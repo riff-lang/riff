@@ -1,10 +1,12 @@
 #include <stdio.h>
 
+#include "code.h"
+#include "disas.h"
+
 int main(int argc, char **argv) {
-    switch (argc) {
-    case 1: repl(); break;
-    case 2: run_file(argv[1]); break;
-    default: fprintf(stderr, "Err\n"); exit(1);
-    }
+    codeblock_t block;
+    block_init(&block);
+    block_append(&block, OP_RETURN);
+    disas_block(&block, "test");
     return 0;
 }
