@@ -3,7 +3,7 @@
 
 #include "code.h"
 
-void disas_block(codeblock_t *, const char *);
-int disas_ins(codeblock_t *, int);
+void disas_chunk(chunk_t *, const char *);
+int disas_ins(chunk_t *, int);
 
 #endif

@@ -12,10 +12,10 @@ typedef struct {
     int      size;
     int      cap;
     uint8_t *code;
-} codeblock_t;
+} chunk_t;
 
-void block_init(codeblock_t *);
-void block_append(codeblock_t *, uint8_t);
-void block_free(codeblock_t *);
+void chunk_init(chunk_t *);
+void chunk_append(chunk_t *, uint8_t);
+void chunk_free(chunk_t *);
 
 #endif

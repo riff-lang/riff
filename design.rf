@@ -1,0 +1,19 @@
+a = 1
+b = 0xf
+c = 0xA
+d = "hello"
+e = 'z'
+
+f(x,y) = x + y
+
+g(x) {
+    return x**2
+}
+
+while h-- > 0 {
+    // Body
+}
+
+for i=1,10 print i
+
+j = {0,1,2,3,4}
