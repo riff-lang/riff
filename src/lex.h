@@ -67,14 +67,12 @@ enum tokens {
 };
 
 typedef struct lexer_t {
-    int         current;
     int         line;
     token_t     token;
     token_t     lookahead;
-    const char *src;
+    const char *p;
 } lexer_t;
 
-void lex_init();
-void lex_next(lexer_t *);
+int lex_next(lexer_t *);
 
 #endif

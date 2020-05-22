@@ -16,7 +16,16 @@ static char *stringify_file(const char *path) {
 }
 
 static void print_tk_stream(const char *src) {
-    printf("%s\n", src);
+    lexer_t lex;
+    lex.line = 1;
+    lex.p = src;
+    lex.lookahead.token = 0;
+    while (!lex_next(&lex)) {
+        if (lex.token.token <= 255)
+            printf("%c\n", lex.token.token);
+        else
+            printf("%d\n", lex.token.token);
+    }
 }
 
 int main(int argc, char **argv) {
