@@ -16,15 +16,19 @@ static char *stringify_file(const char *path) {
 }
 
 static void print_tk_stream(const char *src) {
-    lexer_t lex;
-    lex.line = 1;
-    lex.p = src;
-    lex.lookahead.token = 0;
-    while (!lex_next(&lex)) {
-        if (lex.token.token <= 255)
-            printf("%c\n", lex.token.token);
-        else
-            printf("%d\n", lex.token.token);
+    lexer_t x;
+    x.ln = 1;
+    x.p = src;
+    x.la.token = 0;
+    while (!x_next(&x)) {
+        if (x.tk.token <= 255)
+            printf("%c\n", x.tk.token);
+        else if (x.tk.token <= 289)
+            printf("%d\n", x.tk.token);
+        else if (x.tk.token == 290)
+            printf("<FLT, %g>\n", x.tk.lexeme.f);
+        else if (x.tk.token == 292)
+            printf("<INT, %lld>\n", x.tk.lexeme.i);
     }
 }
 

@@ -2,24 +2,28 @@
 #define LEX_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 // Lexical Analyzer
 
-typedef double  real_t;
+typedef double  flt_t;
 typedef int64_t int_t;
 typedef char *  str_t;
 
 typedef union {
-    char   c;
-    real_t r;
-    int_t  i;
-    str_t  s;
+    char  c;
+    flt_t f;
+    int_t i;
+    str_t s;
 } lexeme_t;
 
 typedef struct {
     int      token;
     lexeme_t lexeme;
 } token_t;
+
+// NOTE: Single character tokens are implicitly enumerated by their
+// ASCII codes
 
 enum tokens {
     TK_AND = 257,
@@ -67,12 +71,13 @@ enum tokens {
 };
 
 typedef struct lexer_t {
-    int         line;
-    token_t     token;
-    token_t     lookahead;
-    const char *p;
+    int         ln; // Current line of the source
+    token_t     tk; // Current token
+    token_t     la; // Lookahead token
+    const char *p;  // Pointer to the current position in the source
 } lexer_t;
 
-int lex_next(lexer_t *);
+// All "public" lexical functions are prefixed with `x_`
+int x_next(lexer_t *);
 
 #endif
