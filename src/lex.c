@@ -52,7 +52,10 @@ static int read_int(lexer_t *x, const char *start, char *end, int base) {
     return TK_INT;
 }
 
-// Incomplete, obvs
+// Incomplete
+// - needs to properly handle binary numbers (e.g. 0b1101)
+// - needs to handle invalid numbers (e.g. 12F or 0xG4)
+// - possibly allow unsigned integers with the `u` suffix.
 static int read_num(lexer_t *x) {
     const char *start = x->p - 1;
     char *end;
@@ -62,32 +65,21 @@ static int read_num(lexer_t *x) {
     if (*start == '.')
         return read_flt(x, start, end);
 
-    int base;
+    int base = 10;
     if (*start == '0') {
         if (*x->p == 'x' || *x->p == 'X') {
             base = 16;
             next(x);
-        } else if (*x->p == 'b' || *x->p == 'B') {
-            base   = 2;
-            start += 2; // strtoull() handles 0x__ but not 0b__
-            next(x);
         }
-    } else
-        base = 10;
-    
+    }
+
     int c;
     while (1) {
         c = *x->p;
-        // printf("%c\n", c);
         if (c == '.') {
             return read_flt(x, start, end);
         } else {
             switch (base) {
-            case 2:
-                // if (c < '0' || c > '1')
-                    // num_err(x, "Invalid binary number");
-                // else
-                    break;
             case 10:
                 if (!isdigit(c))
                     return read_int(x, start, end, base);
@@ -141,6 +133,9 @@ test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
+// NOTE: Parser may be able to handle compound assignment when given a
+// valid token sequence, e.g. '+' '='. If so, it could simplify the
+// tokenization logic and reduce the amount of code needed here.
 static int tokenize(lexer_t *x) {
     int c;
     while (1) {
@@ -160,15 +155,16 @@ static int tokenize(lexer_t *x) {
                                   '=', TK_POW_ASSIGN, TK_POW, '*');
         case '+': return test3(x, '=', TK_ADD_ASSIGN, '+', TK_INC, '+');
         case '-': return test3(x, '=', TK_SUB_ASSIGN, '-', TK_DEC, '-');
-        case '.':
-            // ., .., ..., floating-point number
-            if (isdigit(*x->p))
-                return read_num(x);
-            else
-                exit(1);
+        case '.': return isdigit(*x->p) ? read_num(x) : '.';
         case '/':
-            // /, /=, //
-            exit(1);
+            // Skip comments
+            if (*x->p == '/') {
+                while (*x->p != '\n')
+                    next(x);
+                next(x);
+                break;
+            } else
+                return test2(x, '=', TK_DIV_ASSIGN, '/');
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             return read_num(x);
@@ -192,8 +188,8 @@ static int tokenize(lexer_t *x) {
 }
 
 int x_next(lexer_t *x) {
-    // If a la token already exists (not always the case),
-    // simply assign the current token to the la token.
+    // If a lookahead token already exists (not always the case),
+    // simply assign the current token to the lookahead token.
     if (*x->p == '\0')
         return 1;
     if (x->la.token != 0) {
