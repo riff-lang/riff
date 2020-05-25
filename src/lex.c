@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lex.h"
 
@@ -18,8 +19,12 @@ static bool valid_alpha(char c) {
            (c == '_');
 }
 
-// Incomplete
-static void read_char(lexer_t *x) {
+static bool valid_alphanum(char c) {
+    return valid_alpha(c) || isdigit(c);
+}
+
+// Incomplete - needs more valid escape sequences
+static int read_char(lexer_t *x) {
     char c;
     if (*x->p == '\\') {
         next(x);
@@ -35,6 +40,7 @@ static void read_char(lexer_t *x) {
         err(x, "Invalid character definition; "
                "Use double quotation marks (\"\") to define strings");
     next(x);
+    return TK_CHAR;
 }
 
 
@@ -98,6 +104,105 @@ static int read_num(lexer_t *x) {
     return 0;
 }
 
+// Possibly needs to ignore single backslashes
+static int read_str(lexer_t *x) {
+    const char *start = x->p;
+    char *str;
+    size_t count = 0;
+    int c;
+    while (c != '"') {
+        c = *x->p;
+        switch(c) {
+        case '\\': next(x); next(x); count += 2; break;
+        case '"': 
+            str = malloc(count * sizeof(char) + 1);
+            memcpy(str, start, count * sizeof(char));
+            str[count] = '\0';
+            next(x);
+            break;
+        default: next(x); count++; break;
+        }
+    }
+    x->tk.lexeme.s = str;
+    free(str);
+    return TK_STR;
+}
+
+static int check_kw(lexer_t *x, const char *s, int size) {
+    int f = *(x->p + size); // Character immediately following
+    return !memcmp(x->p, s, size) && !valid_alphanum(f);
+}
+
+static int read_id(lexer_t *x) {
+    const char *start = x->p - 1;
+    // Check for reserved keywords
+    switch (*start) {
+    case 'b':
+        if (check_kw(x, "reak", 4)) {
+            x->p += 4;
+            return TK_BREAK;
+        } else break;
+    case 'e':
+        if (check_kw(x, "lse", 3)) {
+            x->p += 3;
+            return TK_ELSE;
+        } else break;
+    case 'i':
+        if (check_kw(x, "f", 1)) {
+            x->p += 1;
+            return TK_IF;
+        } else break;
+    case 'f':
+        switch (*x->p) {
+        case 'n':
+            if (check_kw(x, "n", 1)) {
+                x->p += 1;
+                return TK_FN;
+            } else break;
+        case 'o':
+            if (check_kw(x, "or", 2)) {
+                x->p += 2;
+                return TK_FOR;
+            } else break;
+        }
+        break;
+    case 'l':
+        if (check_kw(x, "ocal", 4)) {
+            x->p += 4;
+            return TK_LOCAL;
+        } else break;
+    case 'p':
+        if (check_kw(x, "rint", 4)) {
+            x->p += 4;
+            return TK_PRINT;
+        } else break;
+    case 'r':
+        if (check_kw(x, "eturn", 5)) {
+            x->p += 5;
+            return TK_RETURN;
+        } else break;
+    case 'w':
+        if (check_kw(x, "hile", 4)) {
+            x->p += 4;
+            return TK_WHILE;
+        } else break;
+    default:  break;
+    }
+
+    // Otherwise, token is an identifier
+    int count = 1;
+    while (valid_alphanum(*x->p)) {
+        count++;
+        next(x);
+    }
+    char *str = malloc(count * sizeof(char) +  1);
+    memcpy(str, start, count * sizeof(char));
+    str[count] = '\0';
+    x->tk.lexeme.s = str;
+    free(str);
+    return TK_ID;
+}
+
 static int test2(lexer_t *x, int c, int t1, int t2) {
     if (*x->p == c) {
         next(x);
@@ -140,24 +245,20 @@ static int tokenize(lexer_t *x) {
     int c;
     while (1) {
         switch (c = *x->p++) {
+        case '\0': return 1;
         case '\n': case '\r': x->ln++;
         case ' ': case '\t': break;
         case '!': return test2(x, '=', TK_NEQ, '!');
-        case '"':
-            // Read string
-            exit(1);
+        case '"': return read_str(x);
         case '%': return test2(x, '=', TK_MOD_ASSIGN, '%');
         case '&': return test3(x, '=', TK_AND_ASSIGN, '&', TK_AND, '&');
-        case '\'':
-            read_char(x);
-            return TK_CHAR;
+        case '\'': return read_char(x);
         case '*': return test4(x, '=', TK_MUL_ASSIGN, '*', 
                                   '=', TK_POW_ASSIGN, TK_POW, '*');
         case '+': return test3(x, '=', TK_ADD_ASSIGN, '+', TK_INC, '+');
         case '-': return test3(x, '=', TK_SUB_ASSIGN, '-', TK_DEC, '-');
         case '.': return isdigit(*x->p) ? read_num(x) : '.';
         case '/':
-            // Skip comments
             if (*x->p == '/') {
                 while (*x->p != '\n')
                     next(x);
@@ -182,7 +283,11 @@ static int tokenize(lexer_t *x) {
             return c;
         }
         default:
-            exit(1);
+            if (valid_alpha(c)) {
+                return read_id(x);
+            } else {
+                err(x, "Invalid token");
+            }
         }
     }
 }

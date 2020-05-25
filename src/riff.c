@@ -23,12 +23,18 @@ static void print_tk_stream(const char *src) {
     while (!x_next(&x)) {
         if (x.tk.token <= 255)
             printf("%c\n", x.tk.token);
-        else if (x.tk.token <= 289)
+        else if (x.tk.token < 289)
             printf("%d\n", x.tk.token);
-        else if (x.tk.token == 290)
+        else if (x.tk.token == TK_CHAR)
+            printf("<CHAR, %c>\n", x.tk.lexeme.c);
+        else if (x.tk.token == TK_FLT)
             printf("<FLT, %g>\n", x.tk.lexeme.f);
-        else if (x.tk.token == 292)
+        else if (x.tk.token == TK_ID)
+            printf("<ID, %s>\n", x.tk.lexeme.s);
+        else if (x.tk.token == TK_INT)
             printf("<INT, %lld>\n", x.tk.lexeme.i);
+        else if (x.tk.token == TK_STR)
+            printf("<STR, %s>\n", x.tk.lexeme.s);
     }
 }
 
