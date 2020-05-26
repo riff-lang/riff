@@ -44,14 +44,16 @@ static int read_char(lexer_t *x) {
 }
 
 
-static int read_flt(lexer_t *x, const char *start, char *end) {
+static int read_flt(lexer_t *x, const char *start) {
+    char *end;
     double d = strtod(start, &end);
     x->p = end;
     x->tk.lexeme.f = d;
     return TK_FLT;
 }
 
-static int read_int(lexer_t *x, const char *start, char *end, int base) {
+static int read_int(lexer_t *x, const char *start, int base) {
+    char *end;
     int64_t i = strtoull(start, &end, base);
     x->p = end;
     x->tk.lexeme.i = i;
@@ -63,12 +65,11 @@ static int read_int(lexer_t *x, const char *start, char *end, int base) {
 // - possibly allow unsigned integers with the `u` suffix.
 static int read_num(lexer_t *x) {
     const char *start = x->p - 1;
-    char *end;
 
     // Quickly evaluate floating-point numbers with no integer part
     // before the decimal mark, e.g. `.12`
     if (*start == '.')
-        return read_flt(x, start, end);
+        return read_flt(x, start);
 
     int base = 10;
     if (*start == '0') {
@@ -82,7 +83,7 @@ static int read_num(lexer_t *x) {
     while (1) {
         c = *x->p;
         if (c == '.') {
-            return read_flt(x, start, end);
+            return read_flt(x, start);
         } else {
             switch (base) {
             case 10:
@@ -90,7 +91,7 @@ static int read_num(lexer_t *x) {
                     if (valid_alpha(c))
                         err(x, "Malformed number");
                     else
-                        return read_int(x, start, end, base);
+                        return read_int(x, start, base);
                 }
                 else
                     break;
@@ -99,7 +100,7 @@ static int read_num(lexer_t *x) {
                     if (valid_alpha(c))
                         err(x, "Malformed number");
                     else
-                        return read_int(x, start, end, base);
+                        return read_int(x, start, base);
                 }
                 else
                     break;
