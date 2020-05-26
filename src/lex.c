@@ -60,7 +60,6 @@ static int read_int(lexer_t *x, const char *start, char *end, int base) {
 
 // Incomplete
 // - needs to properly handle binary numbers (e.g. 0b1101)
-// - needs to handle invalid numbers (e.g. 12F or 0xG4)
 // - possibly allow unsigned integers with the `u` suffix.
 static int read_num(lexer_t *x) {
     const char *start = x->p - 1;
@@ -87,13 +86,21 @@ static int read_num(lexer_t *x) {
         } else {
             switch (base) {
             case 10:
-                if (!isdigit(c))
-                    return read_int(x, start, end, base);
+                if (!isdigit(c)) {
+                    if (valid_alpha(c))
+                        err(x, "Malformed number");
+                    else
+                        return read_int(x, start, end, base);
+                }
                 else
                     break;
             case 16:
-                if (!isxdigit(c))
-                    return read_int(x, start, end, base);
+                if (!isxdigit(c)) {
+                    if (valid_alpha(c))
+                        err(x, "Malformed number");
+                    else
+                        return read_int(x, start, end, base);
+                }
                 else
                     break;
             default: break;
