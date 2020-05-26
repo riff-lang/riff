@@ -7,10 +7,12 @@ e = 'z'
 f(x,y) = x + y
 
 g(x) {
-    return x**2
+    local y = x ** 2
+    return x + y
 }
 
 while h-- > 0 {
+    print h
     // Body
 }
 
