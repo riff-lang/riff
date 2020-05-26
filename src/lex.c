@@ -248,7 +248,7 @@ static int tokenize(lexer_t *x) {
         case '\0': return 1;
         case '\n': case '\r': x->ln++;
         case ' ': case '\t': break;
-        case '!': return test2(x, '=', TK_NEQ, '!');
+        case '!': return test2(x, '=', TK_NE, '!');
         case '"': return read_str(x);
         case '%': return test2(x, '=', TK_MOD_ASSIGN, '%');
         case '&': return test3(x, '=', TK_AND_ASSIGN, '&', TK_AND, '&');
@@ -269,10 +269,10 @@ static int tokenize(lexer_t *x) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             return read_num(x);
-        case '<': return test4(x, '=', TK_LTE, '<',
+        case '<': return test4(x, '=', TK_LE, '<',
                                   '=', TK_SHL_ASSIGN, TK_SHL, '<');
         case '=': return test2(x, '=', TK_EQ, '=');
-        case '>': return test4(x, '=', TK_GTE, '>',
+        case '>': return test4(x, '=', TK_GE, '>',
                                   '=', TK_SHR_ASSIGN, TK_SHR, '>');
         case '^': return test2(x, '=', TK_XOR_ASSIGN, '^');
         case '|': return test3(x, '=', TK_OR_ASSIGN, '|', TK_OR, '|');
