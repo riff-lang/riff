@@ -151,10 +151,19 @@ static int read_id(lexer_t *x) {
             return TK_BREAK;
         } else break;
     case 'e':
-        if (check_kw(x, "lse", 3)) {
-            x->p += 3;
-            return TK_ELSE;
-        } else break;
+        switch (*x->p) {
+        case 'l':
+            if (check_kw(x, "lse", 3)) {
+                x->p += 3;
+                return TK_ELSE;
+            } else break;
+        case 'x':
+            if (check_kw(x, "xit", 3)) {
+                x->p += 3;
+                return TK_EXIT;
+            } else break;
+        }
+        break;
     case 'i':
         if (check_kw(x, "f", 1)) {
             x->p += 1;
