@@ -127,12 +127,14 @@ static int read_str(lexer_t *x) {
             memcpy(str, start, count * sizeof(char));
             str[count] = '\0';
             next(x);
-            break;
+            x->tk.lexeme.s = str;
+            free(str);
+            return TK_STR;
+        case '\0':
+            err(x, "Reached end of input; unterminated string");
         default: next(x); count++; break;
         }
     }
-    x->tk.lexeme.s = str;
-    free(str);
     return TK_STR;
 }
 
