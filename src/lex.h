@@ -26,7 +26,8 @@ typedef struct {
 // ASCII codes
 
 enum tokens {
-    TK_AND = 257,
+    TK_AND = 256,
+    TK_CAT,
     TK_DEC,
     TK_EQ,
     TK_GE,
@@ -48,6 +49,7 @@ enum tokens {
     TK_XOR_ASSIGN,
 
     // Three char tokens
+    TK_CAT_ASSIGN,
     TK_POW_ASSIGN,
     TK_SHL_ASSIGN,
     TK_SHR_ASSIGN,
@@ -64,6 +66,7 @@ enum tokens {
     TK_RETURN,
     TK_WHILE,
 
+    // Types
     TK_CHAR,
     TK_FLT,
     TK_ID,
@@ -78,7 +81,6 @@ typedef struct lexer_t {
     const char *p;  // Pointer to the current position in the source
 } lexer_t;
 
-// All "public" lexical functions are prefixed with `x_`
 int x_next(lexer_t *);
 
 #endif

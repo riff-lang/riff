@@ -296,9 +296,14 @@ static int tokenize(lexer_t *x) {
         case '^': return test2(x, '=', TK_XOR_ASSIGN, '^');
         case '|': return test3(x, '=', TK_OR_ASSIGN, '|', TK_OR, '|');
         case '~': return test2(x, '=', TK_NOT_ASSIGN, '~');
-        case '#': case '(': case ')': case ',': case ':':
-        case ';': case '?': case ']': case '[': case '{':
-        case '}': {
+        case ':':
+            if (*x->p == ':') {
+                next(x);
+                return test2(x, '=', TK_CAT_ASSIGN, TK_CAT);
+            } else
+                return ':';
+        case '#': case '(': case ')': case ',': case ';':
+        case '?': case ']': case '[': case '{': case '}': {
             return c;
         }
         default:
