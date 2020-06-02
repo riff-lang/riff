@@ -1,21 +1,21 @@
 #include "code.h"
 #include "mem.h"
 
-void chunk_init(chunk_t *chunk) {
-    chunk->size = 0;
-    chunk->cap  = 0;
-    chunk->code = NULL;
+void c_init(chunk_t *c) {
+    c->size = 0;
+    c->cap  = 0;
+    c->code = NULL;
 }
 
-void chunk_append(chunk_t *chunk, uint8_t byte) {
-    if (chunk->cap <= chunk->size) {
-        chunk->cap  = GROW_CAP(chunk->cap);
-        chunk->code = realloc(chunk->code, chunk->cap);
+void c_push(chunk_t *c, uint8_t b) {
+    if (c->cap <= c->size) {
+        c->cap  = GROW_CAP(c->cap);
+        c->code = realloc(c->code, c->cap);
     }
-    chunk->code[chunk->size++] = byte;
+    c->code[c->size++] = b;
 }
 
-void chunk_free(chunk_t *chunk) {
-    free(chunk);
-    chunk_init(chunk);
+void c_free(chunk_t *c) {
+    free(c);
+    c_init(c);
 }
