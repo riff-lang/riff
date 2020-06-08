@@ -18,14 +18,14 @@ typedef union {
 } lexeme_t;
 
 typedef struct {
-    int      token;
+    int      type;
     lexeme_t lexeme;
 } token_t;
 
-// NOTE: Single character tokens are implicitly enumerated by their
-// ASCII codes
-
 enum tokens {
+    // Single character tokens are implicitly enumerated
+
+    // Two-char operators
     TK_AND = 256,
     TK_CAT,
     TK_DEC,
@@ -43,12 +43,11 @@ enum tokens {
     TK_DIV_ASSIGN,
     TK_MOD_ASSIGN,
     TK_MUL_ASSIGN,
-    TK_NOT_ASSIGN,
     TK_OR_ASSIGN,
     TK_SUB_ASSIGN,
     TK_XOR_ASSIGN,
 
-    // Three char tokens
+    // Three-char operators
     TK_CAT_ASSIGN,
     TK_POW_ASSIGN,
     TK_SHL_ASSIGN,
@@ -58,9 +57,9 @@ enum tokens {
     TK_BREAK,
     TK_ELSE,
     TK_EXIT,
-    TK_IF,
     TK_FN,
     TK_FOR,
+    TK_IF,
     TK_LOCAL,
     TK_PRINT,
     TK_RETURN,

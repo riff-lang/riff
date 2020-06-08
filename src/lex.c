@@ -295,7 +295,6 @@ static int tokenize(lexer_t *x) {
                                   '=', TK_SHR_ASSIGN, TK_SHR, '>');
         case '^': return test2(x, '=', TK_XOR_ASSIGN, '^');
         case '|': return test3(x, '=', TK_OR_ASSIGN, '|', TK_OR, '|');
-        case '~': return test2(x, '=', TK_NOT_ASSIGN, '~');
         case ':':
             if (*x->p == ':') {
                 next(x);
@@ -303,9 +302,9 @@ static int tokenize(lexer_t *x) {
             } else
                 return ':';
         case '#': case '(': case ')': case ',': case ';':
-        case '?': case ']': case '[': case '{': case '}': {
+        case '?': case ']': case '[': case '{': case '}':
+        case '~': 
             return c;
-        }
         default:
             if (valid_alpha(c)) {
                 return read_id(x);
@@ -321,12 +320,12 @@ int x_next(lexer_t *x) {
     // simply assign the current token to the lookahead token.
     if (*x->p == '\0')
         return 1;
-    if (x->la.token != 0) {
+    if (x->la.type != 0) {
         x->tk = x->la;
-        x->la.token = 0;
+        x->la.type = 0;
         x->la.lexeme.c = '\0';
     } else {
-        x->tk.token = tokenize(x);
+        x->tk.type = tokenize(x);
     }
     return 0;
 }
