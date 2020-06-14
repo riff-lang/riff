@@ -4,17 +4,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "types.h"
+
 // Lexical Analyzer
 
-typedef double  flt_t;
-typedef int64_t int_t;
-typedef char *  str_t;
-
 typedef union {
-    char  c;
-    flt_t f;
-    int_t i;
-    str_t s;
+    flt_t  f;
+    int_t  i;
+    str_t *s;
 } lexeme_t;
 
 typedef struct {
@@ -66,7 +63,6 @@ enum tokens {
     TK_WHILE,
 
     // Types
-    TK_CHAR,
     TK_FLT,
     TK_ID,
     TK_INT,

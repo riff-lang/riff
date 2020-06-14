@@ -23,27 +23,6 @@ static bool valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
-// Incomplete - needs more valid escape sequences
-static int read_char(lexer_t *x) {
-    char c;
-    if (*x->p == '\\') {
-        next(x);
-        switch (*x->p) {
-        case 'n': c = '\n'; break;
-        default:  err(x, "Invalid escape sequence");
-        }
-    } else
-        c = *x->p;
-    x->tk.lexeme.c = c;
-    next(x);
-    if (*x->p != '\'')
-        err(x, "Invalid character definition; "
-               "Use double quotation marks (\"\") to define strings");
-    next(x);
-    return TK_CHAR;
-}
-
-
 static int read_flt(lexer_t *x, const char *start) {
     char *end;
     double d = strtod(start, &end);
@@ -115,7 +94,7 @@ static int read_num(lexer_t *x) {
 // Possibly needs to ignore single backslashes
 static int read_str(lexer_t *x) {
     const char *start = x->p;
-    char *str;
+    str_t s;
     size_t count = 0;
     int c;
     while (c != '"') {
@@ -123,12 +102,13 @@ static int read_str(lexer_t *x) {
         switch(c) {
         case '\\': next(x); next(x); count += 2; break;
         case '"': 
-            str = malloc(count * sizeof(char) + 1);
-            memcpy(str, start, count * sizeof(char));
-            str[count] = '\0';
+            s.str = malloc(count * sizeof(char) + 1);
+            memcpy(s.str, start, count * sizeof(char));
+            s.str[count] = '\0';
             next(x);
-            x->tk.lexeme.s = str;
-            free(str);
+            s.l   = count;
+            x->tk.lexeme.s = &s;
+            free(s.str);
             return TK_STR;
         case '\0':
             err(x, "Reached end of input; unterminated string");
@@ -205,20 +185,22 @@ static int read_id(lexer_t *x) {
             x->p += 4;
             return TK_WHILE;
         } else break;
-    default:  break;
+    default: break;
     }
 
     // Otherwise, token is an identifier
-    int count = 1;
+    size_t count = 1;
     while (valid_alphanum(*x->p)) {
         count++;
         next(x);
     }
-    char *str = malloc(count * sizeof(char) +  1);
-    memcpy(str, start, count * sizeof(char));
-    str[count] = '\0';
-    x->tk.lexeme.s = str;
-    free(str);
+    str_t s;
+    s.str = malloc(count * sizeof(char) +  1);
+    memcpy(s.str, start, count * sizeof(char));
+    s.str[count] = '\0';
+    s.l   = count;
+    x->tk.lexeme.s = &s;
+    free(s.str);
     return TK_ID;
 }
 
@@ -271,7 +253,6 @@ static int tokenize(lexer_t *x) {
         case '"': return read_str(x);
         case '%': return test2(x, '=', TK_MOD_ASSIGN, '%');
         case '&': return test3(x, '=', TK_AND_ASSIGN, '&', TK_AND, '&');
-        case '\'': return read_char(x);
         case '*': return test4(x, '=', TK_MUL_ASSIGN, '*', 
                                   '=', TK_POW_ASSIGN, TK_POW, '*');
         case '+': return test3(x, '=', TK_ADD_ASSIGN, '+', TK_INC, '+');
@@ -318,14 +299,13 @@ static int tokenize(lexer_t *x) {
 int x_next(lexer_t *x) {
     // If a lookahead token already exists (not always the case),
     // simply assign the current token to the lookahead token.
-    if (*x->p == '\0')
-        return 1;
     if (x->la.type != 0) {
         x->tk = x->la;
         x->la.type = 0;
-        x->la.lexeme.c = '\0';
-    } else {
-        x->tk.type = tokenize(x);
-    }
+        // x->la.lexeme.i = 0;
+    } else if ((x->tk.type = tokenize(x)) == 1)
+        return 1;
     return 0;
 }
+
+#undef next

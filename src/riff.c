@@ -19,22 +19,20 @@ static void print_tk_stream(const char *src) {
     lexer_t x;
     x.ln = 1;
     x.p = src;
-    x.la.token = 0;
+    x.la.type = 0;
     while (!x_next(&x)) {
-        if (x.tk.token <= 255)
-            printf("%c\n", x.tk.token);
-        else if (x.tk.token < 289)
-            printf("%d\n", x.tk.token);
-        else if (x.tk.token == TK_CHAR)
-            printf("<CHAR, %c>\n", x.tk.lexeme.c);
-        else if (x.tk.token == TK_FLT)
+        if (x.tk.type <= 255)
+            printf("%c\n", x.tk.type);
+        else if (x.tk.type < TK_FLT)
+            printf("%d\n", x.tk.type);
+        else if (x.tk.type == TK_FLT)
             printf("<FLT, %g>\n", x.tk.lexeme.f);
-        else if (x.tk.token == TK_ID)
-            printf("<ID, %s>\n", x.tk.lexeme.s);
-        else if (x.tk.token == TK_INT)
+        else if (x.tk.type == TK_ID)
+            printf("<ID, %s>\n", x.tk.lexeme.s->str);
+        else if (x.tk.type == TK_INT)
             printf("<INT, %lld>\n", x.tk.lexeme.i);
-        else if (x.tk.token == TK_STR)
-            printf("<STR, %s>\n", x.tk.lexeme.s);
+        else if (x.tk.type == TK_STR)
+            printf("<STR (%zu), %s>\n", x.tk.lexeme.s->l, x.tk.lexeme.s->str);
     }
 }
 
