@@ -102,13 +102,9 @@ static int read_str(lexer_t *x) {
         switch(c) {
         case '\\': next(x); next(x); count += 2; break;
         case '"': 
-            s.str = malloc(count * sizeof(char) + 1);
-            memcpy(s.str, start, count * sizeof(char));
-            s.str[count] = '\0';
+            s_newstr(&s, start, count);
             next(x);
-            s.l   = count;
             x->tk.lexeme.s = &s;
-            free(s.str);
             return TK_STR;
         case '\0':
             err(x, "Reached end of input; unterminated string");
@@ -195,12 +191,8 @@ static int read_id(lexer_t *x) {
         next(x);
     }
     str_t s;
-    s.str = malloc(count * sizeof(char) +  1);
-    memcpy(s.str, start, count * sizeof(char));
-    s.str[count] = '\0';
-    s.l   = count;
+    s_newstr(&s, start, count);
     x->tk.lexeme.s = &s;
-    free(s.str);
     return TK_ID;
 }
 
@@ -239,9 +231,6 @@ test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
-// NOTE: Parser may be able to handle compound assignment when given a
-// valid token sequence, e.g. '+' '='. If so, it could simplify the
-// tokenization logic and reduce the amount of code needed here.
 static int tokenize(lexer_t *x) {
     int c;
     while (1) {
