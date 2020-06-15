@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "code.h"
+#include "disas.h"
 #include "lex.h"
 
 static char *stringify_file(const char *path) {
@@ -21,18 +22,9 @@ static void print_tk_stream(const char *src) {
     x.p = src;
     x.la.type = 0;
     while (!x_next(&x)) {
-        if (x.tk.type <= 255)
-            printf("%c\n", x.tk.type);
-        else if (x.tk.type < TK_FLT)
-            printf("%d\n", x.tk.type);
-        else if (x.tk.type == TK_FLT)
-            printf("<FLT, %g>\n", x.tk.lexeme.f);
-        else if (x.tk.type == TK_ID)
-            printf("<ID, %s>\n", x.tk.lexeme.s->str);
-        else if (x.tk.type == TK_INT)
-            printf("<INT, %lld>\n", x.tk.lexeme.i);
-        else if (x.tk.type == TK_STR)
-            printf("<STR (%zu), %s>\n", x.tk.lexeme.s->l, x.tk.lexeme.s->str);
+        char s[1024];
+        tk2str(&x.tk, s);
+        printf("%s\n", s);
     }
 }
 
