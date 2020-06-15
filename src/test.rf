@@ -6,14 +6,10 @@ dr2 = .2            // Decimal real (no leading integer)
 hi  = 0xE           // Hexadecimal integer
 hr1 = 0xa.f         // Hexidecimal real
 hr2 = 0x.f          // Hexidecimal real (no leading integer)
-ch  = 'z'           // Single character
 str = "hello"       // String
 
-f(x,y) = x + y      // Short function definition
-g(x,y) = x += y; x**2 
-
 // Normal/long function definition
-h(x) {
+fn f(x) {
     local y = x ** 2
     return x + y
 }
@@ -49,9 +45,9 @@ j = {0,1,2,3,4}     // Standard array
 // Array holding anonymous functions
 ops = {
     fn () = exit 0,
-    fn () { r[w] = y                    ip += 3 },
-    fn () { s[si++] = x                 ip += 2 },
-    fn () { r[w] = s[si] delete s[si--] ip += 2 },
-    fn () { r[w] = y == z               ip += 4 },
-    fn () { r[w] = y >  z               ip += 4 }
+    fn () { r[w] = y                     ip += 3 },
+    fn () { s[si++] = x                  ip += 2 },
+    fn () { r[w] = s[si] delete(s[si--]) ip += 2 },
+    fn () { r[w] = y == z                ip += 4 },
+    fn () { r[w] = y >  z                ip += 4 }
 }
