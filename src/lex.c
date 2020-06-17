@@ -285,6 +285,14 @@ static int tokenize(lexer_t *x) {
     }
 }
 
+int x_init(lexer_t *x, const char *src) {
+    x->ln = 1;
+    x->p  = src;
+    x->tk.type = 0;
+    x->la.type = 0;
+    return 0;
+}
+
 int x_next(lexer_t *x) {
     // If a lookahead token already exists (not always the case),
     // simply assign the current token to the lookahead token.

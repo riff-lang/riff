@@ -77,6 +77,7 @@ typedef struct lexer_t {
     const char *p;  // Pointer to the current position in the source
 } lexer_t;
 
+int x_init(lexer_t *, const char *);
 int x_next(lexer_t *);
 
 #endif
