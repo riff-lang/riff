@@ -5,7 +5,7 @@
 #define OPTR_STR "<Operator, %s >"
 #define KW_STR   "<Keyword, %s>"
 
-void tk2str(token_t *tk, char *s) {
+static void tk2str(token_t *tk, char *s) {
     switch(tk->type) {
     case '+': case '-': case '*': case '/': case '%':
     case '!': case '&': case '|': case '^': case '<':
@@ -70,3 +70,13 @@ void tk2str(token_t *tk, char *s) {
 
 #undef OPTR_STR
 #undef KW_STR
+
+void print_tk_stream(const char *src) {
+    lexer_t x;
+    x_init(&x, src);
+    while (!x_next(&x)) {
+        char s[1024];
+        tk2str(&x.tk, s);
+        printf("%s\n", s);
+    }
+}
