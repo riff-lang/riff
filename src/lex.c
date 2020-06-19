@@ -290,6 +290,7 @@ int x_init(lexer_t *x, const char *src) {
     x->p  = src;
     x->tk.type = 0;
     x->la.type = 0;
+    x_next(x);
     return 0;
 }
 
