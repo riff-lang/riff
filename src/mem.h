@@ -3,8 +3,7 @@
 
 #include <stdlib.h>
 
-#define GROW_CAP(cap) ((cap) < 8 ? 8 : (cap) * 2)
-#define GROW_BLOCK(b, s) \
-    realloc(b, s)
+#define increase_cap(cap) ((cap) < 8 ? 8 : (cap) * 2)
+#define grow_array(a, s)  (realloc(b, s))
 
 #endif

@@ -29,7 +29,7 @@ typedef struct {
         int_t  i;
         str_t *s;
         // Add array type
-    } as;
+    } u;
 } value_t;
 
 #endif

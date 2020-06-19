@@ -9,7 +9,7 @@ void c_init(chunk_t *c) {
 
 void c_push(chunk_t *c, uint8_t b) {
     if (c->cap <= c->size) {
-        c->cap  = GROW_CAP(c->cap);
+        c->cap  = increase_cap(c->cap);
         c->code = realloc(c->code, c->cap);
     }
     c->code[c->size++] = b;
@@ -18,4 +18,16 @@ void c_push(chunk_t *c, uint8_t b) {
 void c_free(chunk_t *c) {
     free(c);
     c_init(c);
+}
+
+// Add a constant value_t to a chunk's constant table, returning the
+// constant's index in the table.
+uint8_t c_addk(chunk_t *c, value_t *v) {
+    if (c->k.cap <= c->k.size) {
+        c->k.cap = increase_cap(c->k.cap);
+        c->k.k   = realloc(c->k.k, c->k.cap);
+    }
+    c->k.k[c->k.size++] = *v;
+
+    return c->k.size - 1;
 }
