@@ -25,8 +25,9 @@ static int uop(int tk) {
     }
 }
 
-// Binary operators which directly map to a single VM instruction
-static int bop(int tk) {
+// Left-associative binary operators which map to a single VM
+// instruction
+static int lbop(int tk) {
     switch (tk) {
     case '%':    return OP_MOD;
     case '&':    return OP_AND;
@@ -36,7 +37,6 @@ static int bop(int tk) {
     case '-':    return OP_SUB;
     case '/':    return OP_DIV;
     case '<':    return OP_LT;
-    case '=':    return OP_SET;
     case '>':    return OP_GT;
     case '^':    return OP_XOR;
     case '|':    return OP_OR;
@@ -46,9 +46,18 @@ static int bop(int tk) {
     case TK_GE:  return OP_GE;
     case TK_LE:  return OP_LE;
     case TK_OR:  return OP_LOR;
-    // case TK_POW: return OP_POW;
     case TK_SHL: return OP_SHL;
     case TK_SHR: return OP_SHR;
+    default:     return 0;
+    }
+}
+
+// Right-associative binary operators which map to a single VM
+// instruction
+static int rbop(int tk) {
+    switch (tk) {
+    case '=':    return OP_SET;
+    case TK_POW: return OP_POW;
     default:     return 0;
     }
 }
@@ -61,7 +70,7 @@ static void nud(parser_t *y) {
     if (u) {
         next(y);
         expr(y, UBP);
-        push((uint8_t) uop);
+        push((uint8_t) u);
         return;
     }
     switch (tk) {
@@ -71,23 +80,23 @@ static void nud(parser_t *y) {
         break;
     case TK_DEC: // Pre-decrement
     case TK_INC: // Pre-increment
+        break;
     case TK_FLT: {
         value_t v;
         v.type = TYPE_FLT;
         v.u.f = y->x->tk.lexeme.f;
         push(OP_PUSHK);
         push(c_addk(y->c, &v));
-    }
         break;
+    }
     case TK_ID:
         // Push var
+        break;
     case TK_INT: {
         int_t i = y->x->tk.lexeme.i;
 
-        // If 0 <= i <= 255, it can be used as an immediate operand,
-        // without adding it to a chunk's constants table.
+        // For ints i s.t. 0 <= i <= 0xFF, use as immediate operand
         if (i >= 0 && i <= 255) {
-            // printf("nud (%d)\n", tk);
             push(OP_PUSHI);
             push((uint8_t) i);
         } else {
@@ -97,10 +106,11 @@ static void nud(parser_t *y) {
             push(OP_PUSHK);
             push(c_addk(y->c, &v));
         }
-    }
         break;
+    }
     case TK_STR:
         // Push constant
+        break;
     default: break;
     }
 }
@@ -108,17 +118,17 @@ static void nud(parser_t *y) {
 #undef UBP
 
 static void led(parser_t *y, int tk) {
-
-    // Simple binary operation where the token maps to a single VM
-    // instruction
-    int b = bop(tk);
-    if (b) {
+    int b;
+    if ((b = lbop(tk))) {
         expr(y, lbp(tk));
+        push(b);
+        return;
+    } else if ((b = rbop(tk))) {
+        expr(y, lbp(tk) - 1);
         push(b);
         return;
     }
     switch (tk) {
-    case TK_POW: expr(y, lbp(tk) - 1); push(OP_POW); break;
     case TK_NE:
     case '?':
     case ':':
@@ -146,7 +156,7 @@ static int lbp(int tk) {
     case TK_POW:                  return 14;
     case '*': case '/': case '%': return 12;
     case '+': case '-':           return 11;
-    case TK_CAT:                  return 10; // TODO
+    case TK_CAT:                  return 10;
     case TK_SHL: case TK_SHR:     return 10;
     case '>': case '<':      
     case TK_GE: case TK_LE:       return 9;
@@ -177,25 +187,26 @@ static int lbp(int tk) {
 //         token = next()
 //         left = t.led(left)
 //     return left
+//
+// Call nud() with initial token
+// Advance token stream
+// While rbp < lbp(token)
+//     Save token
+//     Advance token stream
+//     Call led(token) with saved token
+//
+// Return next token to be parsed?
 
 static int expr(parser_t *y, int rbp) {
     nud(y);
     next(y);
     int op = y->x->tk.type;
     while (rbp < lbp(op)) {
-        op = y->x->tk.type;
         next(y);
         led(y, op);
+        op = y->x->tk.type;
     }
     return 0;
-    // Call nud() with initial token
-    // Advance token stream
-    // While rbp < lbp(token)
-    //     Save token
-    //     Advance token stream
-    //     Call led(token) with saved token
-    //
-    // Return next token to be parsed?
 }
 
 // Evaluates whether a standalone expression had any side effects. If
@@ -235,7 +246,7 @@ static void stmt(parser_t *y) {
     case TK_WHILE:
     default: expr_stmt(y); break;
     }
-    push(OP_RET);
+    push(OP_RET0);
 }
 
 static void stmt_list(parser_t *y) {
