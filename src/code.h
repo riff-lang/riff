@@ -49,6 +49,7 @@ enum opcodes {
 };
 
 typedef struct {
+    const char   *name;
     int      size;
     int      cap;
     uint8_t *code;
@@ -59,7 +60,7 @@ typedef struct {
     } k; // Constants
 } chunk_t;
 
-void c_init(chunk_t *);
+void c_init(chunk_t *, const char *);
 void c_push(chunk_t *, uint8_t);
 void c_free(chunk_t *);
 uint8_t c_addk(chunk_t *, value_t *);
