@@ -17,23 +17,13 @@ static char *stringify_file(const char *path) {
     return buffer;
 }
 
-static void print_chunk(chunk_t *c) {
-    printf("Size: %d\n", c->size);
-    for(int i = 0; i < c->size; i++) {
-        printf("%02x ", c->code[i]);
-    }
-    printf("\n");
-}
-
 int main(int argc, char **argv) {
     chunk_t c;
-    c_init(&c);
+    c_init(&c, "main");
     if (argc == 2)
         y_compile(argv[1], &c);
-        // print_tk_stream(argv[1]);
     else
         y_compile(stringify_file(argv[2]), &c);
-        // print_tk_stream(stringify_file(argv[2]));
-    print_chunk(&c);
+    d_code_chunk(&c);
     return 0;
 }
