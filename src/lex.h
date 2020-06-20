@@ -9,15 +9,13 @@
 
 // Lexical Analyzer
 
-typedef union {
-    flt_t  f;
-    int_t  i;
-    str_t *s;
-} lexeme_t;
-
 typedef struct {
     int      type;
-    lexeme_t lexeme;
+    union {
+        flt_t  f;
+        int_t  i;
+        str_t *s;
+    } lexeme;
 } token_t;
 
 enum tokens {
