@@ -177,32 +177,16 @@ static int lbp(int tk) {
     }
 }
 
-// def expression(rbp=0):
-//     global token
-//     t = token
-//     token = next()
-//     left = t.nud()
-//     while rbp < token.lbp:
-//         t = token
-//         token = next()
-//         left = t.led(left)
-//     return left
-//
-// Call nud() with initial token
-// Advance token stream
-// While rbp < lbp(token)
-//     Save token
-//     Advance token stream
-//     Call led(token) with saved token
-//
-// Return next token to be parsed?
-
 static int expr(parser_t *y, int rbp) {
     nud(y);
-    next(y);
     int op = y->x->tk.type;
-    while (rbp < lbp(op)) {
+
+    // Hack for unary
+    if (!(lbop(op) || rbop(op))) {
         next(y);
+        op = y->x->tk.type;
+    }
+    while (rbp < lbp(op) && !next(y)) {
         led(y, op);
         op = y->x->tk.type;
     }
