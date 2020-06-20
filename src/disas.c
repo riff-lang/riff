@@ -51,8 +51,8 @@ static struct {
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
 #define INST0       "%*d: %02X    %-5s\n"
-#define INST1       "%*d: %02X %02X %-5s %X\n"
-#define INST1DEREF  "%*d: %02X %02X %-5s %X ; %s\n"
+#define INST1       "%*d: %02X %02X %-5s %d\n"
+#define INST1DEREF  "%*d: %02X %02X %-5s %d ; %s\n"
 
 #define OPND(x)     (c->k.k[b1].u.x)
 
