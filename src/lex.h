@@ -67,7 +67,9 @@ enum tokens {
     TK_FLT,
     TK_ID,
     TK_INT,
-    TK_STR
+    TK_STR,
+
+    TK_EOF
 };
 
 typedef struct lexer_t {

@@ -295,14 +295,18 @@ int x_init(lexer_t *x, const char *src) {
 }
 
 int x_next(lexer_t *x) {
+    if (x->tk.type == TK_EOF)
+        return 1;
     // If a lookahead token already exists (not always the case),
     // simply assign the current token to the lookahead token.
     if (x->la.type != 0) {
         x->tk = x->la;
         x->la.type = 0;
         // x->la.lexeme.i = 0;
-    } else if ((x->tk.type = tokenize(x)) == 1)
+    } else if ((x->tk.type = tokenize(x)) == 1) {
+        x->tk.type = TK_EOF;
         return 1;
+    }
     return 0;
 }
 
