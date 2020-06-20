@@ -3,7 +3,7 @@
 #include "parse.h"
 #include "types.h"
 
-#define next(y) x_next(y->x)
+#define adv(y) x_adv(y->x)
 #define push(b) c_push(y->c, b)
 
 static void check(lexer_t *x, int tk) {
@@ -68,7 +68,7 @@ static void nud(parser_t *y) {
     int tk = y->x->tk.type;
     int u = uop(tk);
     if (u) {
-        next(y);
+        adv(y);
         expr(y, UBP);
         push((uint8_t) u);
         return;
@@ -183,10 +183,10 @@ static int expr(parser_t *y, int rbp) {
 
     // Hack for unary
     if (!(lbop(op) || rbop(op))) {
-        next(y);
+        adv(y);
         op = y->x->tk.type;
     }
-    while (rbp < lbp(op) && !next(y)) {
+    while (rbp < lbp(op) && !adv(y)) {
         led(y, op);
         op = y->x->tk.type;
     }
@@ -221,8 +221,8 @@ static void while_stmt(parser_t *y) {
 static void stmt(parser_t *y) {
     int tt = y->x->tk.type;
     switch(tt) {
-    // case ';': x_next(y->x); break;
-    // case TK_FN: x_next(y->x); fn_def(y);
+    // case ';': x_adv(y->x); break;
+    // case TK_FN: x_adv(y->x); fn_def(y);
     case TK_FOR:
     case TK_IF:
     case TK_LOCAL:
@@ -247,4 +247,4 @@ int y_compile(const char *src, chunk_t *c) {
     return 0;
 }
 
-#undef next
+#undef adv

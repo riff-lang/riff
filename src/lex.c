@@ -6,7 +6,7 @@
 
 #include "lex.h"
 
-#define next(x) (x->p++)
+#define adv(x) (x->p++)
 
 static void err(lexer_t *x, const char *msg) {
     fprintf(stderr, "Lexical error at or near line %d: %s\n", x->ln, msg);
@@ -54,7 +54,7 @@ static int read_num(lexer_t *x) {
     if (*start == '0') {
         if (*x->p == 'x' || *x->p == 'X') {
             base = 16;
-            next(x);
+            adv(x);
         }
     }
 
@@ -86,7 +86,7 @@ static int read_num(lexer_t *x) {
             default: break;
             }
         }
-        next(x);
+        adv(x);
     }
     return 0;
 }
@@ -100,15 +100,15 @@ static int read_str(lexer_t *x) {
     while (c != '"') {
         c = *x->p;
         switch(c) {
-        case '\\': next(x); next(x); count += 2; break;
+        case '\\': adv(x); adv(x); count += 2; break;
         case '"': 
             s_newstr(&s, start, count);
-            next(x);
+            adv(x);
             x->tk.lexeme.s = &s;
             return TK_STR;
         case '\0':
             err(x, "Reached end of input; unterminated string");
-        default: next(x); count++; break;
+        default: adv(x); count++; break;
         }
     }
     return TK_STR;
@@ -188,7 +188,7 @@ static int read_id(lexer_t *x) {
     size_t count = 1;
     while (valid_alphanum(*x->p)) {
         count++;
-        next(x);
+        adv(x);
     }
     str_t s;
     s_newstr(&s, start, count);
@@ -198,7 +198,7 @@ static int read_id(lexer_t *x) {
 
 static int test2(lexer_t *x, int c, int t1, int t2) {
     if (*x->p == c) {
-        next(x);
+        adv(x);
         return t1;
     } else
         return t2;
@@ -206,10 +206,10 @@ static int test2(lexer_t *x, int c, int t1, int t2) {
 
 static int test3(lexer_t *x, int c1, int t1, int c2, int t2, int t3) {
     if (*x->p == c1) {
-        next(x);
+        adv(x);
         return t1;
     } else if (*x->p == c2) {
-        next(x);
+        adv(x);
         return t2;
     } else
         return t3;
@@ -218,12 +218,12 @@ static int test3(lexer_t *x, int c1, int t1, int c2, int t2, int t3) {
 static int
 test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
     if (*x->p == c1) {
-        next(x);
+        adv(x);
         return t1;
     } else if (*x->p == c2) {
-        next(x);
+        adv(x);
         if (*x->p == c3) {
-            next(x);
+            adv(x);
             return t2;
         } else
             return t3;
@@ -250,8 +250,8 @@ static int tokenize(lexer_t *x) {
         case '/':
             if (*x->p == '/') {
                 while (*x->p != '\n')
-                    next(x);
-                next(x);
+                    adv(x);
+                adv(x);
                 break;
             } else
                 return test2(x, '=', TK_DIV_ASSIGN, '/');
@@ -267,7 +267,7 @@ static int tokenize(lexer_t *x) {
         case '|': return test3(x, '=', TK_OR_ASSIGN, '|', TK_OR, '|');
         case ':':
             if (*x->p == ':') {
-                next(x);
+                adv(x);
                 return test2(x, '=', TK_CAT_ASSIGN, TK_CAT);
             } else
                 return ':';
@@ -290,11 +290,11 @@ int x_init(lexer_t *x, const char *src) {
     x->p  = src;
     x->tk.type = 0;
     x->la.type = 0;
-    x_next(x);
+    x_adv(x);
     return 0;
 }
 
-int x_next(lexer_t *x) {
+int x_adv(lexer_t *x) {
     if (x->tk.type == TK_EOF)
         return 1;
     // If a lookahead token already exists (not always the case),
@@ -310,4 +310,4 @@ int x_next(lexer_t *x) {
     return 0;
 }
 
-#undef next
+#undef adv

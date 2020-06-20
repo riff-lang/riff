@@ -160,5 +160,5 @@ void d_tk_stream(const char *src) {
         char s[1024];
         tk2str(&x.tk, s);
         puts(s);
-    } while (!x_next(&x));
+    } while (!x_adv(&x));
 }

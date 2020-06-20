@@ -80,6 +80,6 @@ typedef struct lexer_t {
 } lexer_t;
 
 int x_init(lexer_t *, const char *);
-int x_next(lexer_t *);
+int x_adv(lexer_t *);
 
 #endif
