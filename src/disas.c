@@ -6,96 +6,107 @@ static struct {
     const char *mnemonic;
     int         arity;
 } opcode_info[] = {
-    [OP_JMP]   = { "jmp",   1 },
-    [OP_JZ]    = { "jz",    1 },
-    [OP_JNZ]   = { "jnz",   1 },
     [OP_ADD]   = { "add",   0 },
-    [OP_SUB]   = { "sub",   0 },
-    [OP_MUL]   = { "mul",   0 },
-    [OP_DIV]   = { "div",   0 },
-    [OP_MOD]   = { "mod",   0 },
-    [OP_POW]   = { "pow",   0 },
     [OP_AND]   = { "and",   0 },
-    [OP_OR]    = { "or",    0 },
-    [OP_XOR]   = { "xor",   0 },
-    [OP_SHL]   = { "shl",   0 },
-    [OP_SHR]   = { "shr",   0 },
-    [OP_NUM]   = { "num",   0 },
-    [OP_NEG]   = { "neg",   0 },
-    [OP_NOT]   = { "not",   0 },
-    [OP_EQ]    = { "eq",    0 },
-    [OP_GT]    = { "gt",    0 },
-    [OP_GE]    = { "ge",    0 },
-    [OP_LT]    = { "lt",    0 },
-    [OP_LE]    = { "le",    0 },
-    [OP_LAND]  = { "land",  0 },
-    [OP_LOR]   = { "lor",   0 },
-    [OP_LNOT]  = { "lnot",  0 },
     [OP_CALL]  = { "call",  1 },
     [OP_CAT]   = { "cat",   0 },
-    [OP_INC]   = { "inc",   0 },
     [OP_DEC]   = { "dec",   0 },
+    [OP_DIV]   = { "div",   0 },
+    [OP_EQ]    = { "eq",    0 },
+    [OP_GE]    = { "ge",    0 },
+    [OP_GT]    = { "gt",    0 },
+    [OP_INC]   = { "inc",   0 },
+    [OP_JMP]   = { "jmp",   1 },
+    [OP_JNZ]   = { "jnz",   1 },
+    [OP_JZ]    = { "jz",    1 },
+    [OP_LAND]  = { "land",  0 },
     [OP_LEN]   = { "len",   0 },
+    [OP_LE]    = { "le",    0 },
+    [OP_LNOT]  = { "lnot",  0 },
+    [OP_LOR]   = { "lor",   0 },
+    [OP_LT]    = { "lt",    0 },
+    [OP_MOD]   = { "mod",   0 },
+    [OP_MUL]   = { "mul",   0 },
+    [OP_NEG]   = { "neg",   0 },
+    [OP_NOT]   = { "not",   0 },
+    [OP_NUM]   = { "num",   0 },
+    [OP_OR]    = { "or",    0 },
     [OP_POP]   = { "pop",   0 },
+    [OP_POW]   = { "pow",   0 },
+    [OP_PRINT] = { "print", 0 },
     [OP_PUSHA] = { "pusha", 1 },
     [OP_PUSHI] = { "pushi", 1 },
     [OP_PUSHK] = { "pushk", 1 },
     [OP_PUSHV] = { "pushv", 1 },
-    [OP_RET]   = { "ret",   1 },
     [OP_RET0]  = { "ret",   0 },
+    [OP_RET]   = { "ret",   1 },
     [OP_SET]   = { "set",   0 },
-    [OP_PRINT] = { "print", 0 }
+    [OP_SHL]   = { "shl",   0 },
+    [OP_SHR]   = { "shr",   0 },
+    [OP_SUB]   = { "sub",   0 },
+    [OP_XOR]   = { "xor",   0 }
 };
 
+#define OP_ARITY    (opcode_info[b0].arity)
+#define OP_MNEMONIC (opcode_info[b0].mnemonic)
+
+#define INST0       "%*d: %02X    %-5s\n"
+#define INST1       "%*d: %02X %02X %-5s %X\n"
+#define INST1DEREF  "%*d: %02X %02X %-5s %X ; %s\n"
+
+#define OPND(x)     (c->k.k[b1].u.x)
+
 void d_code_chunk(chunk_t *c) {
-    printf("%s, %d bytes\n", c->name, c->size);
-    int i = 0;
+    int sz = c->size;
+    int ipw;
+    if      (sz < 10)   ipw = 1;
+    else if (sz < 100)  ipw = 2;
+    else if (sz < 1000) ipw = 3;
+    else                ipw = 4;
+    int ip = 0;
     char s[80];
-    while (i < c->size) {
-        if (opcode_info[c->code[i]].arity) {
-            switch (c->code[i]) {
+    int b0, b1;
+    printf("%s (%p), %d bytes\n", c->name, c, sz);
+    while (ip < sz) {
+        b0 = c->code[ip];
+        if (OP_ARITY) {
+            b1 = c->code[ip+1];
+            switch (b0) {
             case OP_PUSHK:
-                switch (c->k.k[c->code[i+1]].type) {
+                switch (c->k.k[b1].type) {
                 case TYPE_FLT: {
-                    sprintf(s, "(flt) %g", c->k.k[c->code[i+1]].u.f);
+                    sprintf(s, "(flt) %g", OPND(f));
                     break;
                 } case TYPE_INT: {
-                    sprintf(s, "(int) %lld", c->k.k[c->code[i+1]].u.i);
+                    sprintf(s, "(int) %lld", OPND(i));
                     break;
                 } case TYPE_STR: {
-                    sprintf(s, "(str) %s", c->k.k[c->code[i+1]].u.s->str);
+                    sprintf(s, "(str) %s", OPND(s->str));
                     break;
                 } default: {
                     break;
                 }
                 }
-                printf("%3d: %02X %02X %-6s %2x ; %s\n",
-                        i,
-                        c->code[i],
-                        c->code[i+1],
-                        opcode_info[c->code[i]].mnemonic,
-                        c->code[i+1],
-                        s);
+                printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
                 break;
             default:
-                printf("%3d: %02X %02X %-6s %2x\n",
-                        i,
-                        c->code[i],
-                        c->code[i+1],
-                        opcode_info[c->code[i]].mnemonic,
-                        c->code[i+1]);
+                printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
                 break;
             }
-            i += 2;
+            ip += 2;
         } else {
-            printf("%3d: %02X    %-6s\n",
-                    i,
-                    c->code[i], 
-                    opcode_info[c->code[i]].mnemonic);
-            i += 1;
+            printf(INST0, ipw, ip, b0, OP_MNEMONIC);
+            ip += 1;
         }
     }
 }
+
+#undef OP_ARITY
+#undef OP_MNEMONIC
+#undef INST0
+#undef INST1
+#undef INST1DEREF
+#undef OPND
 
 static const char *tokenstr[] = {
     [TK_AND] =
