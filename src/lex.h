@@ -10,7 +10,7 @@
 // Lexical Analyzer
 
 typedef struct {
-    int      type;
+    int type;
     union {
         flt_t  f;
         int_t  i;
@@ -21,7 +21,7 @@ typedef struct {
 enum tokens {
     // Single character tokens are implicitly enumerated
 
-    // Two-char operators
+    // Multi-char operators
     TK_AND = 256,
     TK_CAT,
     TK_DEC,
@@ -42,8 +42,6 @@ enum tokens {
     TK_OR_ASSIGN,
     TK_SUB_ASSIGN,
     TK_XOR_ASSIGN,
-
-    // Three-char operators
     TK_CAT_ASSIGN,
     TK_POW_ASSIGN,
     TK_SHL_ASSIGN,

@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,15 +34,19 @@ static int read_flt(lexer_t *x, const char *start) {
 
 static int read_int(lexer_t *x, const char *start, int base) {
     char *end;
-    int64_t i = strtoull(start, &end, base);
+    uint64_t i = strtoull(start, &end, base);
+
+    // If the integer literal exceeds the max range (ULLONG_MAX), or if
+    // the literal is decimal and greater than INT64_MAX, interpret as
+    // float instead
+    if ((base == 10 && i > INT64_MAX) || (errno == ERANGE))
+        return read_flt(x, start);
     x->p = end;
     x->tk.lexeme.i = i;
     return TK_INT;
 }
 
-// Incomplete
-// - needs to properly handle binary numbers (e.g. 0b1101)
-// - possibly allow unsigned integers with the `u` suffix.
+// TODO Handle binary numeric literals e.g. 0b1101?
 static int read_num(lexer_t *x) {
     const char *start = x->p - 1;
 
