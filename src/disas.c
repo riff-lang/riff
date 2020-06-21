@@ -39,7 +39,7 @@ static struct {
     [OP_PUSHK] = { "pushk", 1 },
     [OP_PUSHV] = { "pushv", 1 },
     [OP_RET0]  = { "ret",   0 },
-    [OP_RET]   = { "ret",   1 },
+    [OP_RET]   = { "ret",   0 },
     [OP_SET]   = { "set",   0 },
     [OP_SHL]   = { "shl",   0 },
     [OP_SHR]   = { "shr",   0 },
@@ -50,9 +50,9 @@ static struct {
 #define OP_ARITY    (opcode_info[b0].arity)
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
-#define INST0       "%*d: %02X    %-5s\n"
-#define INST1       "%*d: %02X %02X %-5s %d\n"
-#define INST1DEREF  "%*d: %02X %02X %-5s %d ; %s\n"
+#define INST0       "%*d| %02x       %-5s\n"
+#define INST1       "%*d| %02x %02x    %-5s %d\n"
+#define INST1DEREF  "%*d| %02x %02x    %-5s %d    // %s\n"
 
 #define OPND(x)     (c->k.k[b1].u.x)
 
