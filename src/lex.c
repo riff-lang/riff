@@ -27,6 +27,8 @@ static bool valid_alphanum(char c) {
 static int read_flt(lexer_t *x, const char *start) {
     char *end;
     double d = strtod(start, &end);
+    if (valid_alphanum(*end))
+        err(x, "Invalid numeral");
     x->p = end;
     x->tk.lexeme.f = d;
     return TK_FLT;
@@ -35,10 +37,19 @@ static int read_flt(lexer_t *x, const char *start) {
 static int read_int(lexer_t *x, const char *start, int base) {
     char *end;
     uint64_t i = strtoull(start, &end, base);
+    if (*end == '.') {
+        if (base != 2)
+            return read_flt(x, start);
+        else
+            err(x, "Invalid numeral");
+    }
+    else if (valid_alphanum(*end))
+        err(x, "Invalid numeral");
 
-    // If the integer literal exceeds the max range (ULLONG_MAX), or if
-    // the literal is decimal and greater than INT64_MAX, interpret as
-    // float instead
+    // Interpret as float if base-10 int exceeds INT64_MAX, or if
+    // there's overflow in general.
+    // This is a hacky way of handling the base-10 INT64_MIN with a
+    // leading unary minus sign, e.g. `-9223372036854775808`
     if ((base == 10 && i > INT64_MAX) || (errno == ERANGE))
         return read_flt(x, start);
     x->p = end;
@@ -46,7 +57,7 @@ static int read_int(lexer_t *x, const char *start, int base) {
     return TK_INT;
 }
 
-// TODO Handle binary numeric literals e.g. 0b1101?
+// TODO Handle binary float literals? e.g. 0b1101.101
 static int read_num(lexer_t *x) {
     const char *start = x->p - 1;
 
@@ -58,42 +69,15 @@ static int read_num(lexer_t *x) {
     int base = 10;
     if (*start == '0') {
         if (*x->p == 'x' || *x->p == 'X') {
-            base = 16;
-            adv(x);
+            base   = 16;
+            start += 2;
+        }
+        else if (*x->p == 'b' || *x->p == 'B') {
+            base   = 2;
+            start += 2;
         }
     }
-
-    int c;
-    while (1) {
-        c = *x->p;
-        if (c == '.') {
-            return read_flt(x, start);
-        } else {
-            switch (base) {
-            case 10:
-                if (!isdigit(c)) {
-                    if (valid_alpha(c))
-                        err(x, "Malformed number");
-                    else
-                        return read_int(x, start, base);
-                }
-                else
-                    break;
-            case 16:
-                if (!isxdigit(c)) {
-                    if (valid_alpha(c))
-                        err(x, "Malformed number");
-                    else
-                        return read_int(x, start, base);
-                }
-                else
-                    break;
-            default: break;
-            }
-        }
-        adv(x);
-    }
-    return 0;
+    return read_int(x, start, base);
 }
 
 // Possibly needs to ignore single backslashes
