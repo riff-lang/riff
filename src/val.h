@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef VAL_H
+#define VAL_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -30,6 +30,10 @@ typedef struct {
         str_t *s;
         // Add array type
     } u;
-} value_t;
+} val_t;
+
+val_t *v_newint(int_t);
+val_t *v_newflt(flt_t);
+val_t *v_newstr(str_t *);
 
 #endif

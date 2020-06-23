@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "parse.h"
-#include "types.h"
+#include "val.h"
 
 #define adv(y)  x_adv(y->x)
 #define push(b) c_push(y->c, b)
@@ -117,11 +117,9 @@ static void nud(parser_t *y) {
     case TK_INC: // Pre-increment
         break;
     case TK_FLT: {
-        value_t v;
-        v.type = TYPE_FLT;
-        v.u.f = y->x->tk.lexeme.f;
+        val_t *v = v_newflt(y->x->tk.lexeme.f);
         push(OP_PUSHK);
-        push(c_addk(y->c, &v));
+        push(c_addk(y->c, v));
         break;
     }
     case TK_ID:
@@ -135,17 +133,18 @@ static void nud(parser_t *y) {
             push(OP_PUSHI);
             push((uint8_t) i);
         } else {
-            value_t v;
-            v.type = TYPE_INT;
-            v.u.i = i;
+            val_t *v = v_newint(i);
             push(OP_PUSHK);
-            push(c_addk(y->c, &v));
+            push(c_addk(y->c, v));
         }
         break;
     }
-    case TK_STR:
-        // Push constant
+    case TK_STR: {
+        val_t *v = v_newstr(y->x->tk.lexeme.s);
+        push(OP_PUSHK);
+        push(c_addk(y->c, v));
         break;
+    }
     default: break;
     }
 }

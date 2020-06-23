@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "types.h"
+#include "val.h"
 
 enum opcodes {
     OP_JMP,     // Jump
@@ -49,20 +49,20 @@ enum opcodes {
 };
 
 typedef struct {
-    const char   *name;
+    const char *name;
     int      size;
     int      cap;
     uint8_t *code;
     struct {
-        int      size;
-        int      cap;
-        value_t *k;
+        int     size;
+        int     cap;
+        val_t **v;
     } k; // Constants
 } chunk_t;
 
-void c_init(chunk_t *, const char *);
-void c_push(chunk_t *, uint8_t);
-void c_free(chunk_t *);
-uint8_t c_addk(chunk_t *, value_t *);
+void    c_init(chunk_t *, const char *);
+void    c_push(chunk_t *, uint8_t);
+void    c_free(chunk_t *);
+uint8_t c_addk(chunk_t *, val_t *);
 
 #endif

@@ -7,6 +7,6 @@ typedef struct {
     char     *str;
 } str_t;
 
-void s_newstr(str_t *, const char *, size_t);
+str_t *s_newstr(const char *, size_t);
 
 #endif

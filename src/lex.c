@@ -83,18 +83,18 @@ static int read_num(lexer_t *x) {
 // Possibly needs to ignore single backslashes
 static int read_str(lexer_t *x) {
     const char *start = x->p;
-    str_t s;
     size_t count = 0;
-    int c;
+    int c = 0;
     while (c != '"') {
         c = *x->p;
         switch(c) {
         case '\\': adv(x); adv(x); count += 2; break;
-        case '"': 
-            s_newstr(&s, start, count);
+        case '"': {
+            str_t *s = s_newstr(start, count);
             adv(x);
-            x->tk.lexeme.s = &s;
+            x->tk.lexeme.s = s;
             return TK_STR;
+        }
         case '\0':
             err(x, "Reached end of input; unterminated string");
         default: adv(x); count++; break;
@@ -179,9 +179,8 @@ static int read_id(lexer_t *x) {
         count++;
         adv(x);
     }
-    str_t s;
-    s_newstr(&s, start, count);
-    x->tk.lexeme.s = &s;
+    str_t *s = s_newstr(start, count);
+    x->tk.lexeme.s = s;
     return TK_ID;
 }
 
@@ -284,7 +283,11 @@ int x_init(lexer_t *x, const char *src) {
 }
 
 int x_adv(lexer_t *x) {
-    if (x->tk.type == TK_EOF)
+    // TODO make sure this works properly
+    // Free previous string object
+    if (x->tk.type == TK_STR || x->tk.type == TK_ID)
+        free(x->tk.lexeme.s);
+    else if (x->tk.type == TK_EOF)
         return 1;
     // If a lookahead token already exists (not always the case),
     // simply assign the current token to the lookahead token.

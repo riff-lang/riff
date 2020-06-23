@@ -54,7 +54,7 @@ static struct {
 #define INST1       "%*d| %02x %02x    %-5s %d\n"
 #define INST1DEREF  "%*d| %02x %02x    %-5s %d    // %s\n"
 
-#define OPND(x)     (c->k.k[b1].u.x)
+#define OPND(x)     (c->k.v[b1]->u.x)
 
 void d_code_chunk(chunk_t *c) {
     int sz = c->size;
@@ -73,7 +73,7 @@ void d_code_chunk(chunk_t *c) {
             b1 = c->code[ip+1];
             switch (b0) {
             case OP_PUSHK:
-                switch (c->k.k[b1].type) {
+                switch (c->k.v[b1]->type) {
                 case TYPE_FLT: {
                     sprintf(s, "(flt) %g", OPND(f));
                     break;
@@ -81,7 +81,7 @@ void d_code_chunk(chunk_t *c) {
                     sprintf(s, "(int) %lld", OPND(i));
                     break;
                 } case TYPE_STR: {
-                    sprintf(s, "(str) %s", OPND(s->str));
+                    sprintf(s, "(str) \"%s\"", OPND(s->str));
                     break;
                 } default: {
                     break;

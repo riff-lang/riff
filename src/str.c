@@ -12,13 +12,15 @@ static uint64_t s_hash(const char *str) {
     return h;
 }
 
-void s_newstr(str_t *s, const char *start, size_t l) {
+str_t *s_newstr(const char *start, size_t l) {
     char *str;
     str = malloc(l * sizeof(char) + 1);
     memcpy(str, start, l * sizeof(char));
     str[l] = '\0';
+    str_t *s = NULL;
+    s = malloc(sizeof(str_t) + 1);
     s->l = l;
     s->hash = s_hash(str);
     s->str = str;
-    free(str);
+    return s;
 }
