@@ -57,7 +57,7 @@ static struct {
 #define OPND(x)     (c->k.v[b1]->u.x)
 
 void d_code_chunk(chunk_t *c) {
-    int sz = c->size;
+    int sz = c->n;
     int ipw;
     if      (sz < 10)   ipw = 1;
     else if (sz < 100)  ipw = 2;

@@ -50,11 +50,11 @@ enum opcodes {
 
 typedef struct {
     const char *name;
-    int      size;
+    int      n;
     int      cap;
     uint8_t *code;
     struct {
-        int     size;
+        int     n;
         int     cap;
         val_t **v;
     } k; // Constants
