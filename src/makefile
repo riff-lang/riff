@@ -1,9 +1,9 @@
 CFLAGS  = -O3
 
-MFLAGS += -fsanitize=address
+MFLAGS  = -fsanitize=address
 MFLAGS += -fsanitize-address-use-after-scope
 
-WFLAGS += -Wall
+WFLAGS  = -Wall
 WFLAGS += -Wextra
 WFLAGS += -Wpedantic
 WFLAGS += -Weverything
