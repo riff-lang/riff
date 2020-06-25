@@ -27,6 +27,7 @@ static struct {
     [OP_LT]    = { "lt",    0 },
     [OP_MOD]   = { "mod",   0 },
     [OP_MUL]   = { "mul",   0 },
+    [OP_NE]    = { "ne",    0 },
     [OP_NEG]   = { "neg",   0 },
     [OP_NOT]   = { "not",   0 },
     [OP_NUM]   = { "num",   0 },
