@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "lex.h"
 #include "val.h"
 
 enum opcodes {
@@ -25,6 +26,7 @@ enum opcodes {
     OP_NEG,     // Negate
     OP_NOT,     // Bitwise NOT
     OP_EQ,      // Equality
+    OP_NE,      // Not equal
     OP_GT,      // Greater-than
     OP_GE,      // Greater-than or equal-to
     OP_LT,      // Less-than
@@ -63,6 +65,6 @@ typedef struct {
 void    c_init(chunk_t *, const char *);
 void    c_push(chunk_t *, uint8_t);
 void    c_free(chunk_t *);
-uint8_t c_addk(chunk_t *, val_t *);
+void c_pushk(chunk_t *, token_t *);
 
 #endif

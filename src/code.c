@@ -26,11 +26,33 @@ void c_free(chunk_t *c) {
 
 // Add a constant val_t to a chunk's constant table, returning the
 // constant's index in the table.
-uint8_t c_addk(chunk_t *c, val_t *v) {
+void c_pushk(chunk_t *c, token_t *tk) {
+    val_t *v;
+    switch (tk->kind) {
+    case TK_FLT:
+        v = v_newflt(tk->lexeme.f);
+        break;
+    case TK_INT: {
+        int_t i = tk->lexeme.i;
+        if (i >= 0 && i <= 255) {
+            c_push(c, OP_PUSHI);
+            c_push(c, (uint8_t) i);
+            return;
+        } else {
+            v = v_newint(i);
+        }
+        break;
+    }
+    case TK_STR:
+        v = v_newstr(tk->lexeme.s);
+        break;
+    default: break;
+    }
     if (c->k.cap <= c->k.n) {
         c->k.cap = increase_cap(c->k.cap);
         c->k.v   = realloc(c->k.v, sizeof(val_t *) * c->k.cap);
     }
     c->k.v[c->k.n++] = v;
-    return c->k.n - 1;
+    c_push(c, OP_PUSHK);
+    c_push(c, (uint8_t) c->k.n - 1);
 }

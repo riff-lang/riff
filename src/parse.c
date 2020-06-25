@@ -13,13 +13,11 @@ static void err(parser_t *y, const char *msg) {
 
 static void check(parser_t *y, int tk) {
     if (y->x->tk.kind != tk) {
-        char msg[80];
+        char msg[20];
         sprintf(msg, "Missing '%c'", tk);
         err(y, msg);
     }
 }
-
-static int expr(parser_t *y, int rbp);
 
 // LBP for non-unary operators
 static int lbp(int tk) {
@@ -77,6 +75,7 @@ static int lbop(int tk) {
     case TK_AND: return OP_LAND;
     case TK_CAT: return OP_CAT;
     case TK_EQ:  return OP_EQ;
+    case TK_NE:  return OP_NE;
     case TK_GE:  return OP_GE;
     case TK_LE:  return OP_LE;
     case TK_OR:  return OP_LOR;
@@ -94,6 +93,12 @@ static int rbop(int tk) {
     case TK_POW: return OP_POW;
     default:     return 0;
     }
+}
+
+static int expr(parser_t *y, int rbp);
+
+static void literal(parser_t *y) {
+    c_pushk(y->c, &y->x->tk);
 }
 
 #define UBP 12
@@ -116,35 +121,12 @@ static void nud(parser_t *y) {
     case TK_DEC: // Pre-decrement
     case TK_INC: // Pre-increment
         break;
-    case TK_FLT: {
-        val_t *v = v_newflt(y->x->tk.lexeme.f);
-        push(OP_PUSHK);
-        push(c_addk(y->c, v));
+    case TK_FLT: case TK_INT: case TK_STR:
+        literal(y);
         break;
-    }
     case TK_ID:
         // Push var
         break;
-    case TK_INT: {
-        int_t i = y->x->tk.lexeme.i;
-
-        // For ints i s.t. 0 <= i <= 0xFF, use as immediate operand
-        if (i >= 0 && i <= 255) {
-            push(OP_PUSHI);
-            push((uint8_t) i);
-        } else {
-            val_t *v = v_newint(i);
-            push(OP_PUSHK);
-            push(c_addk(y->c, v));
-        }
-        break;
-    }
-    case TK_STR: {
-        val_t *v = v_newstr(y->x->tk.lexeme.s);
-        push(OP_PUSHK);
-        push(c_addk(y->c, v));
-        break;
-    }
     default: break;
     }
 }
@@ -163,11 +145,6 @@ static void led(parser_t *y, int tk) {
         return;
     }
     switch (tk) {
-    case TK_NE:
-        expr(y, lbp(tk));
-        push(OP_EQ);
-        push(OP_NEG);
-        return;
     case '?':
     case ':':
     case '(': // Function call
