@@ -3,6 +3,7 @@
 
 #include "code.h"
 #include "lex.h"
+#include "val.h"
 
 typedef struct {
     lexer_t *x;

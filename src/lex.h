@@ -10,7 +10,7 @@
 // Lexical Analyzer
 
 typedef struct {
-    int type;
+    int kind;
     union {
         flt_t  f;
         int_t  i;
@@ -19,33 +19,32 @@ typedef struct {
 } token_t;
 
 enum tokens {
-    // Single character tokens are implicitly enumerated
+    // NOTE: Single character tokens are implicitly enumerated
 
-    // Multi-char operators
-    TK_AND = 256,
-    TK_CAT,
-    TK_DEC,
-    TK_EQ,
-    TK_GE,
-    TK_INC,
-    TK_LE,
-    TK_NE,
-    TK_OR,
-    TK_POW,
-    TK_SHL,
-    TK_SHR,
-    TK_ADD_ASSIGN,
-    TK_AND_ASSIGN,
-    TK_DIV_ASSIGN,
-    TK_MOD_ASSIGN,
-    TK_MUL_ASSIGN,
-    TK_OR_ASSIGN,
-    TK_SUB_ASSIGN,
-    TK_XOR_ASSIGN,
-    TK_CAT_ASSIGN,
-    TK_POW_ASSIGN,
-    TK_SHL_ASSIGN,
-    TK_SHR_ASSIGN,
+    TK_AND = 256,   // &&
+    TK_CAT,         // ::
+    TK_DEC,         // --
+    TK_EQ,          // ==
+    TK_GE,          // >=
+    TK_INC,         // ++
+    TK_LE,          // <=
+    TK_NE,          // !=
+    TK_OR,          // ||
+    TK_POW,         // **
+    TK_SHL,         // <<
+    TK_SHR,         // >>
+    TK_ADD_ASSIGN,  // +=
+    TK_AND_ASSIGN,  // &=
+    TK_DIV_ASSIGN,  // /=
+    TK_MOD_ASSIGN,  // %=
+    TK_MUL_ASSIGN,  // *=
+    TK_OR_ASSIGN,   // |=
+    TK_SUB_ASSIGN,  // -=
+    TK_XOR_ASSIGN,  // ^=
+    TK_CAT_ASSIGN,  // ::=
+    TK_POW_ASSIGN,  // **=
+    TK_SHL_ASSIGN,  // <<=
+    TK_SHR_ASSIGN,  // >>=
 
     // Keywords
     TK_BREAK,
@@ -59,16 +58,19 @@ enum tokens {
     TK_RETURN,
     TK_WHILE,
 
-    // Types
+    // Literals
     TK_FLT,
-    TK_ID,
     TK_INT,
     TK_STR,
 
-    TK_EOF
+    // Identifiers
+    TK_ID,
+
+    // End of input
+    TK_EOI
 };
 
-typedef struct lexer_t {
+typedef struct {
     int         ln; // Current line of the source
     token_t     tk; // Current token
     token_t     la; // Lookahead token

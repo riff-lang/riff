@@ -12,7 +12,7 @@ static void err(parser_t *y, const char *msg) {
 }
 
 static void check(parser_t *y, int tk) {
-    if (y->x->tk.type != tk) {
+    if (y->x->tk.kind != tk) {
         char msg[80];
         sprintf(msg, "Missing '%c'", tk);
         err(y, msg);
@@ -99,7 +99,7 @@ static int rbop(int tk) {
 #define UBP 12
 
 static void nud(parser_t *y) {
-    int tk = y->x->tk.type;
+    int tk = y->x->tk.kind;
     int u = uop(tk);
     if (u) {
         adv(y);
@@ -190,16 +190,16 @@ static void led(parser_t *y, int tk) {
 
 static int expr(parser_t *y, int rbp) {
     nud(y);
-    int op = y->x->tk.type;
+    int op = y->x->tk.kind;
 
     // Hack for unary
     if (!lbp(op)) {
         adv(y);
-        op = y->x->tk.type;
+        op = y->x->tk.kind;
     }
     while (rbp < lbp(op) && !adv(y)) {
         led(y, op);
-        op = y->x->tk.type;
+        op = y->x->tk.kind;
     }
     return 0;
 }
@@ -233,7 +233,7 @@ static void while_stmt(parser_t *y) {
 }
 
 static void stmt(parser_t *y) {
-    switch(y->x->tk.type) {
+    switch(y->x->tk.kind) {
     case ';':       adv(y);                break;
     case TK_FN:     adv(y); fn_def(y);     break;
     case TK_FOR:    adv(y); for_stmt(y);   break;

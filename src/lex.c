@@ -276,8 +276,8 @@ static int tokenize(lexer_t *x) {
 int x_init(lexer_t *x, const char *src) {
     x->ln = 1;
     x->p  = src;
-    x->tk.type = 0;
-    x->la.type = 0;
+    x->tk.kind = 0;
+    x->la.kind = 0;
     x_adv(x);
     return 0;
 }
@@ -285,18 +285,18 @@ int x_init(lexer_t *x, const char *src) {
 int x_adv(lexer_t *x) {
     // TODO make sure this works properly
     // Free previous string object
-    if (x->tk.type == TK_STR || x->tk.type == TK_ID)
+    if (x->tk.kind == TK_STR || x->tk.kind == TK_ID)
         free(x->tk.lexeme.s);
-    else if (x->tk.type == TK_EOF)
+    else if (x->tk.kind == TK_EOI)
         return 1;
     // If a lookahead token already exists (not always the case),
     // simply assign the current token to the lookahead token.
-    if (x->la.type != 0) {
+    if (x->la.kind != 0) {
         x->tk = x->la;
-        x->la.type = 0;
+        x->la.kind = 0;
         // x->la.lexeme.i = 0;
-    } else if ((x->tk.type = tokenize(x)) == 1) {
-        x->tk.type = TK_EOF;
+    } else if ((x->tk.kind = tokenize(x)) == 1) {
+        x->tk.kind = TK_EOI;
         return 1;
     }
     return 0;

@@ -121,14 +121,14 @@ static const char *tokenstr[] = {
 #define KW_STR   "<Keyword, %s>"
 
 static void tk2str(token_t *tk, char *s) {
-    if (tk->type < TK_AND)
-        sprintf(s, "<Operator, %c >", tk->type);
-    else if (tk->type < TK_BREAK)
-        sprintf(s, OPTR_STR, tokenstr[tk->type]);
-    else if (tk->type < TK_FLT)
-        sprintf(s, KW_STR, tokenstr[tk->type]);
+    if (tk->kind < TK_AND)
+        sprintf(s, "<Operator, %c >", tk->kind);
+    else if (tk->kind < TK_BREAK)
+        sprintf(s, OPTR_STR, tokenstr[tk->kind]);
+    else if (tk->kind < TK_FLT)
+        sprintf(s, KW_STR, tokenstr[tk->kind]);
     else {
-        switch(tk->type) {
+        switch(tk->kind) {
         case TK_FLT:
             sprintf(s, "<Float, %f (0x%a)>", tk->lexeme.f, tk->lexeme.f);
             break;
