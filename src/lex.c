@@ -24,22 +24,22 @@ static bool valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
-static int read_flt(lexer_t *x, const char *start) {
+static int read_flt(lexer_t *x, token_t *tk, const char *start) {
     char *end;
     double d = strtod(start, &end);
     if (valid_alphanum(*end))
         err(x, "Invalid numeral");
     x->p = end;
-    x->tk.lexeme.f = d;
+    tk->lexeme.f = d;
     return TK_FLT;
 }
 
-static int read_int(lexer_t *x, const char *start, int base) {
+static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
     char *end;
     uint64_t i = strtoull(start, &end, base);
     if (*end == '.') {
         if (base != 2)
-            return read_flt(x, start);
+            return read_flt(x, tk, start);
         else
             err(x, "Invalid numeral");
     }
@@ -51,20 +51,20 @@ static int read_int(lexer_t *x, const char *start, int base) {
     // This is a hacky way of handling the base-10 INT64_MIN with a
     // leading unary minus sign, e.g. `-9223372036854775808`
     if ((base == 10 && i > INT64_MAX) || (errno == ERANGE))
-        return read_flt(x, start);
+        return read_flt(x, tk, start);
     x->p = end;
-    x->tk.lexeme.i = i;
+    tk->lexeme.i = i;
     return TK_INT;
 }
 
 // TODO Handle binary float literals? e.g. 0b1101.101
-static int read_num(lexer_t *x) {
+static int read_num(lexer_t *x, token_t *tk) {
     const char *start = x->p - 1;
 
     // Quickly evaluate floating-point numbers with no integer part
     // before the decimal mark, e.g. `.12`
     if (*start == '.')
-        return read_flt(x, start);
+        return read_flt(x, tk, start);
 
     int base = 10;
     if (*start == '0') {
@@ -77,11 +77,11 @@ static int read_num(lexer_t *x) {
             start += 2;
         }
     }
-    return read_int(x, start, base);
+    return read_int(x, tk, start, base);
 }
 
 // Possibly needs to ignore single backslashes
-static int read_str(lexer_t *x) {
+static int read_str(lexer_t *x, token_t *tk) {
     const char *start = x->p;
     size_t count = 0;
     int c = 0;
@@ -92,7 +92,7 @@ static int read_str(lexer_t *x) {
         case '"': {
             str_t *s = s_newstr(start, count);
             adv(x);
-            x->tk.lexeme.s = s;
+            tk->lexeme.s = s;
             return TK_STR;
         }
         case '\0':
@@ -108,7 +108,7 @@ static int check_kw(lexer_t *x, const char *s, int size) {
     return !memcmp(x->p, s, size) && !valid_alphanum(f);
 }
 
-static int read_id(lexer_t *x) {
+static int read_id(lexer_t *x, token_t *tk) {
     const char *start = x->p - 1;
     // Check for reserved keywords
     switch (*start) {
@@ -180,7 +180,7 @@ static int read_id(lexer_t *x) {
         adv(x);
     }
     str_t *s = s_newstr(start, count);
-    x->tk.lexeme.s = s;
+    tk->lexeme.s = s;
     return TK_ID;
 }
 
@@ -219,7 +219,7 @@ test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
-static int tokenize(lexer_t *x) {
+static int tokenize(lexer_t *x, token_t *tk) {
     int c;
     while (1) {
         switch (c = *x->p++) {
@@ -227,14 +227,14 @@ static int tokenize(lexer_t *x) {
         case '\n': case '\r': x->ln++;
         case ' ': case '\t': break;
         case '!': return test2(x, '=', TK_NE, '!');
-        case '"': return read_str(x);
+        case '"': return read_str(x, tk);
         case '%': return test2(x, '=', TK_MOD_ASSIGN, '%');
         case '&': return test3(x, '=', TK_AND_ASSIGN, '&', TK_AND, '&');
         case '*': return test4(x, '=', TK_MUL_ASSIGN, '*', 
                                   '=', TK_POW_ASSIGN, TK_POW, '*');
         case '+': return test3(x, '=', TK_ADD_ASSIGN, '+', TK_INC, '+');
         case '-': return test3(x, '=', TK_SUB_ASSIGN, '-', TK_DEC, '-');
-        case '.': return isdigit(*x->p) ? read_num(x) : '.';
+        case '.': return isdigit(*x->p) ? read_num(x, tk) : '.';
         case '/':
             if (*x->p == '/') {
                 while (*x->p != '\n')
@@ -245,7 +245,7 @@ static int tokenize(lexer_t *x) {
                 return test2(x, '=', TK_DIV_ASSIGN, '/');
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
-            return read_num(x);
+            return read_num(x, tk);
         case '<': return test4(x, '=', TK_LE, '<',
                                   '=', TK_SHL_ASSIGN, TK_SHL, '<');
         case '=': return test2(x, '=', TK_EQ, '=');
@@ -265,7 +265,7 @@ static int tokenize(lexer_t *x) {
             return c;
         default:
             if (valid_alpha(c)) {
-                return read_id(x);
+                return read_id(x, tk);
             } else {
                 err(x, "Invalid token");
             }
@@ -289,14 +289,24 @@ int x_adv(lexer_t *x) {
         free(x->tk.lexeme.s);
     else if (x->tk.kind == TK_EOI)
         return 1;
-    // If a lookahead token already exists (not always the case),
-    // simply assign the current token to the lookahead token.
+    // If a lookahead token already exists, assign it to the current
+    // token
     if (x->la.kind != 0) {
         x->tk = x->la;
         x->la.kind = 0;
         // x->la.lexeme.i = 0;
-    } else if ((x->tk.kind = tokenize(x)) == 1) {
+    } else if ((x->tk.kind = tokenize(x, &x->tk)) == 1) {
         x->tk.kind = TK_EOI;
+        return 1;
+    }
+    return 0;
+}
+
+// Populate the lookahead token_t, leaving the current token_t
+// unchanged
+int x_peek(lexer_t *x) {
+    if ((x->la.kind = tokenize(x, &x->la)) == 1) {
+        x->la.kind = TK_EOI;
         return 1;
     }
     return 0;

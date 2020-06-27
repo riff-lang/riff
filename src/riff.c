@@ -17,12 +17,13 @@ static char *stringify_file(const char *path) {
     return buffer;
 }
 
+// TODO handle piped input (stdin)
 int main(int argc, char **argv) {
-    chunk_t c;
-    c_init(&c, "main");
+    code_t c;
+    c_init(&c);
     if (argc == 2)
         y_compile(argv[1], &c);
-    else
+    else if (argc == 3)
         y_compile(stringify_file(argv[2]), &c);
     d_code_chunk(&c);
     return 0;
