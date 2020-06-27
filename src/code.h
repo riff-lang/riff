@@ -40,10 +40,11 @@ enum opcodes {
     OP_DEC,     // Decrement
     OP_LEN,     // Length
     OP_POP,     // Pop from stack
-    OP_PUSHA,   // Push array on stack
+    OP_PUSH0,   // Push literal `0` on stack
+    OP_PUSH1,   // Push literal `1` on stack
     OP_PUSHI,   // Push immediate value on stack
     OP_PUSHK,   // Push constant value on stack
-    OP_PUSHV,   // Push var on stack
+    OP_PUSHS,   // Push symbol on stack
     OP_RET,     // Return
     OP_RET0,
     OP_SET,     // Set
@@ -51,7 +52,6 @@ enum opcodes {
 };
 
 typedef struct {
-    const char *name;
     int      n;
     int      cap;
     uint8_t *code;
@@ -59,12 +59,18 @@ typedef struct {
         int     n;
         int     cap;
         val_t **v;
-    } k; // Constants
-} chunk_t;
+    } k; // Literal constants
+    // struct {
+    //     int     n;
+    //     int     cap;
+    //     str_t **s;
+    // } s; // Symbols
+} code_t;
 
-void    c_init(chunk_t *, const char *);
-void    c_push(chunk_t *, uint8_t);
-void    c_free(chunk_t *);
-void c_pushk(chunk_t *, token_t *);
+void c_init(code_t *);
+void c_push(code_t *, uint8_t);
+void c_free(code_t *);
+void c_constant(code_t *, token_t *);
+void c_symbol(code_t *, token_t *);
 
 #endif

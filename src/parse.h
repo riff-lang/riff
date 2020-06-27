@@ -7,11 +7,10 @@
 
 typedef struct {
     lexer_t *x;
-    chunk_t *c; // Current code chunk
+    code_t  *c; // Current code object
     int      a; // Assignment flag
-    // Hold tokens?
 } parser_t;
 
-int y_compile(const char *, chunk_t *);
+int y_compile(const char *, code_t *);
 
 #endif

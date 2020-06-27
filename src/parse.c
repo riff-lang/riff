@@ -98,7 +98,11 @@ static int rbop(int tk) {
 static int expr(parser_t *y, int rbp);
 
 static void literal(parser_t *y) {
-    c_pushk(y->c, &y->x->tk);
+    c_constant(y->c, &y->x->tk);
+}
+
+static void identifier(parser_t *y) {
+    c_symbol(y->c, &y->x->tk);
 }
 
 #define UBP 12
@@ -118,6 +122,7 @@ static void nud(parser_t *y) {
         expr(y, 0);
         check(y, ')');
         return;
+    case '{': // New array/table?
     case TK_DEC: // Pre-decrement
     case TK_INC: // Pre-increment
         break;
@@ -125,7 +130,7 @@ static void nud(parser_t *y) {
         literal(y);
         break;
     case TK_ID:
-        // Push var
+        identifier(y);
         break;
     default: break;
     }
@@ -225,7 +230,7 @@ static void stmt(parser_t *y) {
 static void stmt_list(parser_t *y) {
 }
 
-int y_compile(const char *src, chunk_t *c) {
+int y_compile(const char *src, code_t *c) {
     parser_t y;
     lexer_t x;
     x_init(&x, src);
