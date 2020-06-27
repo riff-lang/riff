@@ -4,9 +4,9 @@
 #include "str.h"
 
 // djb2; source: http://www.cse.yorku.ca/~oz/hash.html
-static uint64_t s_hash(const char *str) {
-    uint64_t h = 5381;
-    int c;
+static uint32_t s_hash(const char *str) {
+    uint32_t h = 5381;
+    unsigned int c;
     while ((c = *str++))
         h = ((h << 5) + h) + c;
     return h;

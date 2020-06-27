@@ -3,7 +3,7 @@
 
 typedef struct {
     size_t    l;
-    uint64_t  hash;
+    uint32_t  hash;
     char     *str;
 } str_t;
 
