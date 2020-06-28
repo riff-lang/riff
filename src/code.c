@@ -103,5 +103,44 @@ void c_constant(code_t *c, token_t *tk) {
     c_push(c, (uint8_t) c->k.n - 1);
 }
 
-void c_symbol(code_t *c, token_t *tk) {
+// void c_symbol(code_t *c, token_t *tk) {
+// }
+
+void c_infix(code_t *c, int op) {
+    switch (op) {
+    case '+':    c_push(c, OP_ADD); break;
+    case '-':    c_push(c, OP_SUB); break;
+    case '*':    c_push(c, OP_MUL); break;
+    case '/':    c_push(c, OP_DIV); break;
+    case '%':    c_push(c, OP_MOD); break;
+    case '>':    c_push(c, OP_GT);  break;
+    case '<':    c_push(c, OP_LT);  break;
+    case '=':    c_push(c, OP_SET); break;
+    case '&':    c_push(c, OP_AND); break;
+    case '|':    c_push(c, OP_OR);  break;
+    case '^':    c_push(c, OP_XOR); break;
+    case TK_SHL: c_push(c, OP_SHL); break;
+    case TK_SHR: c_push(c, OP_SHR); break;
+    case TK_POW: c_push(c, OP_POW); break;
+    case TK_CAT: c_push(c, OP_CAT); break;
+    case TK_GE:  c_push(c, OP_GE);  break;
+    case TK_LE:  c_push(c, OP_LE);  break;
+    case TK_EQ:  c_push(c, OP_EQ);  break;
+    case TK_NE:  c_push(c, OP_NE);  break;
+    default: break;
+    }
+}
+
+void c_prefix(code_t *c, int op) {
+    switch (op) {
+    case '!': c_push(c, OP_LNOT); break;
+    case '#': c_push(c, OP_LEN);  break;
+    case '+': c_push(c, OP_NUM);  break;
+    case '-': c_push(c, OP_NEG);  break;
+    case '~': c_push(c, OP_NOT);  break;
+    default: break;
+    }
+}
+
+void c_postfix(code_t *c, int op) {
 }

@@ -73,5 +73,8 @@ void c_push(code_t *, uint8_t);
 void c_free(code_t *);
 void c_constant(code_t *, token_t *);
 void c_symbol(code_t *, token_t *);
+void c_prefix(code_t *, int);
+void c_infix(code_t *, int);
+void c_postfix(code_t *, int);
 
 #endif

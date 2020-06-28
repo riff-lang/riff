@@ -47,52 +47,22 @@ static int lbp(int tk) {
 }
 
 static int uop(int tk) {
-    switch (tk) {
-    case '!': return OP_LNOT;
-    case '#': return OP_LEN;
-    case '+': return OP_NUM;
-    case '-': return OP_NEG;
-    case '~': return OP_NOT;
-    default:  return 0;
-    }
+    return tk == '!' || tk == '#' || tk == '+' ||
+           tk == '-' || tk == '~';
 }
 
-// Left-associative binary operators which map to a single VM
-// instruction
 static int lbop(int tk) {
-    switch (tk) {
-    case '%':    return OP_MOD;
-    case '&':    return OP_AND;
-    case '(':    return OP_CALL; // ???
-    case '*':    return OP_MUL;
-    case '+':    return OP_ADD;
-    case '-':    return OP_SUB;
-    case '/':    return OP_DIV;
-    case '<':    return OP_LT;
-    case '>':    return OP_GT;
-    case '^':    return OP_XOR;
-    case '|':    return OP_OR;
-    case TK_AND: return OP_LAND;
-    case TK_CAT: return OP_CAT;
-    case TK_EQ:  return OP_EQ;
-    case TK_NE:  return OP_NE;
-    case TK_GE:  return OP_GE;
-    case TK_LE:  return OP_LE;
-    case TK_OR:  return OP_LOR;
-    case TK_SHL: return OP_SHL;
-    case TK_SHR: return OP_SHR;
-    default:     return 0;
-    }
+    return tk == '%' || tk == '&' || tk == '(' || tk == '*' ||
+           tk == '+' || tk == '-' || tk == '/' || tk == '<' ||
+           tk == '>' || tk == '^' || tk == '|' || tk == '[' ||
+           tk == TK_AND || tk == TK_EQ || tk == TK_NE ||
+           tk == TK_GE  || tk == TK_LE || tk == TK_OR ||
+           tk == TK_SHL || tk == TK_SHR;
 }
 
-// Right-associative binary operators which map to a single VM
-// instruction
 static int rbop(int tk) {
-    switch (tk) {
-    case '=':    return OP_SET;
-    case TK_POW: return OP_POW;
-    default:     return 0;
-    }
+    return tk == '=' || tk == TK_POW || tk == TK_CAT ||
+           (tk >= TK_ADD_ASSIGN && tk <= TK_XOR_ASSIGN);
 }
 
 static int expr(parser_t *y, int rbp);
@@ -102,18 +72,17 @@ static void literal(parser_t *y) {
 }
 
 static void identifier(parser_t *y) {
-    c_symbol(y->c, &y->x->tk);
+    // c_symbol(y->c, &y->x->tk);
 }
 
 #define UBP 12
 
 static void nud(parser_t *y) {
     int tk = y->x->tk.kind;
-    int u = uop(tk);
-    if (u) {
+    if (uop(tk)) {
         adv(y);
-        expr(y, UBP);
-        push((uint8_t) u);
+        expr(y, 12);
+        c_prefix(y->c, tk);
         return;
     }
     switch (tk) {
@@ -139,35 +108,8 @@ static void nud(parser_t *y) {
 #undef UBP
 
 static void led(parser_t *y, int tk) {
-    int b;
-    if ((b = lbop(tk))) {
-        expr(y, lbp(tk));
-        push(b);
-        return;
-    } else if ((b = rbop(tk))) {
-        expr(y, lbp(tk) - 1);
-        push(b);
-        return;
-    }
-    switch (tk) {
-    case '?':
-    case ':':
-    case '(': // Function call
-    case '[': // Lookup/indexing
-    case TK_ADD_ASSIGN:
-    case TK_AND_ASSIGN:
-    case TK_DIV_ASSIGN:
-    case TK_MOD_ASSIGN:
-    case TK_MUL_ASSIGN:
-    case TK_OR_ASSIGN:
-    case TK_SUB_ASSIGN:
-    case TK_XOR_ASSIGN:
-    case TK_CAT_ASSIGN:
-    case TK_POW_ASSIGN:
-    case TK_SHL_ASSIGN:
-    case TK_SHR_ASSIGN:
-    default: break;
-    }
+    expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
+    c_infix(y->c, tk);
 }
 
 static int expr(parser_t *y, int rbp) {
