@@ -42,6 +42,7 @@ enum opcodes {
     OP_POP,     // Pop from stack
     OP_PUSH0,   // Push literal `0` on stack
     OP_PUSH1,   // Push literal `1` on stack
+    OP_PUSH2,   // Push literal `2` on stack
     OP_PUSHI,   // Push immediate value on stack
     OP_PUSHK,   // Push constant value on stack
     OP_PUSHS,   // Push symbol on stack

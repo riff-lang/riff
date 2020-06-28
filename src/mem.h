@@ -3,7 +3,10 @@
 
 #include <stdlib.h>
 
-#define increase_cap(cap) ((cap) < 8 ? 8 : (cap) * 2)
-#define grow_array(a, s)  (realloc(b, s))
+#define eval_resize(a, n, cap) \
+    if (cap <= n) { \
+        cap = cap < 8 ? 8 : cap * 2; \
+        a = realloc(a, sizeof(a) * cap); \
+    }
 
 #endif

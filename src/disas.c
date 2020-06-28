@@ -37,6 +37,7 @@ static struct {
     [OP_PRINT] = { "print",   0 },
     [OP_PUSH0] = { "pushi 0", 0 },
     [OP_PUSH1] = { "pushi 1", 0 },
+    [OP_PUSH2] = { "pushi 2", 0 },
     [OP_PUSHI] = { "pushi",   1 },
     [OP_PUSHK] = { "pushk",   1 },
     [OP_PUSHS] = { "pushs",   1 },

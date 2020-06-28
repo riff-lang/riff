@@ -18,10 +18,7 @@ void c_init(code_t *c) {
 }
 
 void c_push(code_t *c, uint8_t b) {
-    if (c->cap <= c->n) {
-        c->cap  = increase_cap(c->cap);
-        c->code = realloc(c->code, c->cap);
-    }
+    eval_resize(c->code, c->n, c->cap);
     c->code[c->n++] = b;
 }
 
@@ -76,18 +73,19 @@ void c_constant(code_t *c, token_t *tk) {
         break;
     case TK_INT: {
         int_t i = tk->lexeme.i;
-        if (i == 0) {
-            c_push(c, OP_PUSH0);
-            return;
-        } else if (i == 1) {
-            c_push(c, OP_PUSH1);
-            return;
-        } else if (i >= 2 && i <= 255) {
+        switch (i) {
+        case 0: c_push(c, OP_PUSH0); return;
+        case 1: c_push(c, OP_PUSH1); return;
+        case 2: c_push(c, OP_PUSH2); return;
+        default:
+            if (i >= 3 && i <= 255) {
             c_push(c, OP_PUSHI);
             c_push(c, (uint8_t) i);
             return;
         } else {
             v = v_newint(i);
+        }
+            break;
         }
         break;
     }
@@ -96,14 +94,11 @@ void c_constant(code_t *c, token_t *tk) {
         break;
     default: break;
     }
-    if (c->k.cap <= c->k.n) {
-        c->k.cap = increase_cap(c->k.cap);
-        c->k.v   = realloc(c->k.v, sizeof(val_t *) * c->k.cap);
-    }
 
+    eval_resize(c->k.v, c->k.n, c->k.cap);
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
-        err(c, "Number of constants exceeds maximum");
+        err(c, "Exceeded max number of unique literals");
     c_push(c, OP_PUSHK);
     c_push(c, (uint8_t) c->k.n - 1);
 }
