@@ -51,17 +51,19 @@ static int uop(int tk) {
            tk == '-' || tk == '~';
 }
 
+// TODO: Ternary (?:)
+
 static int lbop(int tk) {
     return tk == '%' || tk == '&' || tk == '(' || tk == '*' ||
            tk == '+' || tk == '-' || tk == '/' || tk == '<' ||
            tk == '>' || tk == '^' || tk == '|' || tk == '[' ||
-           tk == TK_AND || tk == TK_EQ || tk == TK_NE ||
-           tk == TK_GE  || tk == TK_LE || tk == TK_OR ||
-           tk == TK_SHL || tk == TK_SHR;
+           tk == TK_AND || tk == TK_EQ  || tk == TK_NE ||
+           tk == TK_GE  || tk == TK_LE  || tk == TK_OR ||
+           tk == TK_SHL || tk == TK_SHR || tk == TK_CAT;
 }
 
 static int rbop(int tk) {
-    return tk == '=' || tk == TK_POW || tk == TK_CAT ||
+    return tk == '=' || tk == TK_POW ||
            (tk >= TK_ADD_ASSIGN && tk <= TK_XOR_ASSIGN);
 }
 
