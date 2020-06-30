@@ -21,7 +21,7 @@ typedef struct {
 enum tokens {
     // NOTE: Single character tokens are implicitly enumerated
 
-    TK_AND = 256,   // &&
+    TK_AND = 128,   // &&
     TK_CAT,         // ::
     TK_DEC,         // --
     TK_EQ,          // ==
