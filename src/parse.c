@@ -22,6 +22,7 @@ static void check(parser_t *y, int tk) {
 // LBP for non-unary operators
 static int lbp(int tk) {
     switch (tk) {
+    case TK_INC: case TK_DEC:     return 15;
     case TK_POW:                  return 14;
     case '*': case '/': case '%': return 12;
     case '+': case '-':           return 11;
@@ -74,7 +75,7 @@ static void literal(parser_t *y) {
 }
 
 static void identifier(parser_t *y) {
-    // c_symbol(y->c, &y->x->tk);
+    c_symbol(y->c, &y->x->tk);
 }
 
 #define UBP 12
@@ -94,9 +95,11 @@ static void nud(parser_t *y) {
         check(y, ')');
         return;
     case '{': // New array/table?
-    case TK_DEC: // Pre-decrement
-    case TK_INC: // Pre-increment
-        break;
+    case TK_INC: case TK_DEC:
+        adv(y);
+        expr(y, 14);
+        c_prefix(y->c, tk);
+        return;
     case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
         break;
@@ -114,12 +117,18 @@ static void led(parser_t *y, int tk) {
     c_infix(y->c, tk);
 }
 
+// TODO Hacky logic for prefix and postfix ops; requires cleanup
 static int expr(parser_t *y, int rbp) {
     nud(y);
     int op = y->x->tk.kind;
 
     // Hack for unary
     if (!lbp(op)) {
+        adv(y);
+        op = y->x->tk.kind;
+    }
+    if (op == TK_INC || op == TK_DEC) {
+        c_postfix(y->c, op);
         adv(y);
         op = y->x->tk.kind;
     }
@@ -172,15 +181,22 @@ static void stmt(parser_t *y) {
 }
 
 static void stmt_list(parser_t *y) {
+    while (y->x->tk.kind != TK_EOI)
+        stmt(y);
+}
+
+static void y_init(parser_t *y, const char *src) {
+    y->a = 0;
+    x_init(y->x, src);
 }
 
 int y_compile(const char *src, code_t *c) {
     parser_t y;
     lexer_t x;
-    x_init(&x, src);
     y.x = &x;
     y.c = c;
-    stmt(&y);
+    y_init(&y, src);
+    stmt_list(&y);
     return 0;
 }
 

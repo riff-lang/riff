@@ -103,8 +103,26 @@ void c_constant(code_t *c, token_t *tk) {
     c_push(c, (uint8_t) c->k.n - 1);
 }
 
-// void c_symbol(code_t *c, token_t *tk) {
-// }
+void c_symbol(code_t *c, token_t *tk) {
+    // Search for existing symbol
+    for (int i = 0; i < c->k.n; i++) {
+        if (c->k.v[i]->type != TYPE_STR)
+            break;
+        else if (tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
+            c_push(c, OP_PUSHS);
+            c_push(c, (uint8_t) i);
+            return;
+        }
+    }
+    val_t *v;
+    v = v_newstr(tk->lexeme.s);
+    eval_resize(c->k.v, c->k.n, c->k.cap);
+    c->k.v[c->k.n++] = v;
+    if (c->k.n > 255)
+        err(c, "Exceeded max number of unique literals");
+    c_push(c, OP_PUSHS);
+    c_push(c, (uint8_t) c->k.n - 1);
+}
 
 void c_infix(code_t *c, int op) {
     switch (op) {
@@ -138,9 +156,16 @@ void c_prefix(code_t *c, int op) {
     case '+': c_push(c, OP_NUM);  break;
     case '-': c_push(c, OP_NEG);  break;
     case '~': c_push(c, OP_NOT);  break;
+    case TK_INC: c_push(c, OP_PREINC); break;
+    case TK_DEC: c_push(c, OP_PREDEC); break;
     default: break;
     }
 }
 
 void c_postfix(code_t *c, int op) {
+    switch (op) {
+    case TK_INC: c_push(c, OP_POSTINC); break;
+    case TK_DEC: c_push(c, OP_POSTDEC); break;
+    default: break;
+    }
 }

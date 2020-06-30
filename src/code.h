@@ -36,15 +36,17 @@ enum opcodes {
     OP_LNOT,    // Logical NOT
     OP_CALL,    // Function call
     OP_CAT,     // Concatenate
-    OP_INC,     // Increment
-    OP_DEC,     // Decrement
+    OP_PREINC,  // Pre-increment
+    OP_PREDEC,  // Pre-decrement
+    OP_POSTINC, // Post-increment
+    OP_POSTDEC, // Post-decrement
     OP_LEN,     // Length
     OP_POP,     // Pop from stack
     OP_PUSH0,   // Push literal `0` on stack
     OP_PUSH1,   // Push literal `1` on stack
     OP_PUSH2,   // Push literal `2` on stack
     OP_PUSHI,   // Push immediate value on stack
-    OP_PUSHK,   // Push constant value on stack
+    OP_PUSHK,   // Push constant as literal value on stack
     OP_PUSHS,   // Push symbol on stack
     OP_RET,     // Return
     OP_RET0,
@@ -60,12 +62,7 @@ typedef struct {
         int     n;
         int     cap;
         val_t **v;
-    } k; // Literal constants
-    // struct {
-    //     int     n;
-    //     int     cap;
-    //     str_t **s;
-    // } s; // Symbols
+    } k; // Constants table
 } code_t;
 
 void c_init(code_t *);
