@@ -27,6 +27,21 @@ void c_free(code_t *c) {
     c_init(c);
 }
 
+// Emits a jump instruction and returns the location of the byte to be
+// patched
+int c_prep_jump(code_t *c, int type) {
+    if (type)
+        c_push(c, OP_JMP8);
+    else
+        c_push(c, OP_JZ8);
+    c_push(c, 0x00); // Reserve byte
+    return c->n - 1;
+}
+
+void c_patch(code_t *c, int loc) {
+    c->code[loc] = (uint8_t) c->n;
+}
+
 // Add a val_t literal to a code object's constant table, if
 // necessary
 void c_constant(code_t *c, token_t *tk) {

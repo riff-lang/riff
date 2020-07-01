@@ -11,7 +11,7 @@ static void err(parser_t *y, const char *msg) {
     exit(1);
 }
 
-static void check(parser_t *y, int tk) {
+static void check_char(parser_t *y, int tk) {
     if (y->x->tk.kind != tk) {
         char msg[20];
         sprintf(msg, "Missing '%c'", tk);
@@ -19,7 +19,7 @@ static void check(parser_t *y, int tk) {
     }
 }
 
-// LBP for non-unary operators
+// LBP for non-prefix operators
 static int lbp(int tk) {
     switch (tk) {
     case TK_INC: case TK_DEC:     return 15;
@@ -36,7 +36,7 @@ static int lbp(int tk) {
     case '|':                     return 5;
     case TK_AND:                  return 4;
     case TK_OR:                   return 3;
-    case '?': case ':':           return 2;
+    case '?':                     return 2;
     case '=':
     case TK_ADD_ASSIGN: case TK_AND_ASSIGN: case TK_DIV_ASSIGN:
     case TK_MOD_ASSIGN: case TK_MUL_ASSIGN: case TK_OR_ASSIGN:
@@ -78,7 +78,17 @@ static void identifier(parser_t *y) {
     c_symbol(y->c, &y->x->tk);
 }
 
-#define UBP 12
+static void conditional(parser_t *y) {
+    int l1, l2;
+    l1 = c_prep_jump(y->c, 0);
+    expr(y, 0);
+    l2 = c_prep_jump(y->c, 1);
+    c_patch(y->c, l1);
+    check_char(y, ':');
+    adv(y);
+    expr(y, 0);
+    c_patch(y->c, l2);
+}
 
 static void nud(parser_t *y) {
     int tk = y->x->tk.kind;
@@ -92,7 +102,7 @@ static void nud(parser_t *y) {
     case '(':
         adv(y);
         expr(y, 0);
-        check(y, ')');
+        check_char(y, ')');
         return;
     case '{': // New array/table?
     case TK_INC: case TK_DEC:
@@ -110,11 +120,13 @@ static void nud(parser_t *y) {
     }
 }
 
-#undef UBP
-
 static void led(parser_t *y, int tk) {
-    expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
-    c_infix(y->c, tk);
+    if (tk == '?') {
+        conditional(y);
+    } else if (lbop(tk) || rbop(tk)) {
+        expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
+        c_infix(y->c, tk);
+    }
 }
 
 // TODO Hacky logic for prefix and postfix ops; requires cleanup

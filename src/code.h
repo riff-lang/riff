@@ -8,9 +8,10 @@
 #include "val.h"
 
 enum opcodes {
-    OP_JMP,     // Jump
-    OP_JZ,      // Jump if zero
-    OP_JNZ,     // Jump if not zero
+    OP_JMP8,    // Jump (1-byte address)
+    OP_JMP16,   // Jump (2-byte address)
+    OP_JZ8,     // Jump if zero (1-byte address)
+    OP_JZ16,    // Jump if zero (2-byte address)
     OP_ADD,     // Add
     OP_SUB,     // Substract
     OP_MUL,     // Multiply
@@ -73,5 +74,7 @@ void c_symbol(code_t *, token_t *);
 void c_prefix(code_t *, int);
 void c_infix(code_t *, int);
 void c_postfix(code_t *, int);
+void c_patch(code_t *, int);
+int  c_prep_jump(code_t *, int);
 
 #endif
