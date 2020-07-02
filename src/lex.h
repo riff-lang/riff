@@ -21,30 +21,30 @@ typedef struct {
 enum tokens {
     // NOTE: Single character tokens are implicitly enumerated
 
-    TK_AND = 128,   // &&
-    TK_CAT,         // ::
-    TK_DEC,         // --
-    TK_EQ,          // ==
-    TK_GE,          // >=
-    TK_INC,         // ++
-    TK_LE,          // <=
-    TK_NE,          // !=
-    TK_OR,          // ||
-    TK_POW,         // **
-    TK_SHL,         // <<
-    TK_SHR,         // >>
-    TK_ADD_ASSIGN,  // +=
-    TK_AND_ASSIGN,  // &=
-    TK_DIV_ASSIGN,  // /=
-    TK_MOD_ASSIGN,  // %=
-    TK_MUL_ASSIGN,  // *=
-    TK_OR_ASSIGN,   // |=
-    TK_SUB_ASSIGN,  // -=
-    TK_XOR_ASSIGN,  // ^=
-    TK_CAT_ASSIGN,  // ::=
-    TK_POW_ASSIGN,  // **=
-    TK_SHL_ASSIGN,  // <<=
-    TK_SHR_ASSIGN,  // >>=
+    TK_AND = 128, // &&
+    TK_CAT,       // ::
+    TK_DEC,       // --
+    TK_EQ,        // ==
+    TK_GE,        // >=
+    TK_INC,       // ++
+    TK_LE,        // <=
+    TK_NE,        // !=
+    TK_OR,        // ||
+    TK_POW,       // **
+    TK_SHL,       // <<
+    TK_SHR,       // >>
+    TK_ADDASG,    // +=
+    TK_ANDASG,    // &=
+    TK_DIVASG,    // /=
+    TK_MODASG,    // %=
+    TK_MULASG,    // *=
+    TK_ORASG,     // |=
+    TK_SUBASG,    // -=
+    TK_XORASG,    // ^=
+    TK_CATASG,    // ::=
+    TK_POWASG,    // **=
+    TK_SHLASG,    // <<=
+    TK_SHRASG,    // >>=
 
     // Keywords
     TK_BREAK,

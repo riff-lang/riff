@@ -14,6 +14,11 @@ enum opcodes {
     OP_JNZ16,   // Jump if non-zero (2-byte address)
     OP_JZ8,     // Jump if zero (1-byte address)
     OP_JZ16,    // Jump if zero (2-byte address)
+    OP_LJZ8,    // Logical jump if zero (1-byte address)
+    OP_LJNZ8,   // Logical jump if non-zero (1-byte address)
+    OP_LJZ16,   // Logical jump if zero (2-byte address)
+    OP_LJNZ16,  // Logical jump if non-zero (2-byte address)
+    OP_TEST,
     OP_ADD,     // Add
     OP_SUB,     // Substract
     OP_MUL,     // Multiply
@@ -34,8 +39,6 @@ enum opcodes {
     OP_GE,      // Greater-than or equal-to
     OP_LT,      // Less-than
     OP_LE,      // Less-than or equal-to
-    OP_LAND,    // Logical AND
-    OP_LOR,     // Logical OR
     OP_LNOT,    // Logical NOT
     OP_CALL,    // Function call
     OP_CAT,     // Concatenate
@@ -50,9 +53,16 @@ enum opcodes {
     OP_PUSH2,   // Push literal `2` on stack
     OP_PUSHI,   // Push immediate value on stack
     OP_PUSHK,   // Push constant as literal value on stack
+    OP_PUSHK0,  // Push 0th constant on stack as value
+    OP_PUSHK1,  // Push 1st constant on stack as value
+    OP_PUSHK2,  // Push 2nd constant on stack as value
     OP_PUSHS,   // Push symbol on stack
+    OP_PUSHS0,  // Push 0th symbol on stack
+    OP_PUSHS1,  // Push 1st symbol on stack
+    OP_PUSHS2,  // Push 2nd symbol on stack
+    OP_RET0,    // Return 0
+    OP_RET1,    // Return 1
     OP_RET,     // Return
-    OP_RET0,
     OP_SET,     // Set
     OP_PRINT
 };

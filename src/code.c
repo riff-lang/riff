@@ -29,19 +29,26 @@ void c_free(code_t *c) {
 
 // Emits a jump instruction and returns the location of the byte to be
 // patched
-int c_prep_jump(code_t *c, int type) {
-    switch (type) {
-    case 0: c_push(c, OP_JZ8); break;
-    case 1: c_push(c, OP_JNZ8); break;
-    case 2: c_push(c, OP_JMP8); break;
-    default: break;
-    }
+int c_prep_jump(code_t *c, int jmp) {
+    c_push(c, jmp);
     c_push(c, 0x00); // Reserve byte
     return c->n - 1;
 }
 
 void c_patch(code_t *c, int loc) {
     c->code[loc] = (uint8_t) c->n;
+}
+
+static void c_pushk(code_t *c, int i) {
+    switch (i) {
+    case 0: c_push(c, OP_PUSHK0); break;
+    case 1: c_push(c, OP_PUSHK1); break;
+    case 2: c_push(c, OP_PUSHK2); break;
+    default:
+        c_push(c, OP_PUSHK);
+        c_push(c, (uint8_t) i);
+        break;
+    }
 }
 
 // Add a val_t literal to a code object's constant table, if
@@ -55,8 +62,7 @@ void c_constant(code_t *c, token_t *tk) {
             if (c->k.v[i]->type != TYPE_FLT)
                 break;
             else if (tk->lexeme.f == c->k.v[i]->u.f) {
-                c_push(c, OP_PUSHK);
-                c_push(c, (uint8_t) i);
+                c_pushk(c, i);
                 return;
             }
             break;
@@ -64,8 +70,7 @@ void c_constant(code_t *c, token_t *tk) {
             if (c->k.v[i]->type != TYPE_INT)
                 break;
             else if (tk->lexeme.i == c->k.v[i]->u.i) {
-                c_push(c, OP_PUSHK);
-                c_push(c, (uint8_t) i);
+                c_pushk(c, i);
                 return;
             }
             break;
@@ -73,8 +78,7 @@ void c_constant(code_t *c, token_t *tk) {
             if (c->k.v[i]->type != TYPE_STR)
                 break;
             else if (tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
-                c_push(c, OP_PUSHK);
-                c_push(c, (uint8_t) i);
+                c_pushk(c, i);
                 return;
             }
             break;
@@ -116,8 +120,19 @@ void c_constant(code_t *c, token_t *tk) {
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
-    c_push(c, OP_PUSHK);
-    c_push(c, (uint8_t) c->k.n - 1);
+    c_pushk(c, c->k.n - 1);
+}
+
+static void c_pushs(code_t *c, int i) {
+    switch (i) {
+    case 0: c_push(c, OP_PUSHS0); break;
+    case 1: c_push(c, OP_PUSHS1); break;
+    case 2: c_push(c, OP_PUSHS2); break;
+    default:
+        c_push(c, OP_PUSHS);
+        c_push(c, (uint8_t) i);
+        break;
+    }
 }
 
 void c_symbol(code_t *c, token_t *tk) {
@@ -126,8 +141,7 @@ void c_symbol(code_t *c, token_t *tk) {
         if (c->k.v[i]->type != TYPE_STR)
             break;
         else if (tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
-            c_push(c, OP_PUSHS);
-            c_push(c, (uint8_t) i);
+            c_pushs(c, i);
             return;
         }
     }
@@ -137,8 +151,7 @@ void c_symbol(code_t *c, token_t *tk) {
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
-    c_push(c, OP_PUSHS);
-    c_push(c, (uint8_t) c->k.n - 1);
+    c_pushs(c, c->k.n - 1);
 }
 
 void c_infix(code_t *c, int op) {

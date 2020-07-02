@@ -20,11 +20,13 @@ static struct {
     [OP_JNZ16]   = { "jnz",      2 },
     [OP_JZ8]     = { "jz",       1 },
     [OP_JZ16]    = { "jz",       2 },
-    [OP_LAND]    = { "land",     0 },
     [OP_LEN]     = { "len",      0 },
     [OP_LE]      = { "le",       0 },
+    [OP_LJNZ8]   = { "ljnz",     1 },
+    [OP_LJNZ16]  = { "ljnz",     2 },
+    [OP_LJZ8]    = { "ljz",      1 },
+    [OP_LJZ16]   = { "ljz",      2 },
     [OP_LNOT]    = { "lnot",     0 },
-    [OP_LOR]     = { "lor",      0 },
     [OP_LT]      = { "lt",       0 },
     [OP_MOD]     = { "mod",      0 },
     [OP_MUL]     = { "mul",      0 },
@@ -45,13 +47,21 @@ static struct {
     [OP_PUSH2]   = { "pushi  2", 0 },
     [OP_PUSHI]   = { "pushi",    1 },
     [OP_PUSHK]   = { "pushk",    1 },
+    [OP_PUSHK0]  = { "pushk  0", 0 },
+    [OP_PUSHK1]  = { "pushk  1", 0 },
+    [OP_PUSHK2]  = { "pushk  2", 0 },
     [OP_PUSHS]   = { "pushs",    1 },
-    [OP_RET0]    = { "ret",      0 },
+    [OP_PUSHS0]  = { "pushs  0", 0 },
+    [OP_PUSHS1]  = { "pushs  1", 0 },
+    [OP_PUSHS2]  = { "pushs  2", 0 },
+    [OP_RET0]    = { "ret    0", 0 },
+    [OP_RET1]    = { "ret    1", 0 },
     [OP_RET]     = { "ret",      0 },
     [OP_SET]     = { "set",      0 },
     [OP_SHL]     = { "shl",      0 },
     [OP_SHR]     = { "shr",      0 },
     [OP_SUB]     = { "sub",      0 },
+    [OP_TEST]    = { "test",     0 },
     [OP_XOR]     = { "xor",      0 }
 };
 
@@ -59,10 +69,14 @@ static struct {
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
 #define INST0       "%*d| %02x       %-6s\n"
+#define INST0DEREF  "%*d| %02x       %-6s    // %s\n"
 #define INST1       "%*d| %02x %02x    %-6s %d\n"
 #define INST1DEREF  "%*d| %02x %02x    %-6s %d    // %s\n"
 
 #define OPND(x)     (c->k.v[b1]->u.x)
+#define OPND0(x)    (c->k.v[0]->u.x)
+#define OPND1(x)    (c->k.v[1]->u.x)
+#define OPND2(x)    (c->k.v[2]->u.x)
 
 void d_code_chunk(code_t *c) {
     int sz  = c->n;
@@ -105,6 +119,72 @@ void d_code_chunk(code_t *c) {
                 break;
             }
             ip += 2;
+        } else if (b0 >= OP_PUSHK0 && b0 <= OP_PUSHS2) {
+            switch (b0) {
+            case OP_PUSHK0:
+                switch (c->k.v[0]->type) {
+                case TYPE_FLT:
+                    sprintf(s, "(flt) %g", OPND0(f));
+                    break;
+                case TYPE_INT:
+                    sprintf(s, "(int) %lld", OPND0(i));
+                    break;
+                case TYPE_STR:
+                    sprintf(s, "(str) \"%s\"", OPND0(s->str));
+                    break;
+                default:
+                    break;
+                }
+                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                break;
+            case OP_PUSHK1:
+                switch (c->k.v[1]->type) {
+                case TYPE_FLT:
+                    sprintf(s, "(flt) %g", OPND1(f));
+                    break;
+                case TYPE_INT:
+                    sprintf(s, "(int) %lld", OPND1(i));
+                    break;
+                case TYPE_STR:
+                    sprintf(s, "(str) \"%s\"", OPND1(s->str));
+                    break;
+                default:
+                    break;
+                }
+                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                break;
+            case OP_PUSHK2:
+                switch (c->k.v[2]->type) {
+                case TYPE_FLT:
+                    sprintf(s, "(flt) %g", OPND2(f));
+                    break;
+                case TYPE_INT:
+                    sprintf(s, "(int) %lld", OPND2(i));
+                    break;
+                case TYPE_STR:
+                    sprintf(s, "(str) \"%s\"", OPND2(s->str));
+                    break;
+                default:
+                    break;
+                }
+                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                break;
+            case OP_PUSHS0:
+                sprintf(s, "%s", OPND0(s->str));
+                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                break;
+            case OP_PUSHS1:
+                sprintf(s, "%s", OPND1(s->str));
+                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                break;
+            case OP_PUSHS2:
+                sprintf(s, "%s", OPND2(s->str));
+                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                break;
+            default:
+                break;
+            }
+            ip += 1;
         } else {
             printf(INST0, ipw, ip, b0, OP_MNEMONIC);
             ip += 1;
@@ -115,9 +195,13 @@ void d_code_chunk(code_t *c) {
 #undef OP_ARITY
 #undef OP_MNEMONIC
 #undef INST0
+#undef INST0DEREF
 #undef INST1
 #undef INST1DEREF
 #undef OPND
+#undef OPND0
+#undef OPND1
+#undef OPND2
 
 static const char *tokenstr[] = {
     [TK_AND] =

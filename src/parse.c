@@ -6,12 +6,13 @@
 #define adv(y)  x_adv(y->x)
 #define push(b) c_push(y->c, b)
 
-static int is_assignment(int tk) {
-    return tk == '=' || (tk >= TK_ADD_ASSIGN && tk <= TK_XOR_ASSIGN);
-}
 static void err(parser_t *y, const char *msg) {
     fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
     exit(1);
+}
+
+static int is_asgmt(int tk) {
+    return tk == '=' || (tk >= TK_ADDASG && tk <= TK_XORASG);
 }
 
 static void check_char(parser_t *y, int tk) {
@@ -25,6 +26,7 @@ static void check_char(parser_t *y, int tk) {
 // LBP for non-prefix operators
 static int lbp(int tk) {
     switch (tk) {
+    case '(': case'[':
     case TK_INC: case TK_DEC:     return 15;
     case TK_POW:                  return 14;
     case '*': case '/': case '%': return 12;
@@ -40,13 +42,8 @@ static int lbp(int tk) {
     case TK_AND:                  return 4;
     case TK_OR:                   return 3;
     case '?':                     return 2;
-    case '=':
-    case TK_ADD_ASSIGN: case TK_AND_ASSIGN: case TK_DIV_ASSIGN:
-    case TK_MOD_ASSIGN: case TK_MUL_ASSIGN: case TK_OR_ASSIGN:
-    case TK_SUB_ASSIGN: case TK_XOR_ASSIGN: case TK_CAT_ASSIGN:
-    case TK_POW_ASSIGN: case TK_SHL_ASSIGN: case TK_SHR_ASSIGN:
-        return 1;
-    default: return 0;
+    default:
+        return is_asgmt(tk);
     }
 }
 
@@ -65,8 +62,7 @@ static int lbop(int tk) {
 }
 
 static int rbop(int tk) {
-    return tk == '=' || tk == TK_POW ||
-           (tk >= TK_ADD_ASSIGN && tk <= TK_XOR_ASSIGN);
+    return is_asgmt(tk) || tk == TK_POW;
 }
 
 static int expr(parser_t *y, int rbp);
@@ -83,14 +79,14 @@ static void conditional(parser_t *y) {
     int l1, l2;
     if (y->x->tk.kind == ':') {
         adv(y);
-        l1 = c_prep_jump(y->c, 1);
+        l1 = c_prep_jump(y->c, OP_JNZ8);
         push(OP_POP); // TODO JZ pops from stack but not JNZ??
         expr(y, 0);
         c_patch(y->c, l1);
     } else {
-        l1 = c_prep_jump(y->c, 0);
+        l1 = c_prep_jump(y->c, OP_JZ8);
         expr(y, 0);
-        l2 = c_prep_jump(y->c, 2);
+        l2 = c_prep_jump(y->c, OP_JMP8);
         c_patch(y->c, l1);
         check_char(y, ':');
         adv(y);
@@ -129,13 +125,28 @@ static void nud(parser_t *y) {
     }
 }
 
+// Short-circuiting logical operations (&&, ||)
+static void logical(parser_t *y, int tk) {
+    push(OP_TEST);
+    int l1 = c_prep_jump(y->c, tk == TK_OR ? OP_LJNZ8 : OP_LJZ8);
+    // push(OP_POP);
+    expr(y, lbp(tk));
+    push(OP_TEST);
+    c_patch(y->c, l1);
+}
+
 static void led(parser_t *y, int tk) {
-    if (tk == '?') {
-        conditional(y);
-    } else if (lbop(tk) || rbop(tk)) {
-        if (is_assignment(tk)) y->a = 1;
-        expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
-        c_infix(y->c, tk);
+    switch (tk) {
+    case '?':    conditional(y); break;
+    case TK_AND:
+    case TK_OR:  logical(y, tk); break;
+    default:
+        if (lbop(tk) || rbop(tk)) {
+            if (is_asgmt(tk)) y->a = 1;
+            expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
+            c_infix(y->c, tk);
+        }
+        break;
     }
 }
 
@@ -183,13 +194,30 @@ static void for_stmt(parser_t *y) {
 
 static void if_stmt(parser_t *y) {
     expr(y, 0);
-    int l1 = c_prep_jump(y->c, 0);
+    int l1, l2;
+    l1 = c_prep_jump(y->c, OP_JZ8);
     if (y->x->tk.kind == '{') {
         stmt_list(y);
         check_char(y, '}');
     } else
         stmt(y);
-    c_patch(y->c, l1);
+    if (y->x->tk.kind == TK_ELSE) {
+        adv(y);
+        l2 = c_prep_jump(y->c, OP_JMP8);
+        c_patch(y->c, l1);
+        if (y->x->tk.kind == '{') {
+            stmt_list(y);
+            check_char(y, '}');
+        } else
+            stmt(y);
+        c_patch(y->c, l2);
+    } else
+        c_patch(y->c, l1);
+}
+
+static void print_stmt(parser_t *y) {
+    expr(y, 0);
+    push(OP_PRINT);
 }
 
 static void ret_stmt(parser_t *y) {
@@ -207,6 +235,7 @@ static void stmt(parser_t *y) {
     case TK_FOR:    adv(y); for_stmt(y);   break;
     case TK_IF:     adv(y); if_stmt(y);    break;
     case TK_LOCAL: break;
+    case TK_PRINT:  adv(y); print_stmt(y); break;
     case TK_RETURN: adv(y); ret_stmt(y);   break;
     case TK_WHILE:  adv(y); while_stmt(y); break;
     default: expr_stmt(y);                 break;
