@@ -214,9 +214,9 @@ static void stmt(parser_t *y) {
 }
 
 static void stmt_list(parser_t *y) {
-    while (y->x->tk.kind != TK_EOI)
+    while (!(y->x->tk.kind == TK_EOI ||
+             y->x->tk.kind == '}'))
         stmt(y);
-    push(OP_RET0);
 }
 
 static void y_init(parser_t *y, const char *src) {
@@ -231,6 +231,7 @@ int y_compile(const char *src, code_t *c) {
     y.c = c;
     y_init(&y, src);
     stmt_list(&y);
+    c_push(c, OP_RET0);
     return 0;
 }
 
