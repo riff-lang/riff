@@ -16,6 +16,8 @@ static struct {
     [OP_GT]      = { "gt",       0 },
     [OP_JMP8]    = { "jmp",      1 },
     [OP_JMP16]   = { "jmp",      2 },
+    [OP_JNZ8]    = { "jnz",      1 },
+    [OP_JNZ16]   = { "jnz",      2 },
     [OP_JZ8]     = { "jz",       1 },
     [OP_JZ16]    = { "jz",       2 },
     [OP_LAND]    = { "land",     0 },

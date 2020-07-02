@@ -6,6 +6,9 @@
 #define adv(y)  x_adv(y->x)
 #define push(b) c_push(y->c, b)
 
+static int is_assignment(int tk) {
+    return tk == '=' || (tk >= TK_ADD_ASSIGN && tk <= TK_XOR_ASSIGN);
+}
 static void err(parser_t *y, const char *msg) {
     fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
     exit(1);
@@ -52,8 +55,6 @@ static int uop(int tk) {
            tk == '-' || tk == '~';
 }
 
-// TODO: Ternary (?:)
-
 static int lbop(int tk) {
     return tk == '%' || tk == '&' || tk == '(' || tk == '*' ||
            tk == '+' || tk == '-' || tk == '/' || tk == '<' ||
@@ -80,14 +81,22 @@ static void identifier(parser_t *y) {
 
 static void conditional(parser_t *y) {
     int l1, l2;
-    l1 = c_prep_jump(y->c, 0);
-    expr(y, 0);
-    l2 = c_prep_jump(y->c, 1);
-    c_patch(y->c, l1);
-    check_char(y, ':');
-    adv(y);
-    expr(y, 0);
-    c_patch(y->c, l2);
+    if (y->x->tk.kind == ':') {
+        adv(y);
+        l1 = c_prep_jump(y->c, 1);
+        push(OP_POP); // TODO JZ pops from stack but not JNZ??
+        expr(y, 0);
+        c_patch(y->c, l1);
+    } else {
+        l1 = c_prep_jump(y->c, 0);
+        expr(y, 0);
+        l2 = c_prep_jump(y->c, 2);
+        c_patch(y->c, l1);
+        check_char(y, ':');
+        adv(y);
+        expr(y, 0);
+        c_patch(y->c, l2);
+    }
 }
 
 static void nud(parser_t *y) {
@@ -124,6 +133,7 @@ static void led(parser_t *y, int tk) {
     if (tk == '?') {
         conditional(y);
     } else if (lbop(tk) || rbop(tk)) {
+        if (is_assignment(tk)) y->a = 1;
         expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
         c_infix(y->c, tk);
     }
@@ -162,6 +172,9 @@ static void expr_stmt(parser_t *y) {
     y->a = 0;
 }
 
+static void stmt_list(parser_t *);
+static void stmt(parser_t *);
+
 static void fn_def(parser_t *y) {
 }
 
@@ -169,6 +182,14 @@ static void for_stmt(parser_t *y) {
 }
 
 static void if_stmt(parser_t *y) {
+    expr(y, 0);
+    int l1 = c_prep_jump(y->c, 0);
+    if (y->x->tk.kind == '{') {
+        stmt_list(y);
+        check_char(y, '}');
+    } else
+        stmt(y);
+    c_patch(y->c, l1);
 }
 
 static void ret_stmt(parser_t *y) {
@@ -195,6 +216,7 @@ static void stmt(parser_t *y) {
 static void stmt_list(parser_t *y) {
     while (y->x->tk.kind != TK_EOI)
         stmt(y);
+    push(OP_RET0);
 }
 
 static void y_init(parser_t *y, const char *src) {
@@ -213,3 +235,4 @@ int y_compile(const char *src, code_t *c) {
 }
 
 #undef adv
+#undef push

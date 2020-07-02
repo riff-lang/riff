@@ -10,6 +10,8 @@
 enum opcodes {
     OP_JMP8,    // Jump (1-byte address)
     OP_JMP16,   // Jump (2-byte address)
+    OP_JNZ8,    // Jump if non-zero (1-byte address)
+    OP_JNZ16,   // Jump if non-zero (2-byte address)
     OP_JZ8,     // Jump if zero (1-byte address)
     OP_JZ16,    // Jump if zero (2-byte address)
     OP_ADD,     // Add

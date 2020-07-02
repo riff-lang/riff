@@ -30,10 +30,12 @@ void c_free(code_t *c) {
 // Emits a jump instruction and returns the location of the byte to be
 // patched
 int c_prep_jump(code_t *c, int type) {
-    if (type)
-        c_push(c, OP_JMP8);
-    else
-        c_push(c, OP_JZ8);
+    switch (type) {
+    case 0: c_push(c, OP_JZ8); break;
+    case 1: c_push(c, OP_JNZ8); break;
+    case 2: c_push(c, OP_JMP8); break;
+    default: break;
+    }
     c_push(c, 0x00); // Reserve byte
     return c->n - 1;
 }
