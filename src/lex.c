@@ -24,8 +24,10 @@ static bool valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
-static int read_flt(lexer_t *x, token_t *tk, const char *start) {
+static int read_flt(lexer_t *x, token_t *tk, const char *start, int base) {
     char *end;
+    if (base == 16)
+        start -= 2;
     double d = strtod(start, &end);
     if (valid_alphanum(*end))
         err(x, "Invalid numeral");
@@ -39,7 +41,7 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
     uint64_t i = strtoull(start, &end, base);
     if (*end == '.') {
         if (base != 2)
-            return read_flt(x, tk, start);
+            return read_flt(x, tk, start, base);
         else
             err(x, "Invalid numeral");
     }
@@ -51,7 +53,7 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
     // This is a hacky way of handling the base-10 INT64_MIN with a
     // leading unary minus sign, e.g. `-9223372036854775808`
     if ((base == 10 && i > INT64_MAX) || (errno == ERANGE))
-        return read_flt(x, tk, start);
+        return read_flt(x, tk, start, base);
     x->p = end;
     tk->lexeme.i = i;
     return TK_INT;
@@ -64,7 +66,7 @@ static int read_num(lexer_t *x, token_t *tk) {
     // Quickly evaluate floating-point numbers with no integer part
     // before the decimal mark, e.g. `.12`
     if (*start == '.')
-        return read_flt(x, tk, start);
+        return read_flt(x, tk, start, 10);
 
     int base = 10;
     if (*start == '0') {
