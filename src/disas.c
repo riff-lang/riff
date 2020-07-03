@@ -97,13 +97,13 @@ void d_code_chunk(code_t *c) {
             case OP_PUSHK:
                 switch (c->k.v[b1]->type) {
                 case TYPE_FLT:
-                    sprintf(s, "(flt) %g", OPND(f));
+                    sprintf(s, "%g", OPND(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "(int) %lld", OPND(i));
+                    sprintf(s, "%lld", OPND(i));
                     break;
                 case TYPE_STR:
-                    sprintf(s, "(str) \"%s\"", OPND(s->str));
+                    sprintf(s, "\"%s\"", OPND(s->str));
                     break;
                 default:
                     break;
@@ -124,13 +124,13 @@ void d_code_chunk(code_t *c) {
             case OP_PUSHK0:
                 switch (c->k.v[0]->type) {
                 case TYPE_FLT:
-                    sprintf(s, "(flt) %g", OPND0(f));
+                    sprintf(s, "%g", OPND0(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "(int) %lld", OPND0(i));
+                    sprintf(s, "%lld", OPND0(i));
                     break;
                 case TYPE_STR:
-                    sprintf(s, "(str) \"%s\"", OPND0(s->str));
+                    sprintf(s, "\"%s\"", OPND0(s->str));
                     break;
                 default:
                     break;
@@ -140,13 +140,13 @@ void d_code_chunk(code_t *c) {
             case OP_PUSHK1:
                 switch (c->k.v[1]->type) {
                 case TYPE_FLT:
-                    sprintf(s, "(flt) %g", OPND1(f));
+                    sprintf(s, "%g", OPND1(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "(int) %lld", OPND1(i));
+                    sprintf(s, "%lld", OPND1(i));
                     break;
                 case TYPE_STR:
-                    sprintf(s, "(str) \"%s\"", OPND1(s->str));
+                    sprintf(s, "\"%s\"", OPND1(s->str));
                     break;
                 default:
                     break;
@@ -156,13 +156,13 @@ void d_code_chunk(code_t *c) {
             case OP_PUSHK2:
                 switch (c->k.v[2]->type) {
                 case TYPE_FLT:
-                    sprintf(s, "(flt) %g", OPND2(f));
+                    sprintf(s, "%g", OPND2(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "(int) %lld", OPND2(i));
+                    sprintf(s, "%lld", OPND2(i));
                     break;
                 case TYPE_STR:
-                    sprintf(s, "(str) \"%s\"", OPND2(s->str));
+                    sprintf(s, "\"%s\"", OPND2(s->str));
                     break;
                 default:
                     break;
