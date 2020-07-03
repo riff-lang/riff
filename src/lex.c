@@ -119,6 +119,11 @@ static int read_id(lexer_t *x, token_t *tk) {
             x->p += 4;
             return TK_BREAK;
         } else break;
+    case 'd':
+        if (check_kw(x, "o", 1)) {
+            x->p += 1;
+            return TK_DO;
+        } else break;
     case 'e':
         switch (*x->p) {
         case 'l':
@@ -133,11 +138,6 @@ static int read_id(lexer_t *x, token_t *tk) {
             } else break;
         }
         break;
-    case 'i':
-        if (check_kw(x, "f", 1)) {
-            x->p += 1;
-            return TK_IF;
-        } else break;
     case 'f':
         switch (*x->p) {
         case 'n':
@@ -152,6 +152,11 @@ static int read_id(lexer_t *x, token_t *tk) {
             } else break;
         }
         break;
+    case 'i':
+        if (check_kw(x, "f", 1)) {
+            x->p += 1;
+            return TK_IF;
+        } else break;
     case 'l':
         if (check_kw(x, "ocal", 4)) {
             x->p += 4;

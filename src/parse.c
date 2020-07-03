@@ -15,12 +15,15 @@ static int is_asgmt(int tk) {
     return tk == '=' || (tk >= TK_ADDASG && tk <= TK_XORASG);
 }
 
-static void check_char(parser_t *y, int tk) {
-    if (y->x->tk.kind != tk) {
-        char msg[20];
-        sprintf(msg, "Missing '%c'", tk);
+static void check(parser_t *y, int tk, const char *msg) {
+    if (y->x->tk.kind != tk)
         err(y, msg);
-    }
+}
+
+static void consume(parser_t *y, int tk, const char *msg) {
+    if (y->x->tk.kind != tk)
+        err(y, msg);
+    adv(y);
 }
 
 // LBP for non-prefix operators
@@ -77,19 +80,23 @@ static void identifier(parser_t *y) {
 
 static void conditional(parser_t *y) {
     int l1, l2;
+
+    // x ?: y
     if (y->x->tk.kind == ':') {
         adv(y);
         l1 = c_prep_jump(y->c, OP_JNZ8);
         push(OP_POP); // TODO JZ pops from stack but not JNZ??
         expr(y, 0);
         c_patch(y->c, l1);
-    } else {
+    }
+
+    // x ? y : z
+    else {
         l1 = c_prep_jump(y->c, OP_JZ8);
         expr(y, 0);
         l2 = c_prep_jump(y->c, OP_JMP8);
         c_patch(y->c, l1);
-        check_char(y, ':');
-        adv(y);
+        consume(y, ':', "Expected ':'");
         expr(y, 0);
         c_patch(y->c, l2);
     }
@@ -107,7 +114,7 @@ static void nud(parser_t *y) {
     case '(':
         adv(y);
         expr(y, 0);
-        check_char(y, ')');
+        check(y, ')', "Expected ')'");
         return;
     case '{': // New array/table?
     case TK_INC: case TK_DEC:
@@ -186,6 +193,21 @@ static void expr_stmt(parser_t *y) {
 static void stmt_list(parser_t *);
 static void stmt(parser_t *);
 
+static void do_stmt(parser_t *y) {
+    int l1 = y->c->n;
+    if (y->x->tk.kind == '{') {
+        adv(y);
+        stmt_list(y);
+        consume(y, '}', "Expected '}'");
+    } else {
+        stmt(y);
+    }
+    consume(y, TK_WHILE, "Expected 'while' condition after 'do' statement block");
+    expr(y, 0);
+    push(OP_JNZ8);
+    push((uint8_t) l1);
+}
+
 static void fn_def(parser_t *y) {
 }
 
@@ -197,22 +219,27 @@ static void if_stmt(parser_t *y) {
     int l1, l2;
     l1 = c_prep_jump(y->c, OP_JZ8);
     if (y->x->tk.kind == '{') {
+        adv(y);
         stmt_list(y);
-        check_char(y, '}');
-    } else
+        consume(y, '}', "Expected '}'");
+    } else {
         stmt(y);
+    }
     if (y->x->tk.kind == TK_ELSE) {
         adv(y);
         l2 = c_prep_jump(y->c, OP_JMP8);
         c_patch(y->c, l1);
         if (y->x->tk.kind == '{') {
+            adv(y);
             stmt_list(y);
-            check_char(y, '}');
-        } else
+            consume(y, '}', "Expected '}'");
+        } else {
             stmt(y);
+        }
         c_patch(y->c, l2);
-    } else
+    } else {
         c_patch(y->c, l1);
+    }
 }
 
 static void print_stmt(parser_t *y) {
@@ -226,11 +253,27 @@ static void ret_stmt(parser_t *y) {
 }
 
 static void while_stmt(parser_t *y) {
+    int l1, l2;
+
+    l1 = y->c->n;
+    expr(y, 0);
+    l2 = c_prep_jump(y->c, OP_JZ8);
+    if (y->x->tk.kind == '{') {
+        adv(y);
+        stmt_list(y);
+        consume(y, '}', "Expected '}'");
+    } else {
+        stmt(y);
+    }
+    push(OP_JMP8);
+    push((uint8_t) l1);
+    c_patch(y->c, l2);
 }
 
 static void stmt(parser_t *y) {
     switch(y->x->tk.kind) {
     case ';':       adv(y);                break;
+    case TK_DO:     adv(y); do_stmt(y);    break;
     case TK_FN:     adv(y); fn_def(y);     break;
     case TK_FOR:    adv(y); for_stmt(y);   break;
     case TK_IF:     adv(y); if_stmt(y);    break;

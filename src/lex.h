@@ -48,6 +48,7 @@ enum tokens {
 
     // Keywords
     TK_BREAK,
+    TK_DO,
     TK_ELSE,
     TK_EXIT,
     TK_FN,

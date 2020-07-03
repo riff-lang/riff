@@ -15,8 +15,8 @@ enum opcodes {
     OP_JZ8,     // Jump if zero (1-byte address)
     OP_JZ16,    // Jump if zero (2-byte address)
     OP_LJZ8,    // Logical jump if zero (1-byte address)
-    OP_LJNZ8,   // Logical jump if non-zero (1-byte address)
     OP_LJZ16,   // Logical jump if zero (2-byte address)
+    OP_LJNZ8,   // Logical jump if non-zero (1-byte address)
     OP_LJNZ16,  // Logical jump if non-zero (2-byte address)
     OP_TEST,
     OP_ADD,     // Add
