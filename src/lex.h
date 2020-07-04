@@ -35,16 +35,16 @@ enum tokens {
     TK_SHR,       // >>
     TK_ADDASG,    // +=
     TK_ANDASG,    // &=
+    TK_CATASG,    // ::=
     TK_DIVASG,    // /=
     TK_MODASG,    // %=
     TK_MULASG,    // *=
     TK_ORASG,     // |=
-    TK_SUBASG,    // -=
-    TK_XORASG,    // ^=
-    TK_CATASG,    // ::=
     TK_POWASG,    // **=
     TK_SHLASG,    // <<=
     TK_SHRASG,    // >>=
+    TK_SUBASG,    // -=
+    TK_XORASG,    // ^=
 
     // Keywords
     TK_BREAK,

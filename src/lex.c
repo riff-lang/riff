@@ -1,6 +1,5 @@
 #include <ctype.h>
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,13 +13,13 @@ static void err(lexer_t *x, const char *msg) {
     exit(1);
 }
 
-static bool valid_alpha(char c) {
+static int valid_alpha(char c) {
     return (c >= 'A' && c <= 'Z') ||
            (c >= 'a' && c <= 'z') ||
            (c == '_');
 }
 
-static bool valid_alphanum(char c) {
+static int valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
@@ -60,6 +59,7 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
 }
 
 // TODO Handle binary float literals? e.g. 0b1101.101
+// TODO Allow underscores in numeric literals e.g. 123_456_789
 static int read_num(lexer_t *x, token_t *tk) {
     const char *start = x->p - 1;
 

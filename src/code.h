@@ -47,6 +47,18 @@ enum opcodes {
     OP_POSTINC, // Post-increment
     OP_POSTDEC, // Post-decrement
     OP_LEN,     // Length
+    OP_ADDASG,
+    OP_SUBASG,
+    OP_MULASG,
+    OP_DIVASG,
+    OP_MODASG,
+    OP_CATASG,
+    OP_POWASG,
+    OP_ANDASG,
+    OP_ORASG,
+    OP_SHLASG,
+    OP_SHRASG,
+    OP_XORASG,
     OP_POP,     // Pop from stack
     OP_PUSH0,   // Push literal `0` on stack
     OP_PUSH1,   // Push literal `1` on stack

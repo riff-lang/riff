@@ -3,6 +3,8 @@
 #include "code.h"
 #include "mem.h"
 
+#define push(x) c_push(c, x)
+
 static void err(code_t *c, const char *msg) {
     fprintf(stderr, "%s\n", msg);
     exit(1);
@@ -30,8 +32,8 @@ void c_free(code_t *c) {
 // Emits a jump instruction and returns the location of the byte to be
 // patched
 int c_prep_jump(code_t *c, int jmp) {
-    c_push(c, jmp);
-    c_push(c, 0x00); // Reserve byte
+    push(jmp);
+    push(0x00); // Reserve byte
     return c->n - 1;
 }
 
@@ -41,12 +43,12 @@ void c_patch(code_t *c, int loc) {
 
 static void c_pushk(code_t *c, int i) {
     switch (i) {
-    case 0: c_push(c, OP_PUSHK0); break;
-    case 1: c_push(c, OP_PUSHK1); break;
-    case 2: c_push(c, OP_PUSHK2); break;
+    case 0: push(OP_PUSHK0); break;
+    case 1: push(OP_PUSHK1); break;
+    case 2: push(OP_PUSHK2); break;
     default:
-        c_push(c, OP_PUSHK);
-        c_push(c, (uint8_t) i);
+        push(OP_PUSHK);
+        push((uint8_t) i);
         break;
     }
 }
@@ -95,13 +97,13 @@ void c_constant(code_t *c, token_t *tk) {
     case TK_INT: {
         int_t i = tk->lexeme.i;
         switch (i) {
-        case 0: c_push(c, OP_PUSH0); return;
-        case 1: c_push(c, OP_PUSH1); return;
-        case 2: c_push(c, OP_PUSH2); return;
+        case 0: push(OP_PUSH0); return;
+        case 1: push(OP_PUSH1); return;
+        case 2: push(OP_PUSH2); return;
         default:
             if (i >= 3 && i <= 255) {
-            c_push(c, OP_PUSHI);
-            c_push(c, (uint8_t) i);
+            push(OP_PUSHI);
+            push((uint8_t) i);
             return;
         } else {
             v = v_newint(i);
@@ -125,12 +127,12 @@ void c_constant(code_t *c, token_t *tk) {
 
 static void c_pushs(code_t *c, int i) {
     switch (i) {
-    case 0: c_push(c, OP_PUSHS0); break;
-    case 1: c_push(c, OP_PUSHS1); break;
-    case 2: c_push(c, OP_PUSHS2); break;
+    case 0: push(OP_PUSHS0); break;
+    case 1: push(OP_PUSHS1); break;
+    case 2: push(OP_PUSHS2); break;
     default:
-        c_push(c, OP_PUSHS);
-        c_push(c, (uint8_t) i);
+        push(OP_PUSHS);
+        push((uint8_t) i);
         break;
     }
 }
@@ -156,46 +158,60 @@ void c_symbol(code_t *c, token_t *tk) {
 
 void c_infix(code_t *c, int op) {
     switch (op) {
-    case '+':    c_push(c, OP_ADD); break;
-    case '-':    c_push(c, OP_SUB); break;
-    case '*':    c_push(c, OP_MUL); break;
-    case '/':    c_push(c, OP_DIV); break;
-    case '%':    c_push(c, OP_MOD); break;
-    case '>':    c_push(c, OP_GT);  break;
-    case '<':    c_push(c, OP_LT);  break;
-    case '=':    c_push(c, OP_SET); break;
-    case '&':    c_push(c, OP_AND); break;
-    case '|':    c_push(c, OP_OR);  break;
-    case '^':    c_push(c, OP_XOR); break;
-    case TK_SHL: c_push(c, OP_SHL); break;
-    case TK_SHR: c_push(c, OP_SHR); break;
-    case TK_POW: c_push(c, OP_POW); break;
-    case TK_CAT: c_push(c, OP_CAT); break;
-    case TK_GE:  c_push(c, OP_GE);  break;
-    case TK_LE:  c_push(c, OP_LE);  break;
-    case TK_EQ:  c_push(c, OP_EQ);  break;
-    case TK_NE:  c_push(c, OP_NE);  break;
+    case '+':       push(OP_ADD);    break;
+    case '-':       push(OP_SUB);    break;
+    case '*':       push(OP_MUL);    break;
+    case '/':       push(OP_DIV);    break;
+    case '%':       push(OP_MOD);    break;
+    case '>':       push(OP_GT);     break;
+    case '<':       push(OP_LT);     break;
+    case '=':       push(OP_SET);    break;
+    case '&':       push(OP_AND);    break;
+    case '|':       push(OP_OR);     break;
+    case '^':       push(OP_XOR);    break;
+    case TK_SHL:    push(OP_SHL);    break;
+    case TK_SHR:    push(OP_SHR);    break;
+    case TK_POW:    push(OP_POW);    break;
+    case TK_CAT:    push(OP_CAT);    break;
+    case TK_GE:     push(OP_GE);     break;
+    case TK_LE:     push(OP_LE);     break;
+    case TK_EQ:     push(OP_EQ);     break;
+    case TK_NE:     push(OP_NE);     break;
+    case TK_ADDASG: push(OP_ADDASG); break;
+    case TK_ANDASG: push(OP_ANDASG); break;
+    case TK_DIVASG: push(OP_DIVASG); break;
+    case TK_MODASG: push(OP_MODASG); break;
+    case TK_MULASG: push(OP_MULASG); break;
+    case TK_ORASG:  push(OP_ORASG);  break;
+    case TK_SUBASG: push(OP_SUBASG); break;
+    case TK_XORASG: push(OP_XORASG); break;
+    case TK_CATASG: push(OP_CATASG); break;
+    case TK_POWASG: push(OP_POWASG); break;
+    case TK_SHLASG: push(OP_SHLASG); break;
+    case TK_SHRASG: push(OP_SHRASG); break;
     default: break;
     }
 }
 
 void c_prefix(code_t *c, int op) {
     switch (op) {
-    case '!': c_push(c, OP_LNOT); break;
-    case '#': c_push(c, OP_LEN);  break;
-    case '+': c_push(c, OP_NUM);  break;
-    case '-': c_push(c, OP_NEG);  break;
-    case '~': c_push(c, OP_NOT);  break;
-    case TK_INC: c_push(c, OP_PREINC); break;
-    case TK_DEC: c_push(c, OP_PREDEC); break;
+    case '!':    push(OP_LNOT);   break;
+    case '#':    push(OP_LEN);    break;
+    case '+':    push(OP_NUM);    break;
+    case '-':    push(OP_NEG);    break;
+    case '~':    push(OP_NOT);    break;
+    case TK_INC: push(OP_PREINC); break;
+    case TK_DEC: push(OP_PREDEC); break;
     default: break;
     }
 }
 
 void c_postfix(code_t *c, int op) {
     switch (op) {
-    case TK_INC: c_push(c, OP_POSTINC); break;
-    case TK_DEC: c_push(c, OP_POSTDEC); break;
+    case TK_INC: push(OP_POSTINC); break;
+    case TK_DEC: push(OP_POSTDEC); break;
     default: break;
     }
 }
+
+#undef push
