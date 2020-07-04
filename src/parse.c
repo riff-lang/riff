@@ -124,9 +124,11 @@ static void nud(parser_t *y) {
         return;
     case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
+        adv(y);
         break;
     case TK_ID:
         identifier(y);
+        adv(y);
         break;
     default: break;
     }
@@ -136,7 +138,6 @@ static void nud(parser_t *y) {
 static void logical(parser_t *y, int tk) {
     push(OP_TEST);
     int l1 = c_prep_jump(y->c, tk == TK_OR ? OP_LJNZ8 : OP_LJZ8);
-    // push(OP_POP);
     expr(y, lbp(tk));
     push(OP_TEST);
     c_patch(y->c, l1);
@@ -157,16 +158,11 @@ static void led(parser_t *y, int tk) {
     }
 }
 
-// TODO Hacky logic for prefix and postfix ops; requires cleanup
+// TODO Hacky logic for postfix ops; requires cleanup
 static int expr(parser_t *y, int rbp) {
     nud(y);
     int op = y->x->tk.kind;
 
-    // Hack for unary
-    if (!lbp(op)) {
-        adv(y);
-        op = y->x->tk.kind;
-    }
     if (op == TK_INC || op == TK_DEC) {
         c_postfix(y->c, op);
         adv(y);
@@ -202,7 +198,7 @@ static void do_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
-    consume(y, TK_WHILE, "Expected 'while' condition after 'do' statement block");
+    consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
     expr(y, 0);
     push(OP_JNZ8);
     push((uint8_t) l1);
