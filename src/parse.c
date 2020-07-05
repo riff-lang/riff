@@ -201,7 +201,7 @@ static void do_stmt(parser_t *y) {
     }
     consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
     expr(y, 0);
-    c_jump(y->c, OP_JNZ8, l1);
+    c_jump(y->c, JNZ, l1);
 }
 
 static void fn_def(parser_t *y) {
@@ -261,7 +261,7 @@ static void while_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
-    c_jump(y->c, OP_JMP8, l1);
+    c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
 }
 

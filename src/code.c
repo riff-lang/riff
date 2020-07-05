@@ -37,9 +37,33 @@ int c_prep_jump(code_t *c, int jmp) {
     return c->n - 1;
 }
 
-void c_jump(code_t *c, int jmp, int loc) {
-    push(jmp);
-    push((int8_t) (loc - (c->n - 1)));
+void c_jump(code_t *c, int type, int loc) {
+    int d = loc - c->n;
+    uint8_t jmp;
+    if (d <= INT8_MAX && d >= INT8_MIN) {
+        switch (type) {
+        case JMP:  push(OP_JMP8);  break;
+        case JZ:   push(OP_JZ8);   break; 
+        case JNZ:  push(OP_JNZ8);  break;
+        case XJZ:  push(OP_XJZ8);  break;
+        case XJNZ: push(OP_XJNZ8); break;
+        default: break;
+        }
+        push((int8_t) d);
+    } else if (d <= INT16_MAX && d >= INT16_MIN) {
+        switch (type) {
+        case JMP:  push(OP_JMP16);  break;
+        case JZ:   push(OP_JZ16);   break; 
+        case JNZ:  push(OP_JNZ16);  break;
+        case XJZ:  push(OP_XJZ16);  break;
+        case XJNZ: push(OP_XJNZ16); break;
+        default: break;
+        }
+        push((int8_t) ((d >> 8) & 0xff));
+        push((int8_t) (d & 0xff));
+    } else {
+        err(c, "Jump too big");
+    }
 }
 
 void c_patch(code_t *c, int loc) {

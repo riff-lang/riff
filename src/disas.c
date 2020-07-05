@@ -80,11 +80,13 @@ static struct {
 #define OP_ARITY    (opcode_info[b0].arity)
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
+// TODO align trailing comments
 #define INST0       "%*d| %02x       %-6s\n"
 #define INST0DEREF  "%*d| %02x       %-6s\t// %s\n"
 #define INST1       "%*d| %02x %02x    %-6s %d\n"
 #define INST1DEREF  "%*d| %02x %02x    %-6s %d\t// %s\n"
 #define INST1ADDR   "%*d| %02x %02x    %-6s %d\t// %d\n"
+#define INST2ADDR   "%*d| %02x %02x %02x %-6s %d\t// %d\n"
 
 #define OPND(x)     (c->k.v[b1]->u.x)
 #define OPND0(x)    (c->k.v[0]->u.x)
@@ -94,6 +96,11 @@ static struct {
 static int is_jump8(int op) {
     return op == OP_JMP8 || op == OP_JZ8 || op == OP_JNZ8 ||
            op == OP_XJZ8 || op == OP_XJNZ8;
+}
+
+static int is_jump16(int op) {
+    return op == OP_JMP16 || op == OP_JZ16 || op == OP_JNZ16 ||
+           op == OP_XJZ16 || op == OP_XJNZ16;
 }
 
 // TODO This function is way too big for its own good
@@ -136,6 +143,12 @@ void d_code_chunk(code_t *c) {
             default:
                 if (is_jump8(b0)) {
                     printf(INST1ADDR, ipw, ip, b0, b1, OP_MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
+                } else if (is_jump16(b0)) {
+                    int b2 = c->code[ip+2];
+                    int16_t a = (b1 << 8) + b2;
+                    printf(INST2ADDR, ipw, ip, b0, b1, b2, OP_MNEMONIC,
+                            a, ip + a);
+                    ip += 1;
                 } else {
                     printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
                 }
@@ -221,6 +234,8 @@ void d_code_chunk(code_t *c) {
 #undef INST0DEREF
 #undef INST1
 #undef INST1DEREF
+#undef INST1ADDR
+#undef INST2ADDR
 #undef OPND
 #undef OPND0
 #undef OPND1

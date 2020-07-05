@@ -79,6 +79,14 @@ enum opcodes {
     OP_PRINT
 };
 
+enum jumps {
+    JMP,    // Unconditional jump
+    JZ,     // Pop from stack, jump if zero
+    JNZ,    // Pop from stack, jump if non-zero
+    XJZ,    // Pop from stack OR jump if zero
+    XJNZ    // Pop from stack OR jump if non-zero
+};
+
 typedef struct {
     int      n;
     int      cap;
