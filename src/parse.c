@@ -149,7 +149,7 @@ static void led(parser_t *y, int tk) {
     case TK_OR:  logical(y, tk); break;
     default:
         if (lbop(tk) || rbop(tk)) {
-            if (is_asgmt(tk)) y->a = 1;
+            if (is_asgmt(tk)) y->pf = 0;
             expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
         }
@@ -161,7 +161,6 @@ static void led(parser_t *y, int tk) {
 static int expr(parser_t *y, int rbp) {
     nud(y);
     int op = y->x->tk.kind;
-
     if (op == TK_INC || op == TK_DEC) {
         c_postfix(y->c, op);
         adv(y);
@@ -182,9 +181,9 @@ static int expr(parser_t *y, int rbp) {
 // (spoiler alert: it do)
 static void expr_stmt(parser_t *y) {
     expr(y, 0);
-    if (!y->a)
+    if (y->pf)
         push(OP_PRINT);
-    y->a = 0;
+    y->pf = 1;
 }
 
 static void stmt_list(parser_t *);
@@ -250,7 +249,6 @@ static void ret_stmt(parser_t *y) {
 
 static void while_stmt(parser_t *y) {
     int l1, l2;
-
     l1 = y->c->n;
     expr(y, 0);
     l2 = c_prep_jump(y->c, JZ);
@@ -287,7 +285,7 @@ static void stmt_list(parser_t *y) {
 }
 
 static void y_init(parser_t *y, const char *src) {
-    y->a = 0;
+    y->pf = 1;
     x_init(y->x, src);
 }
 
