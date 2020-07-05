@@ -29,7 +29,7 @@ void c_free(code_t *c) {
     c_init(c);
 }
 
-// Emits a jump instruction and returns the location of the byte to be
+// Push a jump instruction and return the location of the byte to be
 // patched
 int c_prep_jump(code_t *c, int type) {
     switch (type) {
@@ -44,8 +44,9 @@ int c_prep_jump(code_t *c, int type) {
     return c->n - 1;
 }
 
-void c_jump(code_t *c, int type, int loc) {
-    int d = loc - c->n;
+// Simple backward jumps. Encodes a 2-byte offset if necessary.
+void c_jump(code_t *c, int type, int l) {
+    int d = l - c->n;
     uint8_t jmp;
     if (d <= INT8_MAX && d >= INT8_MIN) {
         switch (type) {
@@ -73,8 +74,11 @@ void c_jump(code_t *c, int type, int loc) {
     }
 }
 
-void c_patch(code_t *c, int loc) {
-    c->code[loc] = (int8_t) (c->n - loc + 1);
+// Overwrite the byte at location `l` with the distance between
+// the code object's "current" instruction and `l`. Useful for patching
+// forward jumps.
+void c_patch(code_t *c, int l) {
+    c->code[l] = (int8_t) (c->n - l + 1);
 }
 
 static void c_pushk(code_t *c, int i) {
@@ -192,6 +196,8 @@ void c_symbol(code_t *c, token_t *tk) {
     c_pushs(c, c->k.n - 1);
 }
 
+// TODO this function will be used to evaluate infix expression
+// "nodes" and fold constants if possible.
 void c_infix(code_t *c, int op) {
     switch (op) {
     case '+':     push(OP_ADD);  break;
