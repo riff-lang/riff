@@ -84,16 +84,16 @@ static void conditional(parser_t *y) {
     // x ?: y
     if (y->x->tk.kind == ':') {
         adv(y);
-        l1 = c_prep_jump(y->c, OP_XJNZ8);
+        l1 = c_prep_jump(y->c, XJNZ);
         expr(y, 0);
         c_patch(y->c, l1);
     }
 
     // x ? y : z
     else {
-        l1 = c_prep_jump(y->c, OP_JZ8);
+        l1 = c_prep_jump(y->c, JZ);
         expr(y, 0);
-        l2 = c_prep_jump(y->c, OP_JMP8);
+        l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         consume(y, ':', "Expected ':'");
         expr(y, 0);
@@ -136,7 +136,7 @@ static void nud(parser_t *y) {
 // Short-circuiting logical operations (&&, ||)
 static void logical(parser_t *y, int tk) {
     push(OP_TEST);
-    int l1 = c_prep_jump(y->c, tk == TK_OR ? OP_XJNZ8 : OP_XJZ8);
+    int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
     expr(y, lbp(tk));
     push(OP_TEST);
     c_patch(y->c, l1);
@@ -213,7 +213,7 @@ static void for_stmt(parser_t *y) {
 static void if_stmt(parser_t *y) {
     expr(y, 0);
     int l1, l2;
-    l1 = c_prep_jump(y->c, OP_JZ8);
+    l1 = c_prep_jump(y->c, JZ);
     if (y->x->tk.kind == '{') {
         adv(y);
         stmt_list(y);
@@ -223,7 +223,7 @@ static void if_stmt(parser_t *y) {
     }
     if (y->x->tk.kind == TK_ELSE) {
         adv(y);
-        l2 = c_prep_jump(y->c, OP_JMP8);
+        l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         if (y->x->tk.kind == '{') {
             adv(y);
@@ -253,7 +253,7 @@ static void while_stmt(parser_t *y) {
 
     l1 = y->c->n;
     expr(y, 0);
-    l2 = c_prep_jump(y->c, OP_JZ8);
+    l2 = c_prep_jump(y->c, JZ);
     if (y->x->tk.kind == '{') {
         adv(y);
         stmt_list(y);
