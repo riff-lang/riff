@@ -163,37 +163,37 @@ void c_symbol(code_t *c, token_t *tk) {
 
 void c_infix(code_t *c, int op) {
     switch (op) {
-    case '+':       push(OP_ADD);    break;
-    case '-':       push(OP_SUB);    break;
-    case '*':       push(OP_MUL);    break;
-    case '/':       push(OP_DIV);    break;
-    case '%':       push(OP_MOD);    break;
-    case '>':       push(OP_GT);     break;
-    case '<':       push(OP_LT);     break;
-    case '=':       push(OP_SET);    break;
-    case '&':       push(OP_AND);    break;
-    case '|':       push(OP_OR);     break;
-    case '^':       push(OP_XOR);    break;
-    case TK_SHL:    push(OP_SHL);    break;
-    case TK_SHR:    push(OP_SHR);    break;
-    case TK_POW:    push(OP_POW);    break;
-    case TK_CAT:    push(OP_CAT);    break;
-    case TK_GE:     push(OP_GE);     break;
-    case TK_LE:     push(OP_LE);     break;
-    case TK_EQ:     push(OP_EQ);     break;
-    case TK_NE:     push(OP_NE);     break;
-    case TK_ADDASG: push(OP_ADDASG); break;
-    case TK_ANDASG: push(OP_ANDASG); break;
-    case TK_DIVASG: push(OP_DIVASG); break;
-    case TK_MODASG: push(OP_MODASG); break;
-    case TK_MULASG: push(OP_MULASG); break;
-    case TK_ORASG:  push(OP_ORASG);  break;
-    case TK_SUBASG: push(OP_SUBASG); break;
-    case TK_XORASG: push(OP_XORASG); break;
-    case TK_CATASG: push(OP_CATASG); break;
-    case TK_POWASG: push(OP_POWASG); break;
-    case TK_SHLASG: push(OP_SHLASG); break;
-    case TK_SHRASG: push(OP_SHRASG); break;
+    case '+':     push(OP_ADD);  break;
+    case '-':     push(OP_SUB);  break;
+    case '*':     push(OP_MUL);  break;
+    case '/':     push(OP_DIV);  break;
+    case '%':     push(OP_MOD);  break;
+    case '>':     push(OP_GT);   break;
+    case '<':     push(OP_LT);   break;
+    case '=':     push(OP_SET);  break;
+    case '&':     push(OP_AND);  break;
+    case '|':     push(OP_OR);   break;
+    case '^':     push(OP_XOR);  break;
+    case TK_SHL:  push(OP_SHL);  break;
+    case TK_SHR:  push(OP_SHR);  break;
+    case TK_POW:  push(OP_POW);  break;
+    case TK_CAT:  push(OP_CAT);  break;
+    case TK_GE:   push(OP_GE);   break;
+    case TK_LE:   push(OP_LE);   break;
+    case TK_EQ:   push(OP_EQ);   break;
+    case TK_NE:   push(OP_NE);   break;
+    case TK_ADDX: push(OP_ADDX); break;
+    case TK_ANDX: push(OP_ANDX); break;
+    case TK_DIVX: push(OP_DIVX); break;
+    case TK_MODX: push(OP_MODX); break;
+    case TK_MULX: push(OP_MULX); break;
+    case TK_ORX:  push(OP_ORX);  break;
+    case TK_SUBX: push(OP_SUBX); break;
+    case TK_XORX: push(OP_XORX); break;
+    case TK_CATX: push(OP_CATX); break;
+    case TK_POWX: push(OP_POWX); break;
+    case TK_SHLX: push(OP_SHLX); break;
+    case TK_SHRX: push(OP_SHRX); break;
     default: break;
     }
 }

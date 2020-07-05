@@ -235,12 +235,12 @@ static int tokenize(lexer_t *x, token_t *tk) {
         case ' ': case '\t': break;
         case '!': return test2(x, '=', TK_NE, '!');
         case '"': return read_str(x, tk);
-        case '%': return test2(x, '=', TK_MODASG, '%');
-        case '&': return test3(x, '=', TK_ANDASG, '&', TK_AND, '&');
-        case '*': return test4(x, '=', TK_MULASG, '*', 
-                                  '=', TK_POWASG, TK_POW, '*');
-        case '+': return test3(x, '=', TK_ADDASG, '+', TK_INC, '+');
-        case '-': return test3(x, '=', TK_SUBASG, '-', TK_DEC, '-');
+        case '%': return test2(x, '=', TK_MODX, '%');
+        case '&': return test3(x, '=', TK_ANDX, '&', TK_AND, '&');
+        case '*': return test4(x, '=', TK_MULX, '*', 
+                                  '=', TK_POWX, TK_POW, '*');
+        case '+': return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
+        case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
         case '.': return isdigit(*x->p) ? read_num(x, tk) : '.';
         case '/':
             if (*x->p == '/') {
@@ -249,21 +249,21 @@ static int tokenize(lexer_t *x, token_t *tk) {
                 adv(x);
                 break;
             } else
-                return test2(x, '=', TK_DIVASG, '/');
+                return test2(x, '=', TK_DIVX, '/');
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             return read_num(x, tk);
         case '<': return test4(x, '=', TK_LE, '<',
-                                  '=', TK_SHLASG, TK_SHL, '<');
+                                  '=', TK_SHLX, TK_SHL, '<');
         case '=': return test2(x, '=', TK_EQ, '=');
         case '>': return test4(x, '=', TK_GE, '>',
-                                  '=', TK_SHRASG, TK_SHR, '>');
-        case '^': return test2(x, '=', TK_XORASG, '^');
-        case '|': return test3(x, '=', TK_ORASG, '|', TK_OR, '|');
+                                  '=', TK_SHRX, TK_SHR, '>');
+        case '^': return test2(x, '=', TK_XORX, '^');
+        case '|': return test3(x, '=', TK_ORX, '|', TK_OR, '|');
         case ':':
             if (*x->p == ':') {
                 adv(x);
-                return test2(x, '=', TK_CATASG, TK_CAT);
+                return test2(x, '=', TK_CATX, TK_CAT);
             } else
                 return ':';
         case '#': case '(': case ')': case ',': case ';':

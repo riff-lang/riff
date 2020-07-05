@@ -33,18 +33,18 @@ enum tokens {
     TK_POW,       // **
     TK_SHL,       // <<
     TK_SHR,       // >>
-    TK_ADDASG,    // +=
-    TK_ANDASG,    // &=
-    TK_CATASG,    // ::=
-    TK_DIVASG,    // /=
-    TK_MODASG,    // %=
-    TK_MULASG,    // *=
-    TK_ORASG,     // |=
-    TK_POWASG,    // **=
-    TK_SHLASG,    // <<=
-    TK_SHRASG,    // >>=
-    TK_SUBASG,    // -=
-    TK_XORASG,    // ^=
+    TK_ADDX,      // +=
+    TK_ANDX,      // &=
+    TK_CATX,      // ::=
+    TK_DIVX,      // /=
+    TK_MODX,      // %=
+    TK_MULX,      // *=
+    TK_ORX,       // |=
+    TK_POWX,      // **=
+    TK_SHLX,      // <<=
+    TK_SHRX,      // >>=
+    TK_SUBX,      // -=
+    TK_XORX,      // ^=
 
     // Keywords
     TK_BREAK,

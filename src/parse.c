@@ -12,7 +12,7 @@ static void err(parser_t *y, const char *msg) {
 }
 
 static int is_asgmt(int tk) {
-    return tk == '=' || (tk >= TK_ADDASG && tk <= TK_XORASG);
+    return tk == '=' || (tk >= TK_ADDX && tk <= TK_XORX);
 }
 
 static void check(parser_t *y, int tk, const char *msg) {
