@@ -37,8 +37,13 @@ int c_prep_jump(code_t *c, int jmp) {
     return c->n - 1;
 }
 
+void c_jump(code_t *c, int jmp, int loc) {
+    push(jmp);
+    push((int8_t) (loc - (c->n - 1)));
+}
+
 void c_patch(code_t *c, int loc) {
-    c->code[loc] = (uint8_t) c->n;
+    c->code[loc] = (int8_t) (c->n - loc + 1);
 }
 
 static void c_pushk(code_t *c, int i) {

@@ -26,10 +26,6 @@ static struct {
     [OP_JZ8]     = { "jz",       1 },
     [OP_LEN]     = { "len",      0 },
     [OP_LE]      = { "le",       0 },
-    [OP_LJNZ16]  = { "ljnz",     2 },
-    [OP_LJNZ8]   = { "ljnz",     1 },
-    [OP_LJZ16]   = { "ljz",      2 },
-    [OP_LJZ8]    = { "ljz",      1 },
     [OP_LNOT]    = { "lnot",     0 },
     [OP_LT]      = { "lt",       0 },
     [OP_MODASG]  = { "modasg",   0 },
@@ -73,6 +69,10 @@ static struct {
     [OP_SUBASG]  = { "subasg",   0 },
     [OP_SUB]     = { "sub",      0 },
     [OP_TEST]    = { "test",     0 },
+    [OP_XJNZ16]  = { "xjnz",     2 },
+    [OP_XJNZ8]   = { "xjnz",     1 },
+    [OP_XJZ16]   = { "xjz",      2 },
+    [OP_XJZ8]    = { "xjz",      1 },
     [OP_XORASG]  = { "xorasg",   0 },
     [OP_XOR]     = { "xor",      0 }
 };
@@ -81,15 +81,22 @@ static struct {
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
 #define INST0       "%*d| %02x       %-6s\n"
-#define INST0DEREF  "%*d| %02x       %-6s    // %s\n"
+#define INST0DEREF  "%*d| %02x       %-6s\t// %s\n"
 #define INST1       "%*d| %02x %02x    %-6s %d\n"
-#define INST1DEREF  "%*d| %02x %02x    %-6s %d    // %s\n"
+#define INST1DEREF  "%*d| %02x %02x    %-6s %d\t// %s\n"
+#define INST1ADDR   "%*d| %02x %02x    %-6s %d\t// %d\n"
 
 #define OPND(x)     (c->k.v[b1]->u.x)
 #define OPND0(x)    (c->k.v[0]->u.x)
 #define OPND1(x)    (c->k.v[1]->u.x)
 #define OPND2(x)    (c->k.v[2]->u.x)
 
+static int is_jump8(int op) {
+    return op == OP_JMP8 || op == OP_JZ8 || op == OP_JNZ8 ||
+           op == OP_XJZ8 || op == OP_XJNZ8;
+}
+
+// TODO This function is way too big for its own good
 void d_code_chunk(code_t *c) {
     int sz  = c->n;
     int ipw = sz <= 10   ? 1
@@ -127,7 +134,11 @@ void d_code_chunk(code_t *c) {
                 printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
                 break;
             default:
-                printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
+                if (is_jump8(b0)) {
+                    printf(INST1ADDR, ipw, ip, b0, b1, OP_MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
+                } else {
+                    printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
+                }
                 break;
             }
             ip += 2;

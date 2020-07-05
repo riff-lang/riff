@@ -8,16 +8,16 @@
 #include "val.h"
 
 enum opcodes {
-    OP_JMP8,    // Jump (1-byte address)
-    OP_JMP16,   // Jump (2-byte address)
-    OP_JNZ8,    // Jump if non-zero (1-byte address)
-    OP_JNZ16,   // Jump if non-zero (2-byte address)
-    OP_JZ8,     // Jump if zero (1-byte address)
-    OP_JZ16,    // Jump if zero (2-byte address)
-    OP_LJZ8,    // Logical jump if zero (1-byte address)
-    OP_LJZ16,   // Logical jump if zero (2-byte address)
-    OP_LJNZ8,   // Logical jump if non-zero (1-byte address)
-    OP_LJNZ16,  // Logical jump if non-zero (2-byte address)
+    OP_JMP8,    // Jump (1-byte offset)
+    OP_JMP16,   // Jump (2-byte offset)
+    OP_JNZ8,    // Jump if non-zero (1-byte offset)
+    OP_JNZ16,   // Jump if non-zero (2-byte offset)
+    OP_JZ8,     // Jump if zero (1-byte offset)
+    OP_JZ16,    // Jump if zero (2-byte offset)
+    OP_XJZ8,    // "Exclusive" jump if zero (1-byte offset)
+    OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
+    OP_XJNZ8,   // "Exclusive" jump if non-zero (1-byte offset)
+    OP_XJNZ16,  // "Exclusive" jump if non-zero (2-byte offset)
     OP_TEST,
     OP_ADD,     // Add
     OP_SUB,     // Substract
@@ -98,6 +98,7 @@ void c_symbol(code_t *, token_t *);
 void c_prefix(code_t *, int);
 void c_infix(code_t *, int);
 void c_postfix(code_t *, int);
+void c_jump(code_t *, int, int);
 void c_patch(code_t *, int);
 int  c_prep_jump(code_t *, int);
 

@@ -84,8 +84,7 @@ static void conditional(parser_t *y) {
     // x ?: y
     if (y->x->tk.kind == ':') {
         adv(y);
-        l1 = c_prep_jump(y->c, OP_JNZ8);
-        push(OP_POP); // TODO JZ pops from stack but not JNZ??
+        l1 = c_prep_jump(y->c, OP_XJNZ8);
         expr(y, 0);
         c_patch(y->c, l1);
     }
@@ -137,7 +136,7 @@ static void nud(parser_t *y) {
 // Short-circuiting logical operations (&&, ||)
 static void logical(parser_t *y, int tk) {
     push(OP_TEST);
-    int l1 = c_prep_jump(y->c, tk == TK_OR ? OP_LJNZ8 : OP_LJZ8);
+    int l1 = c_prep_jump(y->c, tk == TK_OR ? OP_XJNZ8 : OP_XJZ8);
     expr(y, lbp(tk));
     push(OP_TEST);
     c_patch(y->c, l1);
@@ -176,9 +175,11 @@ static int expr(parser_t *y, int rbp) {
 }
 
 // Standalone expressions
-// Evaluates whether a standalone expression had any side effects. If
-// a standalone expression is given without any assignment, its result
-// will be printed.
+// Evaluates whether a standalone expression had any side effects.
+// If a standalone expression is given without any assignment, its
+// result will be printed.
+// TODO decide whether pre/post inc/dec constitutes side-effects
+// (spoiler alert: it do)
 static void expr_stmt(parser_t *y) {
     expr(y, 0);
     if (!y->a)
@@ -200,8 +201,7 @@ static void do_stmt(parser_t *y) {
     }
     consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
     expr(y, 0);
-    push(OP_JNZ8);
-    push((uint8_t) l1);
+    c_jump(y->c, OP_JNZ8, l1);
 }
 
 static void fn_def(parser_t *y) {
@@ -261,13 +261,12 @@ static void while_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
-    push(OP_JMP8);
-    push((uint8_t) l1);
+    c_jump(y->c, OP_JMP8, l1);
     c_patch(y->c, l2);
 }
 
 static void stmt(parser_t *y) {
-    switch(y->x->tk.kind) {
+    switch (y->x->tk.kind) {
     case ';':       adv(y);                break;
     case TK_DO:     adv(y); do_stmt(y);    break;
     case TK_FN:     adv(y); fn_def(y);     break;
