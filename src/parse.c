@@ -203,6 +203,11 @@ static void do_stmt(parser_t *y) {
     c_jump(y->c, JNZ, l1);
 }
 
+static void exit_stmt(parser_t *y) {
+    expr(y, 0);
+    push(OP_EXIT);
+}
+
 static void fn_def(parser_t *y) {
 }
 
@@ -267,6 +272,7 @@ static void stmt(parser_t *y) {
     switch (y->x->tk.kind) {
     case ';':       adv(y);                break;
     case TK_DO:     adv(y); do_stmt(y);    break;
+    case TK_EXIT:   adv(y); exit_stmt(y);  break;
     case TK_FN:     adv(y); fn_def(y);     break;
     case TK_FOR:    adv(y); for_stmt(y);   break;
     case TK_IF:     adv(y); if_stmt(y);    break;

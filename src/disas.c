@@ -16,6 +16,7 @@ static struct {
     [OP_DIVX]    = { "divx",     0 },
     [OP_DIV]     = { "div",      0 },
     [OP_EQ]      = { "eq",       0 },
+    [OP_EXIT]    = { "exit",     0 },
     [OP_GE]      = { "ge",       0 },
     [OP_GT]      = { "gt",       0 },
     [OP_JMP16]   = { "jmp",      2 },
@@ -80,13 +81,13 @@ static struct {
 #define OP_ARITY    (opcode_info[b0].arity)
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
-// TODO align trailing comments
+// TODO test trailing comment alignment
 #define INST0       "%*d| %02x       %-6s\n"
-#define INST0DEREF  "%*d| %02x       %-6s\t// %s\n"
+#define INST0DEREF  "%*d| %02x       %-6s      // %s\n"
 #define INST1       "%*d| %02x %02x    %-6s %d\n"
-#define INST1DEREF  "%*d| %02x %02x    %-6s %d\t// %s\n"
-#define INST1ADDR   "%*d| %02x %02x    %-6s %d\t// %d\n"
-#define INST2ADDR   "%*d| %02x %02x %02x %-6s %d\t// %d\n"
+#define INST1DEREF  "%*d| %02x %02x    %-6s %-6d // %s\n"
+#define INST1ADDR   "%*d| %02x %02x    %-6s %-6d // %d\n"
+#define INST2ADDR   "%*d| %02x %02x %02x %-6s %-6d // %d\n"
 
 #define OPND(x)     (c->k.v[b1]->u.x)
 #define OPND0(x)    (c->k.v[0]->u.x)

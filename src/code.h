@@ -76,7 +76,8 @@ enum opcodes {
     OP_RET1,    // Return 1
     OP_RET,     // Return
     OP_SET,     // Set
-    OP_PRINT
+    OP_PRINT,   // Print
+    OP_EXIT     // C exit() function, using stack top if it exists
 };
 
 enum jumps {
