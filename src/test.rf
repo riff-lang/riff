@@ -9,45 +9,45 @@ hr2 = 0x.f          // Hexidecimal real (no leading integer)
 str = "hello"       // String
 
 // Normal/long function definition
-fn f(x) {
-    local y = x ** 2
-    return x + y
-}
+/* fn f(x) { */
+/*     local y = x ** 2 */
+/*     return x + y */
+/* } */
 
 // Short/long if statements
-if a == 1 exit
+if a == 1 print x
 if b == 2 {
     print "b is 2"
-    exit
+    /* exit */
 } else if b == 3 {
     print "b is 3"
-    exit
+    /* exit */
 } else {
     print "b is something else"
-    exit
+    /* exit */
 }
 
 // Various for loops
-for i=1..10 print a[i]
-for i=1..10,1 print a[i]
-for i=10..1 print a[i]
-for i=10..1,-1 print a[i]
-for i=1; i<10; i++ print a[i]
+/* for i=1..10 print a[i] */
+/* for i=1..10,1 print a[i] */
+/* for i=10..1 print a[i] */
+/* for i=10..1,-1 print a[i] */
+/* for i=1; i<10; i++ print a[i] */
 
 // While loops
 while h++ < 10 print h
 while h-- > 0 {
-    print "h is", h
+    print "h is"  //, h
 }
 
-j = {0,1,2,3,4}     // Standard array
+/* j = {0,1,2,3,4}     // Standard array */
 
-// Array holding anonymous functions
-ops = {
-    fn () = exit 0,
-    fn () { r[w] = y                     ip += 3 },
-    fn () { s[si++] = x                  ip += 2 },
-    fn () { r[w] = s[si] delete(s[si--]) ip += 2 },
-    fn () { r[w] = y == z                ip += 4 },
-    fn () { r[w] = y >  z                ip += 4 }
-}
+/* // Array holding anonymous functions */
+/* ops = { */
+/*     fn () = exit 0, */
+/*     fn () { r[w] = y                     ip += 3 }, */
+/*     fn () { s[si++] = x                  ip += 2 }, */
+/*     fn () { r[w] = s[si] delete(s[si--]) ip += 2 }, */
+/*     fn () { r[w] = y == z                ip += 4 }, */
+/*     fn () { r[w] = y >  z                ip += 4 } */
+/* } */
