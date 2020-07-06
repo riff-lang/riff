@@ -243,13 +243,38 @@ static int tokenize(lexer_t *x, token_t *tk) {
         case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
         case '.': return isdigit(*x->p) ? read_num(x, tk) : '.';
         case '/':
+            // Eat C++-style line commments
             if (*x->p == '/') {
-                while (*x->p != '\n')
-                    adv(x);
-                adv(x);
+                while (1) {
+                    if (*x->p == '\n' || *x->p == '\0')
+                        break;
+                    else
+                        adv(x);
+                }
                 break;
-            } else
+            }
+            
+            // Eat C-style inline/multi-line comments
+            else if (*x->p == '*') {
+                adv(x);
+                while (1) {
+                    if (*x->p == '\n')
+                        x->ln++;
+                    if (*x->p == '\0')
+                        break;
+                    else if (*x->p == '*') {
+                        adv(x);
+                        if (*x->p == '/') {
+                            adv(x);
+                            break;
+                        }
+                    }
+                    else adv(x);
+                }
+                break;
+            } else {
                 return test2(x, '=', TK_DIVX, '/');
+            }
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             return read_num(x, tk);
