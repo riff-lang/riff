@@ -226,6 +226,32 @@ test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
+static void line_comment(lexer_t *x) {
+    while (1) {
+        if (*x->p == '\n' || *x->p == '\0')
+            break;
+        else
+            adv(x);
+    }
+}
+
+static void block_comment(lexer_t *x) {
+    while (1) {
+        if (*x->p == '\n')
+            x->ln++;
+        if (*x->p == '\0')
+            err(x, "Reached end of input with unterminated block comment");
+        else if (*x->p == '*') {
+            adv(x);
+            if (*x->p == '/') {
+                adv(x);
+                break;
+            }
+        }
+        else adv(x);
+    }
+}
+
 static int tokenize(lexer_t *x, token_t *tk) {
     int c;
     while (1) {
@@ -243,38 +269,12 @@ static int tokenize(lexer_t *x, token_t *tk) {
         case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
         case '.': return isdigit(*x->p) ? read_num(x, tk) : '.';
         case '/':
-            // Eat C++-style line commments
-            if (*x->p == '/') {
-                while (1) {
-                    if (*x->p == '\n' || *x->p == '\0')
-                        break;
-                    else
-                        adv(x);
-                }
-                break;
+            switch (*x->p) {
+            case '/': adv(x); line_comment(x);  break;
+            case '*': adv(x); block_comment(x); break;
+            default:  return test2(x, '=', TK_DIVX, '/');
             }
-            
-            // Eat C-style inline/multi-line comments
-            else if (*x->p == '*') {
-                adv(x);
-                while (1) {
-                    if (*x->p == '\n')
-                        x->ln++;
-                    if (*x->p == '\0')
-                        break;
-                    else if (*x->p == '*') {
-                        adv(x);
-                        if (*x->p == '/') {
-                            adv(x);
-                            break;
-                        }
-                    }
-                    else adv(x);
-                }
-                break;
-            } else {
-                return test2(x, '=', TK_DIVX, '/');
-            }
+            break;
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             return read_num(x, tk);
