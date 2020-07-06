@@ -9,7 +9,7 @@
 #define adv(x) (x->p++)
 
 static void err(lexer_t *x, const char *msg) {
-    fprintf(stderr, "Lexical error at or near line %d: %s\n", x->ln, msg);
+    fprintf(stderr, "line %d: %s\n", x->ln, msg);
     exit(1);
 }
 
