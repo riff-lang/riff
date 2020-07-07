@@ -1,6 +1,8 @@
 #ifndef STR_H
 #define STR_H
 
+#include <stdint.h>
+
 typedef struct {
     size_t    l;
     uint32_t  hash;

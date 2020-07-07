@@ -21,8 +21,7 @@ static void check(parser_t *y, int tk, const char *msg) {
 }
 
 static void consume(parser_t *y, int tk, const char *msg) {
-    if (y->x->tk.kind != tk)
-        err(y, msg);
+    check(y, tk, msg);
     adv(y);
 }
 
