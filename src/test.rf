@@ -18,13 +18,13 @@ str = "hello"       // String
 if a == 1 print x
 if b == 2 {
     print "b is 2"
-    /* exit */
+    exit
 } else if b == 3 {
     print "b is 3"
-    /* exit */
+    exit
 } else {
     print "b is something else"
-    /* exit */
+    exit
 }
 
 // Various for loops

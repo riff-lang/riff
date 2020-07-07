@@ -204,7 +204,6 @@ static void do_stmt(parser_t *y) {
 }
 
 static void exit_stmt(parser_t *y) {
-    expr(y, 0);
     push(OP_EXIT);
 }
 
