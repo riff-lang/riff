@@ -82,7 +82,7 @@ static struct {
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
 // TODO test trailing comment alignment
-#define INST0       "%*d| %02x       %-6s\n"
+#define INST0       "%*d| %02x       %s\n"
 #define INST0DEREF  "%*d| %02x       %-6s      // %s\n"
 #define INST1       "%*d| %02x %02x    %-6s %d\n"
 #define INST1DEREF  "%*d| %02x %02x    %-6s %-6d // %s\n"
