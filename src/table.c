@@ -18,7 +18,7 @@ static entry_t *new_entry(str_t *k, val_t *v) {
     case TYPE_STR: nv = v_newstr(v->u.s); break;
     default: break;
     }
-    entry_t *e = malloc(sizeof(entry_t) + 1);
+    entry_t *e = malloc(sizeof(entry_t));
     e->key = nk;
     e->val = nv;
     return e;
