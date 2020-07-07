@@ -246,8 +246,12 @@ static void print_stmt(parser_t *y) {
 }
 
 static void ret_stmt(parser_t *y) {
+    const char *p = y->x->p; // Save pointer
     expr(y, 0);
-    push(OP_RET);
+    if (p == y->x->p)        // No expression parsed
+        push(OP_RETV);
+    else
+        push(OP_RET);
 }
 
 static void while_stmt(parser_t *y) {
@@ -300,7 +304,7 @@ int y_compile(const char *src, code_t *c) {
     y.c = c;
     y_init(&y, src);
     stmt_list(&y);
-    c_push(c, OP_RET0);
+    c_push(c, OP_RETV);
     return 0;
 }
 

@@ -8,11 +8,13 @@ hr1 = 0xa.f         // Hexidecimal real
 hr2 = 0x.f          // Hexidecimal real (no leading integer)
 str = "hello"       // String
 
+/*
 // Normal/long function definition
-/* fn f(x) { */
-/*     local y = x ** 2 */
-/*     return x + y */
-/* } */
+fn f(x) {
+    local y = x ** 2
+    return x + y
+}
+*/
 
 // Short/long if statements
 if a == 1 print x
@@ -27,9 +29,20 @@ if b == 2 {
     exit
 }
 
-// Ambiguous case; `x++` part of return statement
+// Ambiguous case 1; `x++` part of return statement
 if x == 1
     return
+x++
+
+// Solution: Use semicolon after `return`...
+if x == 1
+    return;
+x++
+
+// ...or enclose in braces
+if x == 1 {
+    return
+}
 x++
 
 // Various for loops
