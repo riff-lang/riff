@@ -72,8 +72,8 @@ enum opcodes {
     OP_PUSHS0,  // Push 0th symbol on stack
     OP_PUSHS1,  // Push 1st symbol on stack
     OP_PUSHS2,  // Push 2nd symbol on stack
-    OP_RETV,    // Return (void)
-    OP_RET,     // Return top of stack
+    OP_RET,     // Return (stack unmodified)
+    OP_RET1,    // Return 1 value from stack top
     OP_SET,     // Set
     OP_PRINT,   // Print
     OP_EXIT     // exit(0) (probably temporary)
