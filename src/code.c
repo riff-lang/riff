@@ -44,7 +44,7 @@ int c_prep_jump(code_t *c, int type) {
     return c->n - 1;
 }
 
-// Simple backward jumps. Encodes a 2-byte offset if necessary.
+// Simple backward jumps. Encode a 2-byte offset if necessary.
 void c_jump(code_t *c, int type, int l) {
     int d = l - c->n;
     uint8_t jmp;
@@ -180,9 +180,8 @@ static void c_pushs(code_t *c, int i) {
 void c_symbol(code_t *c, token_t *tk) {
     // Search for existing symbol
     for (int i = 0; i < c->k.n; i++) {
-        if (c->k.v[i]->type != TYPE_STR)
-            break;
-        else if (tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
+        if (c->k.v[i]->type == TYPE_STR &&
+            tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
             c_pushs(c, i);
             return;
         }
