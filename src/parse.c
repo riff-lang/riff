@@ -173,6 +173,11 @@ static int led(parser_t *y, int tk) {
     case '?':    conditional(y); break;
     case TK_AND:
     case TK_OR:  logical(y, tk); break;
+    case '[':
+        expr(y, 0);
+        consume(y, ']', "Expected ']'");
+        push(OP_GET);
+        break;
     default:
         if (lbop(tk) || rbop(tk)) {
             if (is_asgmt(tk)) y->pf = 0;

@@ -17,6 +17,7 @@ static struct {
     [OP_DIV]     = { "div",      0 },
     [OP_EQ]      = { "eq",       0 },
     [OP_EXIT]    = { "exit",     0 },
+    [OP_GET]     = { "get",      0 },
     [OP_GE]      = { "ge",       0 },
     [OP_GT]      = { "gt",       0 },
     [OP_JMP16]   = { "jmp",      2 },
