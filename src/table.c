@@ -1,5 +1,6 @@
 #include "mem.h"
 #include "table.h"
+#include "types.h"
 
 #define LOAD_FACTOR 0.7
 
@@ -26,7 +27,7 @@ static entry_t *new_entry(str_t *k, val_t *v) {
 
 // Given a string's hash, return index of the element exists in the
 // table, or an index of a suitble empty slot
-static int t_index(entry_t **e, int cap, uint32_t key) {
+static int index(entry_t **e, int cap, uint32_t key) {
     int i = key & (cap - 1);
     while (e[i] && e[i]->key->hash != key) {
         i = (i << 1) & (cap - 1); // Quadratic probing
@@ -34,17 +35,14 @@ static int t_index(entry_t **e, int cap, uint32_t key) {
     return i;
 }
 
-static int t_exists(table_t *t, str_t *k) {
-    int i = t_index(t->e, t->cap, k->hash);
+static int exists(table_t *t, str_t *k) {
+    int i = index(t->e, t->cap, k->hash);
     return t->e[i] && t->e[i]->key->hash == k->hash;
 }
 
 val_t *t_lookup(table_t *t, str_t *k) {
-    int i = t_index(t->e, t->cap, k->hash);
-    if (!t->e[i])
-        return v_newint(0);
-    else
-        return t->e[i]->val;
+    int i = index(t->e, t->cap, k->hash);
+    return !t->e[i] ? v_newint(0) : t->e[i]->val;
 }
 
 void t_insert(table_t *t, str_t *k, val_t *v) {
@@ -59,7 +57,7 @@ void t_insert(table_t *t, str_t *k, val_t *v) {
                 if (!t->e[i]) {
                     continue;
                 } else {
-                    j = t_index(ne, nc, t->e[i]->key->hash);
+                    j = index(ne, nc, t->e[i]->key->hash);
                     ne[j] = t->e[i];
                     nn++;
                     t->n--;
@@ -71,8 +69,8 @@ void t_insert(table_t *t, str_t *k, val_t *v) {
         t->n   = nn;
         t->cap = nc;
     }
-    int i = t_index(t->e, t->cap, k->hash);
-    if (!t_exists(t, k)) {
+    int i = index(t->e, t->cap, k->hash);
+    if (!exists(t, k)) {
         t->n++;
         free(t->e[i]);
     }

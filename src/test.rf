@@ -1,6 +1,7 @@
 // File to test different design patterns
 
-di  = 1             // Decimal integer
+di1 = 1             // Decimal integer
+di2 = 429           // Decimal integer > 255
 dr1 = 1.2           // Decimal real
 dr2 = .2            // Decimal real (no leading integer)
 hi  = 0xE           // Hexadecimal integer
