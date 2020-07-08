@@ -119,6 +119,7 @@ static void nud(parser_t *y) {
         adv(y);
         expr(y, 14);
         c_prefix(y->c, tk);
+        y->pf = 0;
         return;
     case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
@@ -161,6 +162,7 @@ static int expr(parser_t *y, int rbp) {
     nud(y);
     int op = y->x->tk.kind;
     if (op == TK_INC || op == TK_DEC) {
+        y->pf = 0;
         c_postfix(y->c, op);
         adv(y);
         op = y->x->tk.kind;
@@ -176,8 +178,6 @@ static int expr(parser_t *y, int rbp) {
 // Evaluates whether a standalone expression had any side effects.
 // If a standalone expression is given without any assignment, its
 // result will be printed.
-// TODO decide whether pre/post inc/dec constitutes side-effects
-// (spoiler alert: it do)
 static void expr_stmt(parser_t *y) {
     expr(y, 0);
     if (y->pf)
