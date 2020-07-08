@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "str.h"
-#include "table.h"
+#include "hash.h"
 
 static const char *keys[] = {
     "sds0",
@@ -26,32 +26,32 @@ static const char *keys[] = {
     // "key9"
 };
 
-static void t_print(table_t *t, int c) {
+static void h_print(hash_t *h, int c) {
     for (int i = 0; i < c; i++) {
-        if (!t->e[i])
+        if (!h->e[i])
             printf("[%d] (empty)\n", i);
         else
             printf("[%d] Key: %s, Value: %lld\n", 
                     i,
-                    t->e[i]->key->str,
-                    t->e[i]->val->u.i);
+                    h->e[i]->key->str,
+                    h->e[i]->val->u.i);
     }
 }
 
 int main(void) {
-    table_t t;
-    t_init(&t);
+    hash_t h;
+    h_init(&h);
     for (int j = 0; j < 10; j++) {
-        t_insert(&t, s_newstr(keys[j], 4), v_newint(j));
+        h_insert(&h, s_newstr(keys[j], 4), v_newint(j));
         printf("Iteration %d:\n", j);
-        t_print(&t, t.cap);
+        h_print(&h, h.cap);
         printf("\n");
     }
-    printf("Final table:\n");
+    printf("Final hash:\n");
     for (int j = 0; j < 10; j++) {
         printf("Key: %s, Value: %lld\n",
                 keys[j],
-                t_lookup(&t, s_newstr(keys[j], 4))->u.i);
+                h_lookup(&h, s_newstr(keys[j], 4))->u.i);
     }
     return 0;
 }
