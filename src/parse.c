@@ -150,8 +150,9 @@ static int nud(parser_t *y) {
         identifier(y);
         break;
     default:
-        if (is_asgmt(tk))
-            err(y, "Unexpected symbol");
+        // TODO Handle invalid nuds
+        if (lbop(tk) || rbop(tk))
+            err(y, "Invalid start of expression");
         break;
     }
     return tk;
