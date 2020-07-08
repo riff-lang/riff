@@ -6,6 +6,9 @@
 #define adv(y)  x_adv(y->x)
 #define push(b) c_push(y->c, b)
 
+// General TODO: hardcoded logic for valid "follow" tokens should be
+// cleaned up
+
 static void err(parser_t *y, const char *msg) {
     fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
     exit(1);
@@ -127,7 +130,10 @@ static int nud(parser_t *y) {
         adv(y);
         expr(y, 0);
         consume(y, ')', "Expected ')'");
-        break;
+        tk = y->x->tk.kind;
+        if (is_asgmt(tk))
+            err(y, "Invalid operator following expr");
+        return ')';
     case '{': // New array/table?
     case TK_INC: case TK_DEC:
         adv(y);
@@ -143,7 +149,8 @@ static int nud(parser_t *y) {
     case TK_ID:
         identifier(y);
         break;
-    default: break;
+    default:
+        err(y, "Unexpected symbol");
     }
     return tk;
 }
@@ -178,10 +185,13 @@ static int led(parser_t *y, int tk) {
 static int expr(parser_t *y, int rbp) {
     int it = nud(y); // Save initial token type
     int op = y->x->tk.kind;
+
+    // Postfix ++, -- handler
     if (is_incdec(op)) {
-        // If inc/dec follows a constant, return early, allowing it
-        // to be parsed as prefix op for following expr
-        if (is_const(it))
+        // If inc/dec follows a constant or parenthesized expr, return
+        // early, allowing it to be parsed as prefix op for following
+        // expr
+        if (is_const(it) || it == ')')
             return 1;
         y->pf = 0;
         c_postfix(y->c, op);
