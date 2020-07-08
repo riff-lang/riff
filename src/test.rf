@@ -1,4 +1,5 @@
-// File to test different design patterns
+// Numeric constant literals
+// -------------------------
 
 di1 = 1             // Decimal integer
 di2 = 429           // Decimal integer > 255
@@ -8,6 +9,7 @@ hi  = 0xE           // Hexadecimal integer
 hr1 = 0xa.f         // Hexidecimal real
 hr2 = 0x.f          // Hexidecimal real (no leading integer)
 str = "hello"       // String
+e   = ""            // Empty string
 
 /*
 // Normal/long function definition
@@ -17,7 +19,9 @@ fn f(x) {
 }
 */
 
-// Short/long if statements
+// Control structures
+// ------------------
+
 if a == 1 print x
 if b == 2 {
     print "b is 2"
@@ -29,6 +33,22 @@ if b == 2 {
     print "b is something else"
     exit
 }
+
+// Various for loops
+/* for i=1..10 print a[i] */
+/* for i=1..10,1 print a[i] */
+/* for i=10..1 print a[i] */
+/* for i=10..1,-1 print a[i] */
+/* for i=1; i<10; i++ print a[i] */
+
+// While loops
+while h++ < 10 print h
+while h-- > 0 {
+    print "h is"  //, h
+}
+
+// Ambiguities
+// -----------
 
 // Ambiguous case 1; `x++` part of return statement
 if x == 1
@@ -46,18 +66,20 @@ if x == 1 {
 }
 x++
 
-// Various for loops
-/* for i=1..10 print a[i] */
-/* for i=1..10,1 print a[i] */
-/* for i=10..1 print a[i] */
-/* for i=10..1,-1 print a[i] */
-/* for i=1; i<10; i++ print a[i] */
 
-// While loops
-while h++ < 10 print h
-while h-- > 0 {
-    print "h is"  //, h
-}
+// Ambiguous case 2; increment/decrement between two valid symbols
+// will be parsed as post-increment/decrement for the preceding symbol
+x = y
+++z
+
+// Solution: Use semicolon...
+x = y;
+++z
+
+// ...or use post-increment if applicable
+x = y
+z++
+
 
 /* j = {0,1,2,3,4}     // Standard array */
 

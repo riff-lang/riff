@@ -15,6 +15,14 @@ static int is_asgmt(int tk) {
     return tk == '=' || (tk >= TK_ADDX && tk <= TK_XORX);
 }
 
+static int is_const(int tk) {
+    return tk == TK_INT || tk == TK_FLT || tk == TK_STR;
+}
+
+static int is_incdec(int tk) {
+    return tk == TK_INC || tk == TK_DEC;
+}
+
 static void check(parser_t *y, int tk, const char *msg) {
     if (y->x->tk.kind != tk)
         err(y, msg);
@@ -71,10 +79,16 @@ static int expr(parser_t *y, int rbp);
 
 static void literal(parser_t *y) {
     c_constant(y->c, &y->x->tk);
+    adv(y);
+    // Assert no assignment appears following a constant literal
+    int follow = y->x->tk.kind;
+    if (is_asgmt(follow))
+        err(y, "Invalid operator following constant");
 }
 
 static void identifier(parser_t *y) {
     c_symbol(y->c, &y->x->tk);
+    adv(y);
 }
 
 static void conditional(parser_t *y) {
@@ -100,37 +114,38 @@ static void conditional(parser_t *y) {
     }
 }
 
-static void nud(parser_t *y) {
+static int nud(parser_t *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
         adv(y);
         expr(y, 12);
         c_prefix(y->c, tk);
-        return;
+        return 0;
     }
     switch (tk) {
     case '(':
         adv(y);
         expr(y, 0);
-        check(y, ')', "Expected ')'");
-        return;
+        consume(y, ')', "Expected ')'");
+        break;
     case '{': // New array/table?
     case TK_INC: case TK_DEC:
         adv(y);
+        if (is_const(y->x->tk.kind))
+            err(y, "Unexpected constant following prefix increment or decrement");
         expr(y, 14);
         c_prefix(y->c, tk);
         y->pf = 0;
-        return;
+        break;
     case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
-        adv(y);
         break;
     case TK_ID:
         identifier(y);
-        adv(y);
         break;
     default: break;
     }
+    return tk;
 }
 
 // Short-circuiting logical operations (&&, ||)
@@ -142,7 +157,8 @@ static void logical(parser_t *y, int tk) {
     c_patch(y->c, l1);
 }
 
-static void led(parser_t *y, int tk) {
+static int led(parser_t *y, int tk) {
+    int e = 0;
     switch (tk) {
     case '?':    conditional(y); break;
     case TK_AND:
@@ -150,25 +166,31 @@ static void led(parser_t *y, int tk) {
     default:
         if (lbop(tk) || rbop(tk)) {
             if (is_asgmt(tk)) y->pf = 0;
-            expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
+            e = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
         }
         break;
     }
+    return e;
 }
 
 // TODO Hacky logic for postfix ops; requires cleanup
 static int expr(parser_t *y, int rbp) {
-    nud(y);
+    int it = nud(y); // Save initial token type
     int op = y->x->tk.kind;
-    if (op == TK_INC || op == TK_DEC) {
+    if (is_incdec(op)) {
+        // If inc/dec follows a constant, return early, allowing it
+        // to be parsed as prefix op for following expr
+        if (is_const(it))
+            return 1;
         y->pf = 0;
         c_postfix(y->c, op);
         adv(y);
         op = y->x->tk.kind;
     }
-    while (rbp < lbp(op) && !adv(y)) {
-        led(y, op);
+    int e = 0; // Monitors for postfix ops following constants
+    while (rbp < lbp(op) && !e && !adv(y)) {
+        e  = led(y, op);
         op = y->x->tk.kind;
     }
     return 0;
