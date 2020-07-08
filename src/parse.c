@@ -150,7 +150,9 @@ static int nud(parser_t *y) {
         identifier(y);
         break;
     default:
-        err(y, "Unexpected symbol");
+        if (is_asgmt(tk))
+            err(y, "Unexpected symbol");
+        break;
     }
     return tk;
 }
