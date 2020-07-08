@@ -22,7 +22,7 @@ compile:
 	$(CC) $(CFLAGS) $(SRC)
 
 mem:
-	$(CC) $(CFLAGS) $(MFLAGS) $(SRC)
+	$(CC) $(MFLAGS) $(SRC)
 
 warn:
 	$(CC) $(CFLAGS) $(WFLAGS) $(SRC)
