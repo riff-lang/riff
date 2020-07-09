@@ -116,6 +116,15 @@ static void conditional(parser_t *y) {
     }
 }
 
+// Short-circuiting logical operations (&&, ||)
+static void logical(parser_t *y, int tk) {
+    push(OP_TEST);
+    int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
+    expr(y, lbp(tk));
+    push(OP_TEST);
+    c_patch(y->c, l1);
+}
+
 static int nud(parser_t *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
@@ -154,15 +163,6 @@ static int nud(parser_t *y) {
         break;
     }
     return tk;
-}
-
-// Short-circuiting logical operations (&&, ||)
-static void logical(parser_t *y, int tk) {
-    push(OP_TEST);
-    int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
-    expr(y, lbp(tk));
-    push(OP_TEST);
-    c_patch(y->c, l1);
 }
 
 static int led(parser_t *y, int tk) {
