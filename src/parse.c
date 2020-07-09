@@ -85,7 +85,7 @@ static void literal(parser_t *y) {
     adv(y);
     // Assert no assignment appears following a constant literal
     if (is_asgmt(y->x->tk.kind))
-        err(y, "Invalid operator following constant");
+        err(y, "Attempt to assign to constant value");
 }
 
 static void identifier(parser_t *y) {
@@ -284,7 +284,10 @@ static void if_stmt(parser_t *y) {
 }
 
 static void print_stmt(parser_t *y) {
+    const char *p = y->x->p; // Save pointer
     expr(y, 0);
+    if (p == y->x->p)        // No expression parsed
+        err(y, "Expected expression following `print`");
     push(OP_PRINT);
 }
 

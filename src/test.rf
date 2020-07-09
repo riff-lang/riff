@@ -34,6 +34,17 @@ if b == 2 {
     exit
 }
 
+a = x ? y : z       // Standard ternary op
+b = x ?: y          // Equivalent to b = x ? x : y
+
+x = a ? b           // Chained ternary
+  : c ? d
+  : e ? f
+  : g
+
+y = a ? b ? c ? d   // Nested ternary
+      : e : f : g
+
 // Various for loops
 /* for i=1..10 print a[i] */
 /* for i=1..10,1 print a[i] */
@@ -79,6 +90,12 @@ x = y;
 // ...or use post-increment if applicable
 x = y
 z++
+
+// Related: increment/decrement following constant should terminate
+// parsing for the current expr, saving the increment/decrement for
+// the next expr
+x = 1
+++y
 
 
 /* j = {0,1,2,3,4}     // Standard array */
