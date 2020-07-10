@@ -14,10 +14,10 @@ enum opcodes {
     OP_JNZ16,   // Jump if non-zero (2-byte offset)
     OP_JZ8,     // Jump if zero (1-byte offset)
     OP_JZ16,    // Jump if zero (2-byte offset)
-    OP_XJZ8,    // "Exclusive" jump if zero (1-byte offset)
-    OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
     OP_XJNZ8,   // "Exclusive" jump if non-zero (1-byte offset)
     OP_XJNZ16,  // "Exclusive" jump if non-zero (2-byte offset)
+    OP_XJZ8,    // "Exclusive" jump if zero (1-byte offset)
+    OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
     OP_TEST,
     OP_ADD,     // Add
     OP_SUB,     // Substract
