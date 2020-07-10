@@ -5,6 +5,7 @@
 #include "disas.h"
 #include "lex.h"
 #include "parse.h"
+#include "vm.h"
 
 static char *stringify_file(const char *path) {
     FILE *file = fopen(path, "rb");
@@ -25,6 +26,7 @@ int main(int argc, char **argv) {
         y_compile(argv[1], &c);
     else if (argc == 3)
         y_compile(stringify_file(argv[2]), &c);
+    // z_exec(&c);
     d_code_chunk(&c);
     return 0;
 }
