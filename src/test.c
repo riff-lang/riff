@@ -28,9 +28,9 @@ static const char *keys[] = {
 
 static void h_print(hash_t *h, int c) {
     for (int i = 0; i < c; i++) {
-        if (!h->e[i])
-            printf("[%d] (empty)\n", i);
-        else
+        !h->e[i] ?
+            printf("[%d] (empty)\n", i)
+        :
             printf("[%d] Key: %s, Value: %lld\n", 
                     i,
                     h->e[i]->key->str,
