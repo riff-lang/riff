@@ -58,10 +58,11 @@ while h-- > 0 {
     print "h is"  //, h
 }
 
-// Ambiguities
-// -----------
 
-// Ambiguous case 1; `x++` part of return statement
+// Pitfalls
+// --------
+
+// Case 1: `x++` part of return statement
 if x == 1
     return
 x++
@@ -78,8 +79,8 @@ if x == 1 {
 x++
 
 
-// Ambiguous case 2; increment/decrement between two valid symbols
-// will be parsed as post-increment/decrement for the preceding symbol
+// Case 2: increment/decrement between two valid symbols will be
+// parsed as post-increment/decrement for the preceding symbol
 x = y
 ++z
 
