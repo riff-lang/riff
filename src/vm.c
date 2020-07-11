@@ -20,7 +20,7 @@ val_t *z_sub(val_t *l, val_t *r) {
 }
 
 // Return logical result of value
-static int ltest(val_t *v) {
+static int test(val_t *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
@@ -60,14 +60,14 @@ int z_exec(code_t *c) {
         switch (c->code[ip]) {
         case OP_JMP8:   j8(ip);  break;
         case OP_JMP16:  j16(ip); break;
-        case OP_JNZ8:   jc8(ip,    ltest(deref(stk[sp-1]))); sp--; break;
-        case OP_JNZ16:  jc16(ip,   ltest(deref(stk[sp-1]))); sp--; break;
-        case OP_JZ8:    jc8(ip,   !ltest(deref(stk[sp-1]))); sp--; break;
-        case OP_JZ16:   jc16(ip,  !ltest(deref(stk[sp-1]))); sp--; break;
-        case OP_XJNZ8:  xjc8(ip,   ltest(deref(stk[sp-1]))); break;
-        case OP_XJNZ16: xjc16(ip,  ltest(deref(stk[sp-1]))); break;
-        case OP_XJZ8:   xjc8(ip,  !ltest(deref(stk[sp-1]))); break;
-        case OP_XJZ16:  xjc16(ip, !ltest(deref(stk[sp-1]))); break;
+        case OP_JNZ8:   jc8(ip,    test(deref(stk[sp-1]))); sp--; break;
+        case OP_JNZ16:  jc16(ip,   test(deref(stk[sp-1]))); sp--; break;
+        case OP_JZ8:    jc8(ip,   !test(deref(stk[sp-1]))); sp--; break;
+        case OP_JZ16:   jc16(ip,  !test(deref(stk[sp-1]))); sp--; break;
+        case OP_XJNZ8:  xjc8(ip,   test(deref(stk[sp-1]))); break;
+        case OP_XJNZ16: xjc16(ip,  test(deref(stk[sp-1]))); break;
+        case OP_XJZ8:   xjc8(ip,  !test(deref(stk[sp-1]))); break;
+        case OP_XJZ16:  xjc16(ip, !test(deref(stk[sp-1]))); break;
         case OP_TEST:
         case OP_ADD:
             stk[sp-2] = z_add(deref(stk[sp-2]), deref(stk[sp-1]));
