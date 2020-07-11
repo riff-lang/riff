@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "str.h"
-#include "val.h"
+#include "types.h"
 
 // Lexical Analyzer
 

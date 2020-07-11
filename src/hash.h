@@ -1,8 +1,7 @@
 #ifndef HASH_H
 #define HASH_H
 
-#include "str.h"
-#include "val.h"
+#include "types.h"
 
 typedef struct {
     str_t *key;

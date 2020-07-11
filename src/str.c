@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "str.h"
+#include "types.h"
 
 // djb2; source: http://www.cse.yorku.ca/~oz/hash.html
 static uint32_t s_hash(const char *str) {

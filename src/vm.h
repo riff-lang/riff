@@ -4,7 +4,6 @@
 #include "code.h"
 #include "hash.h"
 #include "types.h"
-#include "val.h"
 
 val_t *z_add(val_t *, val_t *);
 val_t *z_sub(val_t *, val_t *);

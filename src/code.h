@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include "lex.h"
-#include "val.h"
+#include "types.h"
 
 enum opcodes {
     OP_JMP8,    // Jump (1-byte offset)

@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "str.h"
-
 #define TYPE_INT 1  // 000001
 #define TYPE_FLT 2  // 000010
 #define TYPE_STR 4  // 000100
@@ -24,5 +22,27 @@
 
 typedef double  flt_t;
 typedef int64_t int_t;
+
+typedef struct {
+    size_t    l;
+    uint32_t  hash;
+    char     *str;
+} str_t;
+
+typedef struct {
+    uint8_t type;
+    union {
+        flt_t  f;
+        int_t  i;
+        str_t *s;
+        // Add array
+        // Add function
+    } u;
+} val_t;
+
+str_t *s_newstr(const char *, size_t);
+val_t *v_newint(int_t);
+val_t *v_newflt(flt_t);
+val_t *v_newstr(str_t *);
 
 #endif
