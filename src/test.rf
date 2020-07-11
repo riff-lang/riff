@@ -99,6 +99,12 @@ x = 1
 ++y
 
 
+// Case 3: Symbol precedes parenthesized expr. This will be parsed as
+// a function call y()
+// This currently cause the program to hang
+/* x = y */
+/* (z + 1) / 2 */
+
 /* j = {0,1,2,3,4}     // Standard array */
 
 /* // Array holding anonymous functions */
