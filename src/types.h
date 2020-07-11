@@ -30,7 +30,7 @@ typedef struct {
 } str_t;
 
 typedef struct {
-    uint8_t type;
+    int type;
     union {
         flt_t  f;
         int_t  i;
