@@ -6,8 +6,8 @@
 
 void h_init(hash_t *h) {
     h->n   = 0;
-    h->cap = 0;
-    h->e   = NULL;
+    h->cap = 8;
+    h->e   = calloc(8, sizeof(entry_t *));
 }
 
 static entry_t *new_entry(str_t *k, val_t *v) {
@@ -19,7 +19,7 @@ static entry_t *new_entry(str_t *k, val_t *v) {
     case TYPE_STR: nv = v_newstr(v->u.s); break;
     default: break;
     }
-    entry_t *e = malloc(sizeof(entry_t));
+    entry_t *e = malloc(sizeof(entry_t *));
     e->key = nk;
     e->val = nv;
     return e;

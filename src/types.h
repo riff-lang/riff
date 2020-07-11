@@ -13,14 +13,14 @@
 #define TYPE_FN  16 // 010000
 #define TYPE_SYM 32 // 100000
 
-#define IS_FLT(x) (x.type & TYPE_FLT)
-#define IS_INT(x) (x.type & TYPE_INT)
-#define IS_STR(x) (x.type & TYPE_STR)
-#define IS_ARR(x) (x.type & TYPE_ARR)
-#define IS_FN(x)  (x.type & TYPE_FN)
-#define IS_SYM(x) (x.type & TYPE_SYM)
+#define IS_FLT(x) (x->type & TYPE_FLT)
+#define IS_INT(x) (x->type & TYPE_INT)
+#define IS_STR(x) (x->type & TYPE_STR)
+#define IS_ARR(x) (x->type & TYPE_ARR)
+#define IS_FN(x)  (x->type & TYPE_FN)
+#define IS_SYM(x) (x->type & TYPE_SYM)
 
-#define IS_NUM(x) (x.type & (TYPE_INT | TYPE_FLT))
+#define IS_NUM(x) (x->type & (TYPE_INT | TYPE_FLT))
 
 typedef double  flt_t;
 typedef int64_t int_t;
