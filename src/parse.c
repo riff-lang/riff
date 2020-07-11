@@ -141,6 +141,7 @@ static int nud(parser_t *y) {
             err(y, "Invalid operator following expr");
         return ')';
     case '{': // TODO New array/table
+        break;
     case TK_INC: case TK_DEC:
         adv(y);
         if (is_const(y->x->tk.kind))
@@ -188,6 +189,8 @@ static int led(parser_t *y, int tk) {
         expr(y, 0);
         consume(y, ']', "Expected ']'");
         push(OP_GET);
+        break;
+    case '(':
         break;
     default:
         if (lbop(tk) || rbop(tk)) {
