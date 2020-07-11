@@ -1,3 +1,4 @@
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,11 +23,25 @@ static char *stringify_file(const char *path) {
 int main(int argc, char **argv) {
     code_t c;
     c_init(&c);
-    if (argc == 2)
-        y_compile(argv[1], &c);
-    else if (argc == 3)
-        y_compile(stringify_file(argv[2]), &c);
-    z_exec(&c);
-    // d_code_chunk(&c);
+
+    int df = 0;
+    int ff = 0;
+    opterr = 0;
+
+    int o;
+    while ((o = getopt(argc, argv, "df")) != -1) {
+        switch (o) {
+        case 'd': df = 1; break;
+        case 'f': ff = 1; break;
+        case '?':
+        default: break;
+        }
+    }
+
+    if (ff) y_compile(stringify_file(argv[optind]), &c);
+    else    y_compile(argv[optind], &c);
+
+    if (df) d_code_chunk(&c);
+    else    z_exec(&c);
     return 0;
 }
