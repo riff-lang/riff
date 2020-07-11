@@ -81,7 +81,6 @@ static struct {
 #define OP_ARITY    (opcode_info[b0].arity)
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
-// TODO test trailing comment alignment
 #define INST0       "%*d| %02x       %s\n"
 #define INST0DEREF  "%*d| %02x       %-6s      // %s\n"
 #define INST1       "%*d| %02x %02x    %-6s %d\n"
@@ -245,8 +244,8 @@ void d_code_chunk(code_t *c) {
 static const char *tokenstr[] = {
     [TK_AND] =
     "&&", "::", "--", "==", ">=", "++", "<=", "!=", "||", "**",
-    "<<", ">>", "+=", "&=", "/=", "%=", "*=", "|=", "-=", "^=",
-    "::=", "**=", "<<=", ">>=",
+    "<<", ">>", "+=", "&=", "::=", "/=", "%=", "*=", "|=", "**=",
+    "<<=", ">>=", "-=", "^=",
     "break", "do", "else", "exit", "fn", "for", "if", "local",
     "print", "return", "while"
 };
