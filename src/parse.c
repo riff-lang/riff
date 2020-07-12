@@ -224,10 +224,10 @@ static int expr(parser_t *y, int rbp) {
 // If a standalone expression is given without any assignment, its
 // result will be printed.
 static void expr_stmt(parser_t *y) {
+    y->pf = 1;
     expr(y, 0);
     if (y->pf)
         push(OP_PRINT);
-    y->pf = 1;
 }
 
 static void stmt_list(parser_t *);
