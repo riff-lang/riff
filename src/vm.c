@@ -36,7 +36,7 @@ static val_t *deref(val_t *v) {
 //     }
 // }
 
-#define numval(x) (IS_FLT(x) ? x->u.f : x->u.i)
+#define numval(x) (IS_INT(x) ? x->u.i : IS_FLT(x) ? x->u.f : 0)
 #define intval(x) (IS_INT(x) ? x->u.i : (int_t) x->u.f)
 #define fltval(x) (IS_FLT(x) ? x->u.f : (flt_t) x->u.i)
 
@@ -72,9 +72,7 @@ val_t *z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
 // TODO
 val_t *z_num(val_t *v) {
-    if (IS_SYM(v) && h_lookup(&globals, v->u.s)->type == TYPE_VOID)
-        return v_newint(0);
-    return v;
+    return !IS_NUM(v) ? v_newint(0) : v;
 }
 
 val_t *z_neg(val_t *v) {
@@ -98,7 +96,7 @@ val_t *z_lnot(val_t *v) {
 
 // TODO type coercion
 val_t *z_len(val_t *v) {
-    return IS_STR(v) ? v_newint(v->u.s->l) : 0;
+    return IS_STR(v) ? v_newint(v->u.s->l) : v_newint(0);
 }
 
 val_t *z_test(val_t *v) {
@@ -106,22 +104,23 @@ val_t *z_test(val_t *v) {
 }
 
 val_t *z_inc(val_t *v) {
-    return IS_INT(v) ? v_newint(intval(v) + 1)
-                     : v_newflt(fltval(v) + 1);
+    return IS_INT(v) ? v_newint(intval(v) + 1) :
+           IS_FLT(v) ? v_newflt(fltval(v) + 1) : v_newint(1);
 }
 
 val_t *z_dec(val_t *v) {
-    return IS_INT(v) ? v_newint(intval(v) - 1)
-                     : v_newflt(fltval(v) - 1);
+    return IS_INT(v) ? v_newint(intval(v) - 1) :
+           IS_FLT(v) ? v_newflt(fltval(v) - 1) : v_newint(-1);
 }
 
 static void put(val_t *v) {
     switch (v->type) {
-    case TYPE_INT: printf("%lld\n", v->u.i);    break;
-    case TYPE_FLT: printf("%g\n", v->u.f);      break;
-    case TYPE_STR: printf("%s\n", v->u.s->str); break;
-    case TYPE_ARR: // TODO
-    case TYPE_FN:  // TODO
+    case TYPE_VOID: printf("\n");                break;
+    case TYPE_INT:  printf("%lld\n", v->u.i);    break;
+    case TYPE_FLT:  printf("%g\n", v->u.f);      break;
+    case TYPE_STR:  printf("%s\n", v->u.s->str); break;
+    case TYPE_ARR:  // TODO
+    case TYPE_FN:   // TODO
     default: break;
     }
 }
