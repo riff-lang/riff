@@ -14,12 +14,13 @@ static entry_t *new_entry(str_t *k, val_t *v) {
     str_t *nk = s_newstr(k->str, k->l);
     val_t *nv;
     switch (v->type) {
-    case TYPE_INT: nv = v_newint(v->u.i); break;
-    case TYPE_FLT: nv = v_newflt(v->u.f); break;
-    case TYPE_STR: nv = v_newstr(v->u.s); break;
+    case TYPE_VOID: nv = v_newvoid();      break;
+    case TYPE_INT:  nv = v_newint(v->u.i); break;
+    case TYPE_FLT:  nv = v_newflt(v->u.f); break;
+    case TYPE_STR:  nv = v_newstr(v->u.s); break;
     default: break;
     }
-    entry_t *e = malloc(sizeof(entry_t *));
+    entry_t *e = malloc(sizeof(entry_t));
     e->key = nk;
     e->val = nv;
     return e;
@@ -46,7 +47,7 @@ val_t *h_lookup(hash_t *h, str_t *k) {
 }
 
 void h_insert(hash_t *h, str_t *k, val_t *v) {
-    // Evaluate hash hash size
+    // Evaluate hash table size
     if ((h->cap * LOAD_FACTOR) <= h->n + 1) {
         int nc = h->cap < 8 ? 8 : h->cap * 2;
         entry_t **ne = calloc(nc, sizeof(entry_t *));
