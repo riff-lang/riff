@@ -54,9 +54,10 @@ val_t *z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
 val_t *z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
 val_t *z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
 
-// TODO Remainder vs modulo
+// TODO Make sure this works as intended
 val_t *z_mod(val_t *l, val_t *r) {
-    int_arith(l,r,%);
+    int_t res = intval(l) % intval(r);
+    return res < 0 ? v_newint(res + intval(r)) : v_newint(res);
 }
 
 val_t *z_pow(val_t *l, val_t *r) {
