@@ -72,6 +72,8 @@ val_t *z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
 // TODO
 val_t *z_num(val_t *v) {
+    if (IS_SYM(v) && h_lookup(&globals, v->u.s)->type == TYPE_VOID)
+        return v_newint(0);
     return v;
 }
 
@@ -101,6 +103,16 @@ val_t *z_len(val_t *v) {
 
 val_t *z_test(val_t *v) {
     return v_newint(test(v));
+}
+
+val_t *z_inc(val_t *v) {
+    return IS_INT(v) ? v_newint(intval(v) + 1)
+                     : v_newflt(fltval(v) + 1);
+}
+
+val_t *z_dec(val_t *v) {
+    return IS_INT(v) ? v_newint(intval(v) - 1)
+                     : v_newflt(fltval(v) - 1);
 }
 
 static void put(val_t *v) {
@@ -166,12 +178,36 @@ int z_exec(code_t *c) {
         case OP_LT:     binop(lt);  break;
         case OP_LE:     binop(le);  break;
         case OP_LNOT:   unop(lnot); break;
-        case OP_CALL:
-        case OP_CAT:
-        case OP_PREINC:
-        case OP_PREDEC:
-        case OP_POSTINC:
-        case OP_POSTDEC:
+        case OP_CALL:   break;
+        case OP_CAT:    break;
+        // TODO Make sure pre inc/dec works properly with unintialized
+        // variables. They currently work but they shouldn't since
+        // deref should ultimately be returning v_newvoid(), which
+        // only sets the str_t union member to NULL
+        case OP_PREINC: {
+            str_t *k = stk[sp-1]->u.s;
+            unop(inc);
+            h_insert(&globals, k, stk[sp-1]);
+            break;
+        }
+        case OP_PREDEC: {
+            str_t *k = stk[sp-1]->u.s;
+            unop(dec);
+            h_insert(&globals, k, stk[sp-1]);
+            break;
+        }
+        case OP_POSTINC: {
+            str_t *k = stk[sp-1]->u.s;
+            unop(num);
+            h_insert(&globals, k, z_inc(stk[sp-1]));
+            break;
+        }
+        case OP_POSTDEC: {
+            str_t *k = stk[sp-1]->u.s;
+            unop(num);
+            h_insert(&globals, k, z_dec(stk[sp-1]));
+            break;
+        }
         case OP_LEN:    unop(len); break;
         case OP_ADDX:
         case OP_SUBX:
