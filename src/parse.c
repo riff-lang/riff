@@ -45,12 +45,12 @@ static int lbp(int tk) {
     case '+': case '-':           return 11;
     case TK_CAT:                  return 10;
     case TK_SHL: case TK_SHR:     return 10;
+    case '&':                     return 9;
+    case '^':                     return 8;
+    case '|':                     return 7;
     case '>': case '<':      
-    case TK_GE: case TK_LE:       return 9;
-    case TK_EQ: case TK_NE:       return 8;
-    case '&':                     return 7;
-    case '^':                     return 6;
-    case '|':                     return 5;
+    case TK_GE: case TK_LE:       return 6;
+    case TK_EQ: case TK_NE:       return 5;
     case TK_AND:                  return 4;
     case TK_OR:                   return 3;
     case '?':                     return 2;
