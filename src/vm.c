@@ -179,10 +179,6 @@ int z_exec(code_t *c) {
         case OP_LNOT:   unop(lnot); break;
         case OP_CALL:   break;
         case OP_CAT:    break;
-        // TODO Make sure pre inc/dec works properly with unintialized
-        // variables. They currently work but they shouldn't since
-        // deref should ultimately be returning v_newvoid(), which
-        // only sets the str_t union member to NULL
         case OP_PREINC: {
             str_t *k = stk[sp-1]->u.s;
             unop(inc);
