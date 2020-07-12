@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
 
     int df = 0;
     int ff = 0;
+    int uf = 0;
     opterr = 0;
 
     int o;
@@ -33,10 +34,15 @@ int main(int argc, char **argv) {
         switch (o) {
         case 'd': df = 1; break;
         case 'f': ff = 1; break;
-        case '?':
+        case '?': uf = 1; break;
         default: break;
         }
     }
+
+    // If getopt() tries to parse an unidentified option, decrement
+    // optind. getopt() will try to parse the actual program if it
+    // begins with a unary minus sign.
+    if (uf) optind--;
 
     if (ff) y_compile(stringify_file(argv[optind]), &c);
     else    y_compile(argv[optind], &c);
