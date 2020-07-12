@@ -28,26 +28,25 @@ static val_t *deref(val_t *v) {
     return IS_SYM(v) ? h_lookup(&globals, v->u.s) : v;
 }
 
-// static int cast_num(val_t *v) {
+// static val_t *cast_num(val_t *v) {
 //     switch (v->type) {
 //     case TYPE_INT:
-//     case TYPE_FLT: return v->type; // Don't cast
+//     case TYPE_FLT: return v; // Don't cast
+//     case TYPE_STR:
 //     }
 // }
 
 #define numval(x) (IS_FLT(x) ? x->u.f : x->u.i)
+#define intval(x) (IS_INT(x) ? x->u.i : (int_t) x->u.f)
+#define fltval(x) (IS_FLT(x) ? x->u.f : (flt_t) x->u.i)
+
 #define num_arith(l,r,op) \
     return (IS_FLT(l) || IS_FLT(r)) ? \
            v_newflt(numval(l) op numval(r)) : \
            v_newint(numval(l) op numval(r)); 
 
-#define intval(x) (IS_INT(x) ? x->u.i : (int_t) x->u.f)
-#define int_arith(l,r,op) \
-    return v_newint(intval(l) op intval(r));
-
-#define fltval(x) (IS_FLT(x) ? x->u.f : (flt_t) x->u.i)
-#define flt_arith(l,r,op) \
-    return v_newflt(numval(l) op numval(r));
+#define int_arith(l,r,op) return v_newint(intval(l) op intval(r));
+#define flt_arith(l,r,op) return v_newflt(numval(l) op numval(r));
 
 val_t *z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
 val_t *z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
@@ -55,9 +54,10 @@ val_t *z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
 val_t *z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
 
 // TODO Make sure this works as intended
+// TODO Error handling, e.g. RHS = 0
 val_t *z_mod(val_t *l, val_t *r) {
-    int_t res = intval(l) % intval(r);
-    return res < 0 ? v_newint(res + intval(r)) : v_newint(res);
+    flt_t res = fmod(numval(l), numval(r));
+    return res < 0 ? v_newflt(res + fltval(r)) : v_newflt(res);
 }
 
 val_t *z_pow(val_t *l, val_t *r) {
@@ -186,6 +186,8 @@ int z_exec(code_t *c) {
         case OP_SHRX:
         case OP_XORX:
         case OP_POP:
+            sp--;
+            break;
         case OP_PUSH0:
             push(v_newint(0));
             ip += 1;
