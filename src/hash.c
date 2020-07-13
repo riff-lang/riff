@@ -74,8 +74,10 @@ void h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!exists(h, k)) {
         h->n++;
         free(h->e[i]);
+        h->e[i] = new_entry(k, v);
+    } else {
+        h->e[i]->val = v;
     }
-    h->e[i] = new_entry(k, v);
 }
 
 // TODO
