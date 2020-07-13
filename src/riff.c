@@ -10,6 +10,10 @@
 
 static char *stringify_file(const char *path) {
     FILE *file = fopen(path, "rb");
+    if (!file) {
+        fprintf(stderr, "File not found: %s\n", path);
+        exit(1);
+    }
     fseek(file, 0L, SEEK_END);
     size_t s = ftell(file);
     rewind(file);
@@ -21,6 +25,12 @@ static char *stringify_file(const char *path) {
 
 // TODO handle piped input (stdin)
 int main(int argc, char **argv) {
+    // Temporary; Program will start a REPL if invoked with no args
+    if (argc == 1) {
+        printf("No program given\n");
+        exit(1);
+    }
+
     code_t c;
     c_init(&c);
 
