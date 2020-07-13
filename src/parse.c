@@ -206,6 +206,7 @@ static int led(parser_t *y, int p, int tk) {
     return p;
 }
 
+// TODO have nud() and led() return the last (rightmost) token parsed
 static int expr(parser_t *y, int rbp) {
     int p  = nud(y);
     int tk = y->x->tk.kind;
