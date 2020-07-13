@@ -92,14 +92,14 @@ static void identifier(parser_t *y) {
     adv(y);
 }
 
-static void conditional(parser_t *y) {
-    int l1, l2;
+static int conditional(parser_t *y) {
+    int e, l1, l2;
 
     // x ?: y
     if (y->x->tk.kind == ':') {
         adv(y);
         l1 = c_prep_jump(y->c, XJNZ);
-        expr(y, 0);
+        e = expr(y, 0);
         c_patch(y->c, l1);
     }
 
@@ -110,9 +110,10 @@ static void conditional(parser_t *y) {
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         consume(y, ':', "Expected ':'");
-        expr(y, 0);
+        e = expr(y, 0);
         c_patch(y->c, l2);
     }
+    return e;
 }
 
 // Short-circuiting logical operations (&&, ||)
@@ -143,9 +144,10 @@ static int nud(parser_t *y) {
     case '{': // TODO New array/table
         break;
     case TK_INC: case TK_DEC:
-        adv(y);
+        if (adv(y))
+            err(y, "Expected symbol follwing prefix increment/decrement");
         if (is_const(y->x->tk.kind))
-            err(y, "Unexpected constant following prefix increment or decrement");
+            err(y, "Unexpected constant following prefix increment/decrement");
         expr(y, 14);
         c_prefix(y->c, tk);
         y->pf = 0;
@@ -165,10 +167,11 @@ static int nud(parser_t *y) {
     return tk;
 }
 
-static int led(parser_t *y, int tk) {
-    int p = 0;
+static int led(parser_t *y, int p, int tk) {
     switch (tk) {
     case TK_INC: case TK_DEC:
+        if (is_const(p))
+            return p;
         y->pf = 0;
         c_postfix(y->c, tk);
         adv(y);
@@ -176,8 +179,7 @@ static int led(parser_t *y, int tk) {
         break;
     case '?':
         adv(y);
-        p = y->x->tk.kind;
-        conditional(y);
+        p = conditional(y);
         break;
     case TK_AND: case TK_OR:
         adv(y);
@@ -196,8 +198,7 @@ static int led(parser_t *y, int tk) {
         if (lbop(tk) || rbop(tk)) {
             if (is_asgmt(tk)) y->pf = 0;
             adv(y);
-            p = y->x->tk.kind;
-            expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
+            p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
         }
         break;
@@ -212,11 +213,11 @@ static int expr(parser_t *y, int rbp) {
         // Return early if previous nud was a constant;
         // evaluate inc/dec as prefix op for next expr
         if (is_const(p) && is_incdec(tk))
-            return 1;
-        p  = led(y, tk);
+            return p;
+        p  = led(y, p, tk);
         tk = y->x->tk.kind;
     }
-    return 0;
+    return p;
 }
 
 // Standalone expressions
