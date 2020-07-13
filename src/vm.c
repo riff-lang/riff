@@ -125,16 +125,36 @@ static void put(val_t *v) {
     }
 }
 
-#define j8       (ip += (int8_t) c->code[ip+1])
-#define j16      (ip += (int16_t) ((c->code[ip+1] << 8) + c->code[ip+2]))
-#define jc8(x)   (x ? j8  : (ip += 2)); sp--;
-#define jc16(x)  (x ? j16 : (ip += 2)); sp--;
+// Unconditional jumps
+#define j8  (ip += (int8_t) c->code[ip+1])
+#define j16 (ip += (int16_t) ((c->code[ip+1] << 8) + c->code[ip+2]))
+
+// Conditional jumps (pop stack unconditionally)
+#define jc8(x)  (x ? j8  : (ip += 2)); sp--;
+#define jc16(x) (x ? j16 : (ip += 2)); sp--;
+
+// Conditional jumps (pop stack if jump not taken)
 #define xjc8(x)  if (x) j8;  else {sp--; ip += 2;}
 #define xjc16(x) if (x) j16; else {sp--; ip += 2;}
 
+// Standard binary operations
 #define binop(x) stk[sp-2] = z_##x(deref(stk[sp-2]), deref(stk[sp-1]));\
                  sp--; ip++;
-#define unop(x)  stk[sp-1] = z_##x(deref(stk[sp-1])); ip++;
+
+// Unary operations
+#define unop(x) stk[sp-1] = z_##x(deref(stk[sp-1])); ip++;
+
+// Pre-increment/decrement
+#define pre(x) { str_t *k = stk[sp-1]->u.s; unop(x); \
+                 h_insert(&globals, k, stk[sp-1]); }
+
+// Post-increment/decrement
+#define post(x) { str_t *k = stk[sp-1]->u.s; unop(num); \
+                  h_insert(&globals, k, z_##x(stk[sp-1])); }
+
+// Compound assignment operations
+#define cbinop(x) { str_t *k = stk[sp-2]->u.s; binop(x); \
+                    h_insert(&globals, k, stk[sp-1]); }
 
 #define push(x)  (stk[sp++] = x)
 
@@ -145,77 +165,60 @@ int z_exec(code_t *c) {
     register int ip = 0;
     while (ip < c->n) {
         switch (c->code[ip]) {
-        case OP_JMP8:   j8; break;
-        case OP_JMP16:  j16; break;
-        case OP_JNZ8:   jc8(test(deref(stk[sp-1]))); break;
-        case OP_JNZ16:  jc16(test(deref(stk[sp-1]))); break;
-        case OP_JZ8:    jc8(!test(deref(stk[sp-1]))); break;
-        case OP_JZ16:   jc16(!test(deref(stk[sp-1]))); break;
-        case OP_XJNZ8:  xjc8(test(deref(stk[sp-1]))); break;
-        case OP_XJNZ16: xjc16(test(deref(stk[sp-1]))); break;
-        case OP_XJZ8:   xjc8(!test(deref(stk[sp-1]))); break;
-        case OP_XJZ16:  xjc16(!test(deref(stk[sp-1]))); break;
-        case OP_TEST:   unop(test); break;
-        case OP_ADD:    binop(add); break;
-        case OP_SUB:    binop(sub); break;
-        case OP_MUL:    binop(mul); break;
-        case OP_DIV:    binop(div); break;
-        case OP_MOD:    binop(mod); break;
-        case OP_POW:    binop(pow); break;
-        case OP_AND:    binop(and); break;
-        case OP_OR:     binop(or);  break;
-        case OP_XOR:    binop(xor); break;
-        case OP_SHL:    binop(shl); break;
-        case OP_SHR:    binop(shr); break;
-        case OP_NUM:    unop(num);  break;
-        case OP_NEG:    unop(neg);  break;
-        case OP_NOT:    unop(not);  break;
-        case OP_EQ:     binop(eq);  break;
-        case OP_NE:     binop(ne);  break;
-        case OP_GT:     binop(gt);  break;
-        case OP_GE:     binop(ge);  break;
-        case OP_LT:     binop(lt);  break;
-        case OP_LE:     binop(le);  break;
-        case OP_LNOT:   unop(lnot); break;
-        case OP_CALL:   break;
-        case OP_CAT:    break;
-        case OP_PREINC: {
-            str_t *k = stk[sp-1]->u.s;
-            unop(inc);
-            h_insert(&globals, k, stk[sp-1]);
+        case OP_JMP8:    j8; break;
+        case OP_JMP16:   j16; break;
+        case OP_JNZ8:    jc8(test(deref(stk[sp-1]))); break;
+        case OP_JNZ16:   jc16(test(deref(stk[sp-1]))); break;
+        case OP_JZ8:     jc8(!test(deref(stk[sp-1]))); break;
+        case OP_JZ16:    jc16(!test(deref(stk[sp-1]))); break;
+        case OP_XJNZ8:   xjc8(test(deref(stk[sp-1]))); break;
+        case OP_XJNZ16:  xjc16(test(deref(stk[sp-1]))); break;
+        case OP_XJZ8:    xjc8(!test(deref(stk[sp-1]))); break;
+        case OP_XJZ16:   xjc16(!test(deref(stk[sp-1]))); break;
+        case OP_TEST:    unop(test); break;
+        case OP_ADD:     binop(add); break;
+        case OP_SUB:     binop(sub); break;
+        case OP_MUL:     binop(mul); break;
+        case OP_DIV:     binop(div); break;
+        case OP_MOD:     binop(mod); break;
+        case OP_POW:     binop(pow); break;
+        case OP_AND:     binop(and); break;
+        case OP_OR:      binop(or);  break;
+        case OP_XOR:     binop(xor); break;
+        case OP_SHL:     binop(shl); break;
+        case OP_SHR:     binop(shr); break;
+        case OP_NUM:     unop(num);  break;
+        case OP_NEG:     unop(neg);  break;
+        case OP_NOT:     unop(not);  break;
+        case OP_EQ:      binop(eq);  break;
+        case OP_NE:      binop(ne);  break;
+        case OP_GT:      binop(gt);  break;
+        case OP_GE:      binop(ge);  break;
+        case OP_LT:      binop(lt);  break;
+        case OP_LE:      binop(le);  break;
+        case OP_LNOT:    unop(lnot); break;
+        case OP_CALL: // TODO
             break;
-        }
-        case OP_PREDEC: {
-            str_t *k = stk[sp-1]->u.s;
-            unop(dec);
-            h_insert(&globals, k, stk[sp-1]);
+        case OP_CAT:     // TODO binop(cat);
             break;
-        }
-        case OP_POSTINC: {
-            str_t *k = stk[sp-1]->u.s;
-            unop(num);
-            h_insert(&globals, k, z_inc(stk[sp-1]));
+        case OP_PREINC:  pre(inc); break;
+        case OP_PREDEC:  pre(dec); break;
+        case OP_POSTINC: post(inc); break;
+        case OP_POSTDEC: post(dec); break;
+        case OP_LEN:     unop(len); break;
+        case OP_ADDX:    cbinop(add); break;
+        case OP_SUBX:    cbinop(sub); break;
+        case OP_MULX:    cbinop(mul); break;
+        case OP_DIVX:    cbinop(div); break;
+        case OP_MODX:    cbinop(mod); break;
+        case OP_CATX:    // TODO cbinop(cat);
             break;
-        }
-        case OP_POSTDEC: {
-            str_t *k = stk[sp-1]->u.s;
-            unop(num);
-            h_insert(&globals, k, z_dec(stk[sp-1]));
-            break;
-        }
-        case OP_LEN:    unop(len); break;
-        case OP_ADDX:
-        case OP_SUBX:
-        case OP_MULX:
-        case OP_DIVX:
-        case OP_MODX:
-        case OP_CATX:
-        case OP_POWX:
-        case OP_ANDX:
-        case OP_ORX:
-        case OP_SHLX:
-        case OP_SHRX:
-        case OP_XORX:
+        case OP_POWX:    cbinop(pow); break;
+        case OP_ANDX:    cbinop(and); break;
+        case OP_ORX:     cbinop(or);  break;
+        case OP_SHLX:    cbinop(shl); break;
+        case OP_SHRX:    cbinop(shr); break;
+        case OP_XORX:    cbinop(xor); break;
         case OP_POP:
             sp--;
             break;
@@ -273,8 +276,10 @@ int z_exec(code_t *c) {
             break;
         case OP_RET:
             exit(0);
-        case OP_RET1:
-        case OP_GET:
+        case OP_RET1: // TODO
+            break;
+        case OP_GET: // TODO
+            break;
         case OP_SET:
             if (stk[sp-2]->type != TYPE_SYM)
                 err("Attempt to assign to constant value");
