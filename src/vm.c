@@ -43,7 +43,7 @@ static val_t *deref(val_t *v) {
 #define num_arith(l,r,op) \
     return (IS_FLT(l) || IS_FLT(r)) ? \
            v_newflt(numval(l) op numval(r)) : \
-           v_newint(numval(l) op numval(r)); 
+           v_newint(intval(l) op intval(r)); 
 
 #define int_arith(l,r,op) return v_newint(intval(l) op intval(r));
 #define flt_arith(l,r,op) return v_newflt(numval(l) op numval(r));
