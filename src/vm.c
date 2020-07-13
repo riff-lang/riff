@@ -154,7 +154,7 @@ static void put(val_t *v) {
 
 // Compound assignment operations
 #define cbinop(x) { str_t *k = stk[sp-2]->u.s; binop(x); \
-                    h_insert(&globals, k, stk[sp-1]); }
+                    h_insert(&globals, k, deref(stk[sp-1])); sp--; }
 
 #define push(x)  (stk[sp++] = x)
 
