@@ -8,15 +8,15 @@ WFLAGS += -Wextra
 WFLAGS += -Wpedantic
 WFLAGS += -Weverything
 
-SRC     = riff.c
-SRC    += code.c
-SRC    += disas.c
-SRC    += hash.c
-SRC    += lex.c
-SRC    += parse.c
-SRC    += str.c
-SRC    += val.c
-SRC    += vm.c
+SRC     = src/riff.c
+SRC    += src/code.c
+SRC    += src/disas.c
+SRC    += src/hash.c
+SRC    += src/lex.c
+SRC    += src/parse.c
+SRC    += src/str.c
+SRC    += src/val.c
+SRC    += src/vm.c
 
 all: compile
 
