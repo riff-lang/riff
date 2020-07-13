@@ -25,6 +25,10 @@ static int is_incdec(int tk) {
     return tk == TK_INC || tk == TK_DEC;
 }
 
+static int const_follow_ok(int tk) {
+    return !(is_incdec(tk) || tk == '(');
+}
+
 static void check(parser_t *y, int tk, const char *msg) {
     if (y->x->tk.kind != tk)
         err(y, msg);
@@ -211,9 +215,11 @@ static int expr(parser_t *y, int rbp) {
     int p  = nud(y);
     int tk = y->x->tk.kind;
     while (rbp < lbp(tk)) {
-        // Return early if previous nud was a constant;
-        // evaluate inc/dec as prefix op for next expr
-        if (is_const(p) && is_incdec(tk))
+        // Return early if previous nud was a constant and succeeding
+        // token would make for an invalid expression. This allows the
+        // succeeding token to be parsed as a new expression instead
+        // of throwing an error
+        if (is_const(p) && !const_follow_ok(tk))
             return p;
         p  = led(y, p, tk);
         tk = y->x->tk.kind;
