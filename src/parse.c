@@ -236,6 +236,8 @@ static void expr_stmt(parser_t *y) {
     expr(y, 0);
     if (y->pf)
         push(OP_PRINT);
+    else
+        push(OP_POP);
 }
 
 static void stmt_list(parser_t *);
