@@ -11,6 +11,7 @@ static void err(const char *msg) {
 }
 
 static hash_t globals;
+static val_t *sp;
 
 // Return logical result of value
 static int test(val_t *v) {
@@ -28,34 +29,32 @@ static val_t *deref(val_t *v) {
     return IS_SYM(v) ? h_lookup(&globals, v->u.s) : v;
 }
 
-#define numval(x) (IS_INT(x) ? x->u.i : IS_FLT(x) ? x->u.f : 0)
-#define intval(x) (IS_INT(x) ? x->u.i : IS_FLT(x) ? (int_t) x->u.f : 0)
-#define fltval(x) (IS_FLT(x) ? x->u.f : IS_INT(x) ? (flt_t) x->u.i : 0)
+#define numval(x) (IS_INT(x) ? x->u.i : \
+                   IS_FLT(x) ? x->u.f : 0)
+#define intval(x) (IS_INT(x) ? x->u.i : \
+                   IS_FLT(x) ? (int_t) x->u.f : 0)
+#define fltval(x) (IS_FLT(x) ? x->u.f : \
+                   IS_INT(x) ? (flt_t) x->u.i : 0)
+
+#define int_arith(l,r,op) \
+    sp[-2].u.i  = intval(l) op intval(r); \
+    sp[-2].type = TYPE_INT; \
+    return l;
+
+#define flt_arith(l,r,op) \
+    sp[-2].u.f  = numval(l) op numval(r); \
+    sp[-2].type = TYPE_FLT; \
+    return l;
 
 #define num_arith(l,r,op) \
-    return (IS_FLT(l) || IS_FLT(r)) ? \
-           v_newflt(numval(l) op numval(r)) : \
-           v_newint(intval(l) op intval(r)); 
-
-#define int_arith(l,r,op) return v_newint(intval(l) op intval(r));
-#define flt_arith(l,r,op) return v_newflt(numval(l) op numval(r));
-
-// #define int_arith(l,r,op) \
-//     l->u.i  = intval(l) op intval(r); \
-//     l->type = TYPE_INT; \
-//     return l;
-
-// #define flt_arith(l,r,op) \
-//     l->u.f  = numval(l) op numval(r); \
-//     l->type = TYPE_FLT; \
-//     return l;
-
-// #define num_arith(l,r,op) \
-//     if (IS_FLT(l) || IS_FLT(r)) { \
-//         flt_arith(l,r,op); \
-//     } else  { \
-//         int_arith(l,r,op); \
-//     }
+    if (IS_FLT(l) || IS_FLT(r)) { \
+        sp[-2].u.f  = numval(l) op numval(r); \
+        sp[-2].type = TYPE_FLT; \
+    } else  { \
+        sp[-2].u.i  = intval(l) op intval(r); \
+        sp[-2].type = TYPE_INT; \
+    } \
+    return l;
 
 val_t *z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
 val_t *z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
@@ -81,7 +80,11 @@ val_t *z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
 // TODO
 val_t *z_num(val_t *v) {
-    return !IS_NUM(v) ? v_newint(0) : v;
+    if (!IS_NUM(v)) {
+        v->type = TYPE_INT;
+        v->u.i  = 0;
+    }
+    return v;
 }
 
 val_t *z_neg(val_t *v) {
@@ -113,13 +116,27 @@ val_t *z_test(val_t *v) {
 }
 
 val_t *z_inc(val_t *v) {
-    return IS_INT(v) ? v_newint(intval(v) + 1) :
-           IS_FLT(v) ? v_newflt(fltval(v) + 1) : v_newint(1);
+    switch (v->type) {
+    case TYPE_INT: v->u.i += 1; break;
+    case TYPE_FLT: v->u.f += 1; break;
+    default:
+        v->type = TYPE_INT;
+        v->u.i  = 1;
+        break;
+    }
+    return v;
 }
 
 val_t *z_dec(val_t *v) {
-    return IS_INT(v) ? v_newint(intval(v) - 1) :
-           IS_FLT(v) ? v_newflt(fltval(v) - 1) : v_newint(-1);
+    switch (v->type) {
+    case TYPE_INT: v->u.i -= 1; break;
+    case TYPE_FLT: v->u.f -= 1; break;
+    default:
+        v->type = TYPE_INT;
+        v->u.i  = -1;
+        break;
+    }
+    return v;
 }
 
 static void put(val_t *v) {
@@ -148,7 +165,7 @@ static void put(val_t *v) {
 
 // Standard binary operations
 #define binop(x) \
-    sp[-2] = *z_##x(deref(sp-2), deref(sp-1));\
+    z_##x(deref(sp-2), deref(sp-1));\
     sp--; \
     ip++;
 
@@ -165,6 +182,7 @@ static void put(val_t *v) {
 }
 
 // Post-increment/decrement
+// TODO replace stack element with previous value
 #define post(x) { \
     str_t *k = sp[-1].u.s; \
     unop(num); \
@@ -175,7 +193,7 @@ static void put(val_t *v) {
 #define cbinop(x) { \
     str_t *k = sp[-2].u.s; \
     binop(x); \
-    h_insert(&globals, k, deref(sp-1)); \
+    h_insert(&globals, k, &sp[-1]); \
 }
 
 #define push(x) \
@@ -190,7 +208,7 @@ static void put(val_t *v) {
 
 int z_exec(code_t *c) {
     h_init(&globals);
-    register val_t *sp = malloc(256 * sizeof(val_t));
+    sp = malloc(256 * sizeof(val_t));
     register uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {

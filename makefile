@@ -1,6 +1,7 @@
 CFLAGS  = -O3
 
-MFLAGS  = -fsanitize=address
+MFLAGS  = -O0
+MFLAGS += -fsanitize=address
 MFLAGS += -fsanitize-address-use-after-scope
 
 WFLAGS  = -Wall
