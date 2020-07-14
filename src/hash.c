@@ -76,13 +76,8 @@ void h_insert(hash_t *h, str_t *k, val_t *v) {
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
     } else {
-        switch (v->type) {
-        case TYPE_VOID: h->e[i]->val = v_newvoid();      break;
-        case TYPE_INT:  h->e[i]->val = v_newint(v->u.i); break;
-        case TYPE_FLT:  h->e[i]->val = v_newflt(v->u.f); break;
-        case TYPE_STR:  h->e[i]->val = v_newstr(v->u.s); break;
-        default: break;
-        }
+        h->e[i]->val->type = v->type;
+        h->e[i]->val->u    = v->u;
     }
 }
 
