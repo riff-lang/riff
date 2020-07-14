@@ -29,8 +29,8 @@ static val_t *deref(val_t *v) {
 }
 
 #define numval(x) (IS_INT(x) ? x->u.i : IS_FLT(x) ? x->u.f : 0)
-#define intval(x) (IS_INT(x) ? x->u.i : (int_t) x->u.f)
-#define fltval(x) (IS_FLT(x) ? x->u.f : (flt_t) x->u.i)
+#define intval(x) (IS_INT(x) ? x->u.i : IS_FLT(x) ? (int_t) x->u.f : 0)
+#define fltval(x) (IS_FLT(x) ? x->u.f : IS_INT(x) ? (flt_t) x->u.i : 0)
 
 #define num_arith(l,r,op) \
     return (IS_FLT(l) || IS_FLT(r)) ? \
@@ -39,6 +39,23 @@ static val_t *deref(val_t *v) {
 
 #define int_arith(l,r,op) return v_newint(intval(l) op intval(r));
 #define flt_arith(l,r,op) return v_newflt(numval(l) op numval(r));
+
+// #define int_arith(l,r,op) \
+//     l->u.i  = intval(l) op intval(r); \
+//     l->type = TYPE_INT; \
+//     return l;
+
+// #define flt_arith(l,r,op) \
+//     l->u.f  = numval(l) op numval(r); \
+//     l->type = TYPE_FLT; \
+//     return l;
+
+// #define num_arith(l,r,op) \
+//     if (IS_FLT(l) || IS_FLT(r)) { \
+//         flt_arith(l,r,op); \
+//     } else  { \
+//         int_arith(l,r,op); \
+//     }
 
 val_t *z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
 val_t *z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
@@ -123,39 +140,57 @@ static void put(val_t *v) {
 
 // Conditional jumps (pop stack unconditionally)
 #define jc8(x)  (x ? j8  : (ip += 2)); sp--;
-#define jc16(x) (x ? j16 : (ip += 2)); sp--;
+#define jc16(x) (x ? j16 : (ip += 3)); sp--;
 
 // Conditional jumps (pop stack if jump not taken)
 #define xjc8(x)  if (x) j8;  else {sp--; ip += 2;}
-#define xjc16(x) if (x) j16; else {sp--; ip += 2;}
+#define xjc16(x) if (x) j16; else {sp--; ip += 3;}
 
 // Standard binary operations
-#define binop(x) sp[-2] = *z_##x(deref(sp-2), deref(sp-1));\
-                 sp--; ip++;
+#define binop(x) \
+    sp[-2] = *z_##x(deref(sp-2), deref(sp-1));\
+    sp--; \
+    ip++;
 
 // Unary operations
-#define unop(x) sp[-1] = *z_##x(deref(sp-1)); ip++;
+#define unop(x) \
+    sp[-1] = *z_##x(deref(sp-1)); \
+    ip++;
 
 // Pre-increment/decrement
-#define pre(x) { str_t *k = (sp-1)->u.s; unop(x); \
-                 h_insert(&globals, k, &sp[-1]); }
+#define pre(x) { \
+    str_t *k = sp[-1].u.s; \
+    unop(x); \
+    h_insert(&globals, k, &sp[-1]); \
+}
 
 // Post-increment/decrement
-#define post(x) { str_t *k = (sp-1)->u.s; unop(num); \
-                  h_insert(&globals, k, z_##x(sp-1)); }
+#define post(x) { \
+    str_t *k = sp[-1].u.s; \
+    unop(num); \
+    h_insert(&globals, k, z_##x(sp-1)); \
+}
 
 // Compound assignment operations
-#define cbinop(x) { str_t *k = sp[-2].u.s; binop(x); \
-                    h_insert(&globals, k, deref(sp-1)); }
+#define cbinop(x) { \
+    str_t *k = sp[-2].u.s; \
+    binop(x); \
+    h_insert(&globals, k, deref(sp-1)); \
+}
 
-#define push(x)  {\
-    sp->type = x->type;\
-    sp->u = x->u; sp++; }
+#define push(x) \
+    sp->type = x->type; \
+    sp->u    = x->u; \
+    sp++;
+
+#define pushi(x) \
+    sp->type = TYPE_INT; \
+    sp->u.i  = x; \
+    sp++;
 
 int z_exec(code_t *c) {
     h_init(&globals);
-    register val_t *sp;
-    sp = malloc(256 *sizeof(val_t));
+    register val_t *sp = malloc(256 * sizeof(val_t));
     register uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
@@ -215,21 +250,22 @@ int z_exec(code_t *c) {
         case OP_XORX:    cbinop(xor); break;
         case OP_POP:
             sp--;
+            ip++;
             break;
         case OP_PUSH0:
-            push(v_newint(0));
+            pushi(0);
             ip++;
             break;
         case OP_PUSH1:
-            push(v_newint(1));
+            pushi(1);
             ip++;
             break;
         case OP_PUSH2:
-            push(v_newint(2));
+            pushi(2);
             ip++;
             break;
         case OP_PUSHI:
-            push(v_newint(ip[1]));
+            pushi(ip[1]);
             ip += 2;
             break;
         case OP_PUSHK:
@@ -250,22 +286,22 @@ int z_exec(code_t *c) {
             break;
         case OP_PUSHS:
             push(c->k.v[ip[1]]);
-            (sp-1)->type = TYPE_SYM;
+            sp[-1].type = TYPE_SYM;
             ip += 2;
             break;
         case OP_PUSHS0:
             push(c->k.v[0]);
-            (sp-1)->type = TYPE_SYM;
+            sp[-1].type = TYPE_SYM;
             ip++;
             break;
         case OP_PUSHS1:
             push(c->k.v[1]);
-            (sp-1)->type = TYPE_SYM;
+            sp[-1].type = TYPE_SYM;
             ip++;
             break;
         case OP_PUSHS2:
             push(c->k.v[2]);
-            (sp-1)->type = TYPE_SYM;
+            sp[-1].type = TYPE_SYM;
             ip++;
             break;
         case OP_RET:
@@ -277,7 +313,7 @@ int z_exec(code_t *c) {
         case OP_SET:
             if (!IS_SYM((sp-2)))
                 err("Attempt to assign to constant value");
-            h_insert(&globals, (sp-2)->u.s, deref(sp-1));
+            h_insert(&globals, sp[-2].u.s, deref(sp-1));
             sp[-2] = *deref(sp-1);
             sp--;
             ip++;
