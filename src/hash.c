@@ -28,9 +28,9 @@ static entry_t *new_entry(str_t *k, val_t *v) {
 
 // Given a string's hash, return index of the element exists in the
 // hash, or an index of a suitble empty slot
-static int index(entry_t **e, int cap, uint32_t key) {
-    int i = key & (cap - 1);
-    while (e[i] && e[i]->key->hash != key) {
+static int index(entry_t **e, int cap, uint32_t hash) {
+    int i = hash & (cap - 1);
+    while (e[i] && e[i]->key->hash != hash) {
         i = (i << 1) & (cap - 1); // Quadratic probing
     }
     return i;
@@ -76,7 +76,13 @@ void h_insert(hash_t *h, str_t *k, val_t *v) {
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
     } else {
-        h->e[i]->val = v;
+        switch (v->type) {
+        case TYPE_VOID: h->e[i]->val = v_newvoid();      break;
+        case TYPE_INT:  h->e[i]->val = v_newint(v->u.i); break;
+        case TYPE_FLT:  h->e[i]->val = v_newflt(v->u.f); break;
+        case TYPE_STR:  h->e[i]->val = v_newstr(v->u.s); break;
+        default: break;
+        }
     }
 }
 

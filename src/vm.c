@@ -28,14 +28,6 @@ static val_t *deref(val_t *v) {
     return IS_SYM(v) ? h_lookup(&globals, v->u.s) : v;
 }
 
-// static val_t *cast_num(val_t *v) {
-//     switch (v->type) {
-//     case TYPE_INT:
-//     case TYPE_FLT: return v; // Don't cast
-//     case TYPE_STR:
-//     }
-// }
-
 #define numval(x) (IS_INT(x) ? x->u.i : IS_FLT(x) ? x->u.f : 0)
 #define intval(x) (IS_INT(x) ? x->u.i : (int_t) x->u.f)
 #define fltval(x) (IS_FLT(x) ? x->u.f : (flt_t) x->u.i)
@@ -126,8 +118,8 @@ static void put(val_t *v) {
 }
 
 // Unconditional jumps
-#define j8  (ip += (int8_t) c->code[ip+1])
-#define j16 (ip += (int16_t) ((c->code[ip+1] << 8) + c->code[ip+2]))
+#define j8  (ip += (int8_t) ip[1])
+#define j16 (ip += (int16_t) ((ip[1] << 8) + ip[2]))
 
 // Conditional jumps (pop stack unconditionally)
 #define jc8(x)  (x ? j8  : (ip += 2)); sp--;
@@ -138,43 +130,45 @@ static void put(val_t *v) {
 #define xjc16(x) if (x) j16; else {sp--; ip += 2;}
 
 // Standard binary operations
-#define binop(x) stk[sp-2] = z_##x(deref(stk[sp-2]), deref(stk[sp-1]));\
+#define binop(x) sp[-2] = *z_##x(deref(sp-2), deref(sp-1));\
                  sp--; ip++;
 
 // Unary operations
-#define unop(x) stk[sp-1] = z_##x(deref(stk[sp-1])); ip++;
+#define unop(x) sp[-1] = *z_##x(deref(sp-1)); ip++;
 
 // Pre-increment/decrement
-#define pre(x) { str_t *k = stk[sp-1]->u.s; unop(x); \
-                 h_insert(&globals, k, stk[sp-1]); }
+#define pre(x) { str_t *k = (sp-1)->u.s; unop(x); \
+                 h_insert(&globals, k, &sp[-1]); }
 
 // Post-increment/decrement
-#define post(x) { str_t *k = stk[sp-1]->u.s; unop(num); \
-                  h_insert(&globals, k, z_##x(stk[sp-1])); }
+#define post(x) { str_t *k = (sp-1)->u.s; unop(num); \
+                  h_insert(&globals, k, z_##x(sp-1)); }
 
 // Compound assignment operations
-#define cbinop(x) { str_t *k = stk[sp-2]->u.s; binop(x); \
-                    h_insert(&globals, k, deref(stk[sp-1])); sp--; }
+#define cbinop(x) { str_t *k = sp[-2].u.s; binop(x); \
+                    h_insert(&globals, k, deref(sp-1)); }
 
-#define push(x)  (stk[sp++] = x)
+#define push(x)  {\
+    sp->type = x->type;\
+    sp->u = x->u; sp++; }
 
 int z_exec(code_t *c) {
     h_init(&globals);
-    val_t *stk[256];
-    register int sp = 0;
-    register int ip = 0;
-    while (ip < c->n) {
-        switch (c->code[ip]) {
+    register val_t *sp;
+    sp = malloc(256 *sizeof(val_t));
+    register uint8_t *ip = c->code;
+    while (1) {
+        switch (*ip) {
         case OP_JMP8:    j8; break;
         case OP_JMP16:   j16; break;
-        case OP_JNZ8:    jc8(test(deref(stk[sp-1]))); break;
-        case OP_JNZ16:   jc16(test(deref(stk[sp-1]))); break;
-        case OP_JZ8:     jc8(!test(deref(stk[sp-1]))); break;
-        case OP_JZ16:    jc16(!test(deref(stk[sp-1]))); break;
-        case OP_XJNZ8:   xjc8(test(deref(stk[sp-1]))); break;
-        case OP_XJNZ16:  xjc16(test(deref(stk[sp-1]))); break;
-        case OP_XJZ8:    xjc8(!test(deref(stk[sp-1]))); break;
-        case OP_XJZ16:   xjc16(!test(deref(stk[sp-1]))); break;
+        case OP_JNZ8:    jc8(test(deref((sp-1)))); break;
+        case OP_JNZ16:   jc16(test(deref((sp-1)))); break;
+        case OP_JZ8:     jc8(!test(deref((sp-1)))); break;
+        case OP_JZ16:    jc16(!test(deref((sp-1)))); break;
+        case OP_XJNZ8:   xjc8(test(deref((sp-1)))); break;
+        case OP_XJNZ16:  xjc16(test(deref((sp-1)))); break;
+        case OP_XJZ8:    xjc8(!test(deref((sp-1)))); break;
+        case OP_XJZ16:   xjc16(!test(deref((sp-1)))); break;
         case OP_TEST:    unop(test); break;
         case OP_ADD:     binop(add); break;
         case OP_SUB:     binop(sub); break;
@@ -224,55 +218,55 @@ int z_exec(code_t *c) {
             break;
         case OP_PUSH0:
             push(v_newint(0));
-            ip += 1;
+            ip++;
             break;
         case OP_PUSH1:
             push(v_newint(1));
-            ip += 1;
+            ip++;
             break;
         case OP_PUSH2:
             push(v_newint(2));
-            ip += 1;
+            ip++;
             break;
         case OP_PUSHI:
-            push(v_newint(c->code[ip+1]));
+            push(v_newint(ip[1]));
             ip += 2;
             break;
         case OP_PUSHK:
-            push(c->k.v[c->code[ip+1]]);
+            push(c->k.v[ip[1]]);
             ip += 2;
             break;
         case OP_PUSHK0:
             push(c->k.v[0]);
-            ip += 1;
+            ip++;
             break;
         case OP_PUSHK1:
             push(c->k.v[1]);
-            ip += 1;
+            ip++;
             break;
         case OP_PUSHK2:
             push(c->k.v[2]);
-            ip += 1;
+            ip++;
             break;
         case OP_PUSHS:
-            push(c->k.v[c->code[ip+1]]);
-            stk[sp-1]->type = TYPE_SYM;
+            push(c->k.v[ip[1]]);
+            (sp-1)->type = TYPE_SYM;
             ip += 2;
             break;
         case OP_PUSHS0:
             push(c->k.v[0]);
-            stk[sp-1]->type = TYPE_SYM;
-            ip += 1;
+            (sp-1)->type = TYPE_SYM;
+            ip++;
             break;
         case OP_PUSHS1:
             push(c->k.v[1]);
-            stk[sp-1]->type = TYPE_SYM;
-            ip += 1;
+            (sp-1)->type = TYPE_SYM;
+            ip++;
             break;
         case OP_PUSHS2:
             push(c->k.v[2]);
-            stk[sp-1]->type = TYPE_SYM;
-            ip += 1;
+            (sp-1)->type = TYPE_SYM;
+            ip++;
             break;
         case OP_RET:
             exit(0);
@@ -281,16 +275,16 @@ int z_exec(code_t *c) {
         case OP_GET: // TODO
             break;
         case OP_SET:
-            if (stk[sp-2]->type != TYPE_SYM)
+            if (!IS_SYM((sp-2)))
                 err("Attempt to assign to constant value");
-            h_insert(&globals, stk[sp-2]->u.s, deref(stk[sp-1]));
-            stk[sp-2] = deref(stk[sp-1]);
-            sp -= 1;
-            ip += 1;
+            h_insert(&globals, (sp-2)->u.s, deref(sp-1));
+            sp[-2] = *deref(sp-1);
+            sp--;
+            ip++;
             break;
         case OP_PRINT:
-            put(deref(stk[--sp]));
-            ip += 1;
+            put(deref(--sp));
+            ip++;
             break;
         case OP_EXIT:
             exit(0);
