@@ -178,16 +178,16 @@ static void put(val_t *v) {
 // Pre-increment/decrement
 #define pre(x) { \
     str_t *k = sp[-1].u.s; \
-    unop(num); \
-    switch (sp[-1].type) { \
-    case TYPE_INT: sp[-1].u.i += x; break; \
-    case TYPE_FLT: sp[-1].u.f += x; break; \
+    val_t *v = h_lookup(&globals, k); \
+    switch (v->type) { \
+    case TYPE_INT: v->u.i += x; break; \
+    case TYPE_FLT: v->u.f += x; break; \
     default: \
-        sp[-1].type = TYPE_INT; \
-        sp[-1].u.i  = x; \
+        v->type = TYPE_INT; \
+        v->u.i  = x; \
         break; \
     } \
-    h_insert(&globals, k, &sp[-1]); \
+    ip++; \
 }
 
 // Post-increment/decrement
