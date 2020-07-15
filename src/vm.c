@@ -38,13 +38,11 @@ static val_t *deref(val_t *v) {
 
 #define int_arith(l,r,op) \
     sp[-2].u.i  = intval(l) op intval(r); \
-    sp[-2].type = TYPE_INT; \
-    return l;
+    sp[-2].type = TYPE_INT;
 
 #define flt_arith(l,r,op) \
     sp[-2].u.f  = numval(l) op numval(r); \
-    sp[-2].type = TYPE_FLT; \
-    return l;
+    sp[-2].type = TYPE_FLT;
 
 #define num_arith(l,r,op) \
     if (IS_FLT(l) || IS_FLT(r)) { \
@@ -53,90 +51,96 @@ static val_t *deref(val_t *v) {
     } else  { \
         sp[-2].u.i  = intval(l) op intval(r); \
         sp[-2].type = TYPE_INT; \
-    } \
-    return l;
+    }
 
-val_t *z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
-val_t *z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
-val_t *z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
-val_t *z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
+static void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
+static void z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
+static void z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
+static void z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
 
 // TODO Make sure this works as intended
 // TODO Error handling, e.g. RHS = 0
-val_t *z_mod(val_t *l, val_t *r) {
+static void z_mod(val_t *l, val_t *r) {
     flt_t res = fmod(numval(l), numval(r));
-    return res < 0 ? v_newflt(res + fltval(r)) : v_newflt(res);
+    sp[-2].type = TYPE_FLT;
+    sp[-2].u.f = res < 0 ? res + numval(r) : res;
 }
 
-val_t *z_pow(val_t *l, val_t *r) {
-    return v_newflt(pow(fltval(l), fltval(r)));
+static void z_pow(val_t *l, val_t *r) {
+    sp[-2].type = TYPE_FLT;
+    sp[-2].u.f  = pow(fltval(l), fltval(r));
 }
 
-val_t *z_and(val_t *l, val_t *r) { int_arith(l,r,&);  }
-val_t *z_or(val_t *l, val_t *r)  { int_arith(l,r,|);  }
-val_t *z_xor(val_t *l, val_t *r) { int_arith(l,r,^);  }
-val_t *z_shl(val_t *l, val_t *r) { int_arith(l,r,<<); }
-val_t *z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
+static void z_and(val_t *l, val_t *r) { int_arith(l,r,&);  }
+static void z_or(val_t *l, val_t *r)  { int_arith(l,r,|);  }
+static void z_xor(val_t *l, val_t *r) { int_arith(l,r,^);  }
+static void z_shl(val_t *l, val_t *r) { int_arith(l,r,<<); }
+static void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
 // TODO
-val_t *z_num(val_t *v) {
+static void z_num(val_t *v) {
     if (!IS_NUM(v)) {
-        v->type = TYPE_INT;
-        v->u.i  = 0;
+        sp[-1].type = TYPE_INT;
+        sp[-1].u.i  = 0;
     }
-    return v;
 }
 
-val_t *z_neg(val_t *v) {
-    return IS_FLT(v) ? v_newflt(-(v->u.f)) : v_newint(-(v->u.i));
+static void z_neg(val_t *v) {
+    switch (sp[-1].type) {
+    case TYPE_INT: sp[-1].u.i = -(intval(v)); break;
+    case TYPE_FLT: sp[-1].u.f = -(fltval(v)); break;
+    default:       sp[-1].u.i = -1; sp[-1].type = TYPE_INT; break;
+    }
 }
 
-val_t *z_not(val_t *v) {
-    return v_newint(~intval(v));
+static void z_not(val_t *v) {
+    sp[-1].u.i  = ~intval(v);
+    sp[-1].type = TYPE_INT;
 }
 
-val_t *z_eq(val_t *l, val_t *r) { num_arith(l,r,==); }
-val_t *z_ne(val_t *l, val_t *r) { num_arith(l,r,!=); }
-val_t *z_gt(val_t *l, val_t *r) { num_arith(l,r,>);  }
-val_t *z_ge(val_t *l, val_t *r) { num_arith(l,r,>=); }
-val_t *z_lt(val_t *l, val_t *r) { num_arith(l,r,<);  }
-val_t *z_le(val_t *l, val_t *r) { num_arith(l,r,<=); }
+static void z_eq(val_t *l, val_t *r) { num_arith(l,r,==); }
+static void z_ne(val_t *l, val_t *r) { num_arith(l,r,!=); }
+static void z_gt(val_t *l, val_t *r) { num_arith(l,r,>);  }
+static void z_ge(val_t *l, val_t *r) { num_arith(l,r,>=); }
+static void z_lt(val_t *l, val_t *r) { num_arith(l,r,<);  }
+static void z_le(val_t *l, val_t *r) { num_arith(l,r,<=); }
 
-val_t *z_lnot(val_t *v) {
-    return v_newint(!numval(v));
+static void z_lnot(val_t *v) {
+    sp[-1].u.i  = !numval(v);
+    sp[-1].type = TYPE_INT;
 }
 
 // TODO type coercion
-val_t *z_len(val_t *v) {
-    return IS_STR(v) ? v_newint(v->u.s->l) : v_newint(0);
+static void z_len(val_t *v) {
+    sp[-1].u.i  = IS_STR(v) ? v->u.s->l : 0;
+    sp[-1].type = TYPE_INT;
 }
 
-val_t *z_test(val_t *v) {
-    return v_newint(test(v));
+static void z_test(val_t *v) {
+    sp[-1].u.i  = test(v);
+    sp[-1].type = TYPE_INT;
 }
 
-val_t *z_inc(val_t *v) {
-    switch (v->type) {
-    case TYPE_INT: v->u.i += 1; break;
-    case TYPE_FLT: v->u.f += 1; break;
+static void z_inc(val_t *v) {
+    switch (sp[-1].type) {
+    case TYPE_INT: sp[-1].u.i += 1; break;
+    case TYPE_FLT: sp[-1].u.f += 1; break;
     default:
-        v->type = TYPE_INT;
-        v->u.i  = 1;
+        sp[-1].type = TYPE_INT;
+        sp[-1].u.i  = 1;
         break;
     }
-    return v;
 }
 
-val_t *z_dec(val_t *v) {
-    switch (v->type) {
-    case TYPE_INT: v->u.i -= 1; break;
-    case TYPE_FLT: v->u.f -= 1; break;
+static void z_dec(val_t *v) {
+    switch (sp[-1].type) {
+    case TYPE_INT: sp[-1].u.i -= 1; break;
+    case TYPE_FLT: sp[-1].u.f -= 1; break;
     default:
-        v->type = TYPE_INT;
-        v->u.i  = -1;
+        sp[-1].type = TYPE_INT;
+        sp[-1].u.i  = -1;
         break;
     }
-    return v;
 }
 
 static void put(val_t *v) {
@@ -171,7 +175,7 @@ static void put(val_t *v) {
 
 // Unary operations
 #define unop(x) \
-    sp[-1] = *z_##x(deref(sp-1)); \
+    z_##x(deref(sp-1)); \
     ip++;
 
 // Pre-increment/decrement
@@ -186,7 +190,8 @@ static void put(val_t *v) {
 #define post(x) { \
     str_t *k = sp[-1].u.s; \
     unop(num); \
-    h_insert(&globals, k, z_##x(sp-1)); \
+    z_##x(sp-1); \
+    h_insert(&globals, k, &sp[-1]); \
 }
 
 // Compound assignment operations
