@@ -140,38 +140,6 @@ static void z_test(val_t *v) {
     sp[-1].type = TYPE_INT;
 }
 
-static val_t *z_inc(val_t *v) {
-    switch (v->type) {
-    case TYPE_INT:
-        v->u.i += 1;
-        break;
-    case TYPE_FLT:
-        v->u.f += 1;
-        break;
-    default:
-        v->type = TYPE_INT;
-        v->u.i  = 1;
-        break;
-    }
-    return v;
-}
-
-static val_t *z_dec(val_t *v) {
-    switch (v->type) {
-    case TYPE_INT:
-        v->u.i -= 1;
-        break;
-    case TYPE_FLT:
-        v->u.f -= 1;
-        break;
-    default:
-        v->type = TYPE_INT;
-        v->u.i  = -1;
-        break;
-    }
-    return v;
-}
-
 static void put(val_t *v) {
     switch (v->type) {
     case TYPE_VOID: printf("\n");                break;
@@ -210,23 +178,29 @@ static void put(val_t *v) {
 // Pre-increment/decrement
 #define pre(x) { \
     str_t *k = sp[-1].u.s; \
-    sp[-1] = *z_##x(deref(sp-1)); \
-    ip++; \
+    unop(num); \
+    switch (sp[-1].type) { \
+    case TYPE_INT: sp[-1].u.i += x; break; \
+    case TYPE_FLT: sp[-1].u.f += x; break; \
+    default: \
+        sp[-1].type = TYPE_INT; \
+        sp[-1].u.i  = x; \
+        break; \
+    } \
     h_insert(&globals, k, &sp[-1]); \
 }
 
 // Post-increment/decrement
-// TODO replace stack element with previous value
 #define post(x) { \
     str_t *k = sp[-1].u.s; \
     unop(num); \
-    printf("%lld\n", sp[-1].u.i); \
-    switch (sp[-1].type) { \
-    case TYPE_INT: h_lookup(&globals, k)->u.i += x; break; \
-    case TYPE_FLT: h_lookup(&globals, k)->u.f += x; break; \
+    val_t *v = h_lookup(&globals, k); \
+    switch (v->type) { \
+    case TYPE_INT: v->u.i += x; break; \
+    case TYPE_FLT: v->u.f += x; break; \
     default: \
-        h_insert(&globals, k, &sp[-1]); \
-        h_lookup(&globals, k)->u.i += x; \
+        v->type = TYPE_INT; \
+        v->u.i  = x; \
         break; \
     } \
 }
@@ -290,8 +264,8 @@ int z_exec(code_t *c) {
             break;
         case OP_CAT:     // TODO binop(cat);
             break;
-        case OP_PREINC:  pre(inc); break;
-        case OP_PREDEC:  pre(dec); break;
+        case OP_PREINC:  pre(1); break;
+        case OP_PREDEC:  pre(-1); break;
         case OP_POSTINC: post(1); break;
         case OP_POSTDEC: post(-1); break;
         case OP_LEN:     unop(len); break;
