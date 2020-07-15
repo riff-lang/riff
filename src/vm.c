@@ -79,17 +79,36 @@ static void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
 // TODO
 static void z_num(val_t *v) {
-    if (!IS_NUM(v)) {
+    switch (v->type) {
+    case TYPE_INT:
+        sp[-1].u.i  = intval(v);
         sp[-1].type = TYPE_INT;
+        break;
+    case TYPE_FLT:
+        sp[-1].u.f  = fltval(v);
+        sp[-1].type = TYPE_FLT;
+        break;
+    default:
         sp[-1].u.i  = 0;
+        sp[-1].type = TYPE_INT;
+        break;
     }
 }
 
 static void z_neg(val_t *v) {
-    switch (sp[-1].type) {
-    case TYPE_INT: sp[-1].u.i = -(intval(v)); break;
-    case TYPE_FLT: sp[-1].u.f = -(fltval(v)); break;
-    default:       sp[-1].u.i = -1; sp[-1].type = TYPE_INT; break;
+    switch (v->type) {
+    case TYPE_INT:
+        sp[-1].u.i  = -(intval(v));
+        sp[-1].type = TYPE_INT;
+        break;
+    case TYPE_FLT:
+        sp[-1].u.f  = -(fltval(v));
+        sp[-1].type = TYPE_FLT;
+        break;
+    default:
+        sp[-1].u.i = -1;
+        sp[-1].type = TYPE_INT;
+        break;
     }
 }
 
@@ -121,26 +140,36 @@ static void z_test(val_t *v) {
     sp[-1].type = TYPE_INT;
 }
 
-static void z_inc(val_t *v) {
-    switch (sp[-1].type) {
-    case TYPE_INT: sp[-1].u.i += 1; break;
-    case TYPE_FLT: sp[-1].u.f += 1; break;
+static val_t *z_inc(val_t *v) {
+    switch (v->type) {
+    case TYPE_INT:
+        v->u.i += 1;
+        break;
+    case TYPE_FLT:
+        v->u.f += 1;
+        break;
     default:
-        sp[-1].type = TYPE_INT;
-        sp[-1].u.i  = 1;
+        v->type = TYPE_INT;
+        v->u.i  = 1;
         break;
     }
+    return v;
 }
 
-static void z_dec(val_t *v) {
-    switch (sp[-1].type) {
-    case TYPE_INT: sp[-1].u.i -= 1; break;
-    case TYPE_FLT: sp[-1].u.f -= 1; break;
+static val_t *z_dec(val_t *v) {
+    switch (v->type) {
+    case TYPE_INT:
+        v->u.i -= 1;
+        break;
+    case TYPE_FLT:
+        v->u.f -= 1;
+        break;
     default:
-        sp[-1].type = TYPE_INT;
-        sp[-1].u.i  = -1;
+        v->type = TYPE_INT;
+        v->u.i  = -1;
         break;
     }
+    return v;
 }
 
 static void put(val_t *v) {
@@ -181,7 +210,8 @@ static void put(val_t *v) {
 // Pre-increment/decrement
 #define pre(x) { \
     str_t *k = sp[-1].u.s; \
-    unop(x); \
+    sp[-1] = *z_##x(deref(sp-1)); \
+    ip++; \
     h_insert(&globals, k, &sp[-1]); \
 }
 
@@ -190,8 +220,15 @@ static void put(val_t *v) {
 #define post(x) { \
     str_t *k = sp[-1].u.s; \
     unop(num); \
-    z_##x(sp-1); \
-    h_insert(&globals, k, &sp[-1]); \
+    printf("%lld\n", sp[-1].u.i); \
+    switch (sp[-1].type) { \
+    case TYPE_INT: h_lookup(&globals, k)->u.i += x; break; \
+    case TYPE_FLT: h_lookup(&globals, k)->u.f += x; break; \
+    default: \
+        h_insert(&globals, k, &sp[-1]); \
+        h_lookup(&globals, k)->u.i += x; \
+        break; \
+    } \
 }
 
 // Compound assignment operations
@@ -255,8 +292,8 @@ int z_exec(code_t *c) {
             break;
         case OP_PREINC:  pre(inc); break;
         case OP_PREDEC:  pre(dec); break;
-        case OP_POSTINC: post(inc); break;
-        case OP_POSTDEC: post(dec); break;
+        case OP_POSTINC: post(1); break;
+        case OP_POSTDEC: post(-1); break;
         case OP_LEN:     unop(len); break;
         case OP_ADDX:    cbinop(add); break;
         case OP_SUBX:    cbinop(sub); break;
