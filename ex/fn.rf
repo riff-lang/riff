@@ -1,0 +1,6 @@
+// User functions
+
+fn f(x) {
+    local y = x ** 2
+    return x + y
+}
