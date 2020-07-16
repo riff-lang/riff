@@ -42,6 +42,10 @@ typedef struct {
     } u;
 } val_t;
 
+#define INT_VAL(x) ((val_t) { TYPE_INT, { .i = x }})
+#define FLT_VAL(x) ((val_t) { TYPE_FLT, { .f = x }})
+#define STR_VAL(x) ((val_t) { TYPE_STR, { .s = x }})
+
 str_t *s_newstr(const char *, size_t);
 val_t *v_newvoid(void);
 val_t *v_newint(int_t);
