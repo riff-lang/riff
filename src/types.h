@@ -42,9 +42,10 @@ typedef struct {
     } u;
 } val_t;
 
-#define INT_VAL(x) ((val_t) { TYPE_INT, { .i = x }})
-#define FLT_VAL(x) ((val_t) { TYPE_FLT, { .f = x }})
-#define STR_VAL(x) ((val_t) { TYPE_STR, { .s = x }})
+// Assign value x to val_t *p
+#define ASSIGN_INT(p, x) (p)->u.i = (x); (p)->type = TYPE_INT
+#define ASSIGN_FLT(p, x) (p)->u.f = (x); (p)->type = TYPE_FLT
+#define ASSIGN_STR(p, x) (p)->u.s = (x); (p)->type = TYPE_STR
 
 str_t *s_newstr(const char *, size_t);
 val_t *v_newvoid(void);

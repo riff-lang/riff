@@ -37,16 +37,16 @@ static val_t *deref(val_t *v) {
                    IS_INT(x) ? (flt_t) x->u.i : 0)
 
 #define int_arith(l,r,op) \
-    sp[-2] = INT_VAL(intval(l) op intval(r));
+    ASSIGN_INT((sp-2), (intval(l) op intval(r)));
 
 #define flt_arith(l,r,op) \
-    sp[-2] = FLT_VAL(numval(l) op numval(r));
+    ASSIGN_FLT((sp-2), (numval(l) op numval(r)));
 
 #define num_arith(l,r,op) \
     if (IS_FLT(l) || IS_FLT(r)) { \
-        sp[-2] = FLT_VAL(numval(l) op numval(r)); \
+        flt_arith(l,r,op); \
     } else  { \
-        sp[-2] = INT_VAL(intval(l) op intval(r)); \
+        int_arith(l,r,op); \
     }
 
 static void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
@@ -58,11 +58,11 @@ static void z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
 // TODO Error handling, e.g. RHS = 0
 static void z_mod(val_t *l, val_t *r) {
     flt_t res = fmod(numval(l), numval(r));
-    sp[-2] = FLT_VAL(res < 0 ? res + numval(r) : res);
+    ASSIGN_FLT((sp-2), res < 0 ? res + numval(r) : res);
 }
 
 static void z_pow(val_t *l, val_t *r) {
-    sp[-2] = FLT_VAL(pow(fltval(l), fltval(r)));
+    ASSIGN_FLT((sp-2), pow(fltval(l), fltval(r)));
 }
 
 static void z_and(val_t *l, val_t *r) { int_arith(l,r,&);  }
@@ -75,13 +75,13 @@ static void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 static void z_num(val_t *v) {
     switch (v->type) {
     case TYPE_INT:
-        sp[-1] = INT_VAL(intval(v));
+        ASSIGN_INT((sp-1), intval(v));
         break;
     case TYPE_FLT:
-        sp[-1] = FLT_VAL(fltval(v));
+        ASSIGN_FLT((sp-1), fltval(v));
         break;
     default:
-        sp[-1] = INT_VAL(0);
+        ASSIGN_INT((sp-1), 0);
         break;
     }
 }
@@ -89,19 +89,19 @@ static void z_num(val_t *v) {
 static void z_neg(val_t *v) {
     switch (v->type) {
     case TYPE_INT:
-        sp[-1] = INT_VAL(-intval(v));
+        ASSIGN_INT((sp-1), -intval(v));
         break;
     case TYPE_FLT:
-        sp[-1] = FLT_VAL(-fltval(v));
+        ASSIGN_FLT((sp-1), -fltval(v));
         break;
     default:
-        sp[-1] = INT_VAL(-1);
+        ASSIGN_INT((sp-1), -1);
         break;
     }
 }
 
 static void z_not(val_t *v) {
-    sp[-1] = INT_VAL(~intval(v));
+    ASSIGN_INT((sp-1), ~intval(v));
 }
 
 static void z_eq(val_t *l, val_t *r) { num_arith(l,r,==); }
@@ -112,16 +112,16 @@ static void z_lt(val_t *l, val_t *r) { num_arith(l,r,<);  }
 static void z_le(val_t *l, val_t *r) { num_arith(l,r,<=); }
 
 static void z_lnot(val_t *v) {
-    sp[-1] = INT_VAL(!numval(v));
+    ASSIGN_INT((sp-1), !numval(v));
 }
 
 // TODO type coercion
 static void z_len(val_t *v) {
-    sp[-1] = INT_VAL(IS_STR(v) ? v->u.s->l : 0);
+    ASSIGN_INT((sp-1), IS_STR(v) ? v->u.s->l : 0);
 }
 
 static void z_test(val_t *v) {
-    sp[-1] = INT_VAL(test(v));
+    ASSIGN_INT((sp-1), test(v));
 }
 
 static void put(val_t *v) {
@@ -167,7 +167,7 @@ static void put(val_t *v) {
     case TYPE_INT: v->u.i += x; break; \
     case TYPE_FLT: v->u.f += x; break; \
     default: \
-        *v = INT_VAL(x); \
+        ASSIGN_INT(v, x); \
         break; \
     } \
     ip++; \
@@ -182,7 +182,7 @@ static void put(val_t *v) {
     case TYPE_INT: v->u.i += x; break; \
     case TYPE_FLT: v->u.f += x; break; \
     default: \
-        *v = INT_VAL(x); \
+        ASSIGN_INT(v, x); \
         break; \
     } \
 }
@@ -200,7 +200,7 @@ static void put(val_t *v) {
     sp++;
 
 #define pushi(x) \
-    *sp = INT_VAL(x); \
+    ASSIGN_INT(sp, x); \
     sp++;
 
 int z_exec(code_t *c) {
