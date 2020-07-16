@@ -153,8 +153,8 @@ static int nud(parser_t *y) {
     case TK_INC: case TK_DEC:
         if (adv(y))
             err(y, "Expected symbol follwing prefix increment/decrement");
-        if (is_const(y->x->tk.kind))
-            err(y, "Unexpected constant following prefix increment/decrement");
+        if (y->x->tk.kind != TK_ID)
+            err(y, "Unexpected symbol following prefix increment/decrement");
         expr(y, 14);
         c_prefix(y->c, tk);
         set(px);
@@ -227,7 +227,7 @@ static int expr(parser_t *y, int rbp) {
         // token would make for an invalid expression. This allows the
         // succeeding token to be parsed as a new expression instead
         // of throwing an error
-        if (is_const(p) && !const_follow_ok(tk))
+        if ((is_const(p) || p == ')') && !const_follow_ok(tk))
             return p;
         p  = led(y, p, tk);
         tk = y->x->tk.kind;
