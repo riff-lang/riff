@@ -1,15 +1,10 @@
 #include "types.h"
 
-static val_t *voidval = NULL; // Single "void" value
-
-// TODO Check for unintended side effects
 val_t *v_newvoid(void) {
-    if (voidval == NULL) {
-        voidval = malloc(sizeof(val_t));
-        voidval->type = TYPE_VOID;
-        voidval->u.s = NULL;
-    }
-    return voidval;
+    val_t *v = malloc(sizeof(val_t));
+    v->type = TYPE_VOID;
+    v->u.s  = NULL;
+    return v;
 }
 
 val_t *v_newint(int_t i) {

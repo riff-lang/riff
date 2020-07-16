@@ -43,7 +43,9 @@ static int exists(hash_t *h, str_t *k) {
 
 val_t *h_lookup(hash_t *h, str_t *k) {
     int i = index(h->e, h->cap, k->hash);
-    return !h->e[i] ? v_newvoid() : h->e[i]->val;
+    if (!h->e[i])
+        h->e[i] = new_entry(k, v_newvoid());
+    return h->e[i]->val;
 }
 
 void h_insert(hash_t *h, str_t *k, val_t *v) {
