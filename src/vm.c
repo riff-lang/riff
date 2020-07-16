@@ -95,7 +95,7 @@ static void z_neg(val_t *v) {
         ASSIGN_FLT((sp-1), -fltval(v));
         break;
     default:
-        ASSIGN_INT((sp-1), -1);
+        ASSIGN_INT((sp-1), -1); // TODO type coercion
         break;
     }
 }
