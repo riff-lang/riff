@@ -227,7 +227,7 @@ static int expr(parser_t *y, int rbp) {
         // token would make for an invalid expression. This allows the
         // succeeding token to be parsed as a new expression instead
         // of throwing an error
-        if ((is_const(p) || p == ')') && !const_follow_ok(tk))
+        if ((is_const(p) || is_incdec(p) || p == ')') && !const_follow_ok(tk))
             return p;
         p  = led(y, p, tk);
         tk = y->x->tk.kind;
