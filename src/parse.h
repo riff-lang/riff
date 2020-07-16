@@ -8,7 +8,9 @@
 typedef struct {
     lexer_t *x;
     code_t  *c;  // Current code object
-    int      pf; // Print flag
+    uint8_t  ax; // Assignment flag
+    uint8_t  ox; // Typical operation flag
+    uint8_t  px; // Prefix/postfix increment/decrement flag
 } parser_t;
 
 int y_compile(const char *, code_t *);

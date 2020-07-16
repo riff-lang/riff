@@ -2,8 +2,10 @@
 
 #include "parse.h"
 
-#define adv(y)  x_adv(y->x)
-#define push(b) c_push(y->c, b)
+#define adv(y)      x_adv(y->x)
+#define push(b)     c_push(y->c, b)
+#define unset_all() y->ax = 0; y->ox = 0; y->px = 0;
+#define set(x)      y->x = 1;
 
 // General TODO: hardcoded logic for valid "follow" tokens should be
 // cleaned up
@@ -132,6 +134,7 @@ static void logical(parser_t *y, int tk) {
 static int nud(parser_t *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
+        set(ox);
         adv(y);
         expr(y, 12);
         c_prefix(y->c, tk);
@@ -154,7 +157,7 @@ static int nud(parser_t *y) {
             err(y, "Unexpected constant following prefix increment/decrement");
         expr(y, 14);
         c_prefix(y->c, tk);
-        y->pf = 0;
+        set(px);
         break;
     case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
@@ -176,12 +179,13 @@ static int led(parser_t *y, int p, int tk) {
     case TK_INC: case TK_DEC:
         if (is_const(p))
             return p;
-        y->pf = 0;
+        set(px);
         c_postfix(y->c, tk);
         adv(y);
         p = y->x->tk.kind;
         break;
     case '?':
+        set(ox);
         adv(y);
         p = conditional(y);
         break;
@@ -200,7 +204,9 @@ static int led(parser_t *y, int p, int tk) {
         break;
     default:
         if (lbop(tk) || rbop(tk)) {
-            if (is_asgmt(tk)) y->pf = 0;
+            if (is_asgmt(tk))
+                set(ax);
+            set(ox);
             adv(y);
             p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
@@ -214,7 +220,9 @@ static int led(parser_t *y, int p, int tk) {
 static int expr(parser_t *y, int rbp) {
     int p  = nud(y);
     int tk = y->x->tk.kind;
+
     while (rbp < lbp(tk)) {
+
         // Return early if previous nud was a constant and succeeding
         // token would make for an invalid expression. This allows the
         // succeeding token to be parsed as a new expression instead
@@ -228,13 +236,23 @@ static int expr(parser_t *y, int rbp) {
 }
 
 // Standalone expressions
-// Evaluates whether a standalone expression had any side effects.
-// If a standalone expression is given without any assignment, its
-// result will be printed.
 static void expr_stmt(parser_t *y) {
-    y->pf = 1;
+    unset_all();
     expr(y, 0);
-    if (y->pf)
+
+    // Implicit printing conditions
+    // 1. No assignment took place
+    // 2. No prefix/postfix ++/-- UNLESS there was an operation that
+    //    otherwise doesn't mutate state, e.g. normal arithmetic
+    //
+    // Examples:
+    //   a = 1       (Do not print)
+    //   a << 2      (Print)
+    //   a++         (Do not print)
+    //   a = b--     (Do not print)
+    //   ++a == 1    (Print)
+    //   x++ ? y : z (Print)
+    if (!y->ax && (!y->px || y->ox))
         push(OP_PRINT);
     else
         push(OP_POP);
@@ -351,7 +369,7 @@ static void stmt_list(parser_t *y) {
 }
 
 static void y_init(parser_t *y, const char *src) {
-    y->pf = 1;
+    unset_all();
     x_init(y->x, src);
 }
 
