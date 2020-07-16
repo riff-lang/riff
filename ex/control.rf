@@ -1,16 +1,19 @@
 // Control structures
 
-if a == 1 print x
-if b == 2 {
-    print "b is 2"
-    exit
-} else if b == 3 {
-    print "b is 3"
-    exit
-} else {
-    print "b is something else"
-    exit
-}
+if a != 1 !x        // Prints 1
+a != 1 ? !x : 2     // Also prints 1
+!a ?: 2             // This as well
+
+// This prints "b is something else"
+if b == 2
+    "b is 2"
+else if b == 3
+    "b is 3"
+else
+    "b is something else"
+
+// This prints "b is nothing"
+b == "" ? "b is nothing" : b == 3 ? "b is 3" : "b is something else"
 
 a = x ? y : z       // Standard ternary op
 b = x ?: y          // Equivalent to b = x ? x : y
@@ -23,7 +26,7 @@ x = a ? b           // Chained ternary
 y = a ? b ? c ? d   // Nested ternary
       : e : f : g
 
-// Various for loops
+// Various for loops - not yet implemented
 /* for i=1..10 print a[i] */
 /* for i=1..10,1 print a[i] */
 /* for i=10..1 print a[i] */
@@ -31,7 +34,9 @@ y = a ? b ? c ? d   // Nested ternary
 /* for i=1; i<10; i++ print a[i] */
 
 // While loops
-while h++ < 10 print h
+while h++ < 10 h    // This will print h (1..10); h is 11 afterwards
+
+// Prints "h is" followed by h on a separate line
 while h-- > 0 {
-    print "h is"  //, h
+    "h is"; h
 }

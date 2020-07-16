@@ -1,0 +1,15 @@
+// Implicit printing behavior
+
+// Assignment; no output takes place
+a = 2
+b = 4
+c = 5
+
+// Prints 2, 4 and 5 on separate lines
+a b c;
+
+// Prefix/postfix increment/decrement; no output
+d--
+++e
+
+d e 
