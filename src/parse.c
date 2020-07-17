@@ -152,7 +152,7 @@ static int nud(parser_t *y) {
         break;
     case TK_INC: case TK_DEC:
         if (adv(y))
-            err(y, "Expected symbol follwing prefix increment/decrement");
+            err(y, "Expected symbol following prefix increment/decrement");
         if (y->x->tk.kind != TK_ID)
             err(y, "Unexpected symbol following prefix increment/decrement");
         expr(y, 14);
@@ -191,8 +191,8 @@ static int led(parser_t *y, int p, int tk) {
         break;
     case TK_AND: case TK_OR:
         adv(y);
-        p = y->x->tk.kind;
         logical(y, tk);
+        p = y->x->tk.kind;
         break;
     case '[':
         adv(y);
