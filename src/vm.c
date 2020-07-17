@@ -326,8 +326,6 @@ int z_exec(code_t *c) {
         case OP_GET: // TODO
             break;
         case OP_SET:
-            if (!IS_SYM((sp-2)))
-                err("Attempt to assign to constant value");
             h_insert(&globals, sp[-2].u.s, deref(sp-1));
             sp[-2] = *deref(sp-1);
             sp--;
