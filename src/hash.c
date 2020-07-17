@@ -2,6 +2,8 @@
 #include "hash.h"
 #include "types.h"
 
+#include <stdio.h> // Debug purposes
+
 #define LOAD_FACTOR 0.7
 
 void h_init(hash_t *h) {
