@@ -215,6 +215,11 @@ static void put(val_t *v) {
     ASSIGN_INT(sp, x); \
     sp++;
 
+#define pushs(x) \
+    sp->type = TYPE_SYM; \
+    sp->u    = c->k.v[(x)]->u; \
+    sp++;
+
 int z_exec(code_t *c) {
     h_init(&globals);
     sp = malloc(256 * sizeof(val_t));
@@ -312,23 +317,19 @@ int z_exec(code_t *c) {
             ip++;
             break;
         case OP_PUSHS:
-            push(c->k.v[ip[1]]);
-            sp[-1].type = TYPE_SYM;
+            pushs(ip[1]);
             ip += 2;
             break;
         case OP_PUSHS0:
-            push(c->k.v[0]);
-            sp[-1].type = TYPE_SYM;
+            pushs(0);
             ip++;
             break;
         case OP_PUSHS1:
-            push(c->k.v[1]);
-            sp[-1].type = TYPE_SYM;
+            pushs(1);
             ip++;
             break;
         case OP_PUSHS2:
-            push(c->k.v[2]);
-            sp[-1].type = TYPE_SYM;
+            pushs(2);
             ip++;
             break;
         case OP_RET:
