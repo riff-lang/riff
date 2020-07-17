@@ -124,6 +124,18 @@ static void z_test(val_t *v) {
     ASSIGN_INT((sp-1), test(v));
 }
 
+static void z_get(val_t *l, val_t *r) {
+    switch (l->type) {
+    case TYPE_STR:
+        ASSIGN_STR((sp-2), s_newstr(&l->u.s->str[intval(r)], 1));
+        break;
+    case TYPE_ARR: // TODO
+    default:
+        ASSIGN_INT((sp-2), 0);
+        break;
+    }
+}
+
 static void put(val_t *v) {
     switch (v->type) {
     case TYPE_VOID: printf("\n");                break;
@@ -324,6 +336,9 @@ int z_exec(code_t *c) {
         case OP_RET1: // TODO
             break;
         case OP_GET: // TODO
+            z_get(sp-2, deref(sp-1));
+            sp--;
+            ip++;
             break;
         case OP_SET:
             h_insert(&globals, sp[-2].u.s, deref(sp-1));
