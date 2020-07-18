@@ -48,6 +48,9 @@ typedef struct {
 #define assign_str(p, x) (p)->u.s = (x); (p)->type = TYPE_STR
 
 str_t *s_newstr(const char *, size_t);
+str_t *s_concat(str_t *, str_t *);
+str_t *s_int2str(int_t);
+str_t *s_flt2str(flt_t);
 val_t *v_newvoid(void);
 val_t *v_newint(int_t);
 val_t *v_newflt(flt_t);
