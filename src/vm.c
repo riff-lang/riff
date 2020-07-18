@@ -148,8 +148,17 @@ void z_cat(val_t *p, val_t *l, val_t *r) {
     assign_str(p, s_concat(l->u.s, r->u.s));
 }
 
+// Potentially very slow; allocates 2 new string objects for every int
+// or float LHS
+// TODO Index out of bounds handling, e.g. RHS > length of LHS
 void z_get(val_t *p, val_t *l, val_t *r) {
     switch (l->type) {
+    case TYPE_INT:
+        assign_str(p, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1));
+        break;
+    case TYPE_FLT:
+        assign_str(p, s_newstr(&s_flt2str(l->u.f)->str[intval(r)], 1));
+        break;
     case TYPE_STR:
         assign_str(p, s_newstr(&l->u.s->str[intval(r)], 1));
         break;
