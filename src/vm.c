@@ -11,10 +11,14 @@ static void err(const char *msg) {
 }
 
 static hash_t globals;
-static val_t *sp;
+
+static val_t *deref(val_t *v) {
+    return IS_SYM(v) ? h_lookup(&globals, v->u.s) : v;
+}
 
 // Return logical result of value
 static int test(val_t *v) {
+    v = deref(v);
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
@@ -25,10 +29,6 @@ static int test(val_t *v) {
     }
 }
 
-static val_t *deref(val_t *v) {
-    return IS_SYM(v) ? h_lookup(&globals, v->u.s) : v;
-}
-
 #define numval(x) (IS_INT(x) ? x->u.i : \
                    IS_FLT(x) ? x->u.f : 0)
 #define intval(x) (IS_INT(x) ? x->u.i : \
@@ -36,102 +36,126 @@ static val_t *deref(val_t *v) {
 #define fltval(x) (IS_FLT(x) ? x->u.f : \
                    IS_INT(x) ? (flt_t) x->u.i : 0)
 
-#define int_arith(l,r,op) \
-    assign_int((sp-2), (intval(l) op intval(r)));
+#define int_arith(p,l,r,op) \
+    assign_int(p, (intval(l) op intval(r)));
 
-#define flt_arith(l,r,op) \
-    assign_flt((sp-2), (numval(l) op numval(r)));
+#define flt_arith(p,l,r,op) \
+    assign_flt(p, (numval(l) op numval(r)));
 
-#define num_arith(l,r,op) \
+#define num_arith(p,l,r,op) \
     if (IS_FLT(l) || IS_FLT(r)) { \
-        flt_arith(l,r,op); \
-    } else  { \
-        int_arith(l,r,op); \
+        flt_arith(p,l,r,op); \
+    } else { \
+        int_arith(p,l,r,op); \
     }
 
-static void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
-static void z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
-static void z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
-static void z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
+void z_add(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,+); }
+void z_sub(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,-); }
+void z_mul(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,*); }
+void z_div(val_t *p, val_t *l, val_t *r) { flt_arith(p,l,r,/); }
 
 // TODO Make sure this works as intended
 // TODO Error handling, e.g. RHS = 0
-static void z_mod(val_t *l, val_t *r) {
+void z_mod(val_t *p, val_t *l, val_t *r) {
     flt_t res = fmod(numval(l), numval(r));
-    assign_flt((sp-2), res < 0 ? res + numval(r) : res);
+    assign_flt(p, res < 0 ? res + numval(r) : res);
 }
 
-static void z_pow(val_t *l, val_t *r) {
-    assign_flt((sp-2), pow(fltval(l), fltval(r)));
+void z_pow(val_t *p, val_t *l, val_t *r) {
+    assign_flt(p, pow(fltval(l), fltval(r)));
 }
 
-static void z_and(val_t *l, val_t *r) { int_arith(l,r,&);  }
-static void z_or(val_t *l, val_t *r)  { int_arith(l,r,|);  }
-static void z_xor(val_t *l, val_t *r) { int_arith(l,r,^);  }
-static void z_shl(val_t *l, val_t *r) { int_arith(l,r,<<); }
-static void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
+void z_and(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,&);  }
+void z_or(val_t *p, val_t *l, val_t *r)  { int_arith(p,l,r,|);  }
+void z_xor(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,^);  }
+void z_shl(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,<<); }
+void z_shr(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,>>); }
 
 // TODO
-static void z_num(val_t *v) {
+void z_num(val_t *p, val_t *v) {
     switch (v->type) {
     case TYPE_INT:
-        assign_int((sp-1), intval(v));
+        assign_int(p, intval(v));
         break;
     case TYPE_FLT:
-        assign_flt((sp-1), fltval(v));
+        assign_flt(p, fltval(v));
         break;
     default:
-        assign_int((sp-1), 0);
+        assign_int(p, 0);
         break;
     }
 }
 
-static void z_neg(val_t *v) {
+void z_neg(val_t *p, val_t *v) {
     switch (v->type) {
     case TYPE_INT:
-        assign_int((sp-1), -intval(v));
+        assign_int(p, -intval(v));
         break;
     case TYPE_FLT:
-        assign_flt((sp-1), -fltval(v));
+        assign_flt(p, -fltval(v));
         break;
     default:
-        assign_int((sp-1), -1); // TODO type coercion
+        assign_int(p, -1); // TODO type coercion
         break;
     }
 }
 
-static void z_not(val_t *v) {
-    assign_int((sp-1), ~intval(v));
+void z_not(val_t *p, val_t *v) {
+    assign_int(p, ~intval(v));
 }
 
-static void z_eq(val_t *l, val_t *r) { num_arith(l,r,==); }
-static void z_ne(val_t *l, val_t *r) { num_arith(l,r,!=); }
-static void z_gt(val_t *l, val_t *r) { num_arith(l,r,>);  }
-static void z_ge(val_t *l, val_t *r) { num_arith(l,r,>=); }
-static void z_lt(val_t *l, val_t *r) { num_arith(l,r,<);  }
-static void z_le(val_t *l, val_t *r) { num_arith(l,r,<=); }
+void z_eq(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,==); }
+void z_ne(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,!=); }
+void z_gt(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,>);  }
+void z_ge(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,>=); }
+void z_lt(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,<);  }
+void z_le(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,<=); }
 
-static void z_lnot(val_t *v) {
-    assign_int((sp-1), !numval(v));
+void z_lnot(val_t *p, val_t *v) {
+    assign_int(p, !numval(v));
 }
 
-// TODO type coercion
-static void z_len(val_t *v) {
-    assign_int((sp-1), IS_STR(v) ? v->u.s->l : 0);
+void z_len(val_t *p, val_t *v) {
+    int_t l = 0;
+    switch (v->type) {
+    case TYPE_INT: l = s_int2str(v->u.i)->l; break;
+    case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
+    case TYPE_STR: l = v->u.s->l;            break;
+    case TYPE_ARR: // TODO
+    case TYPE_FN:  // TODO
+    default: break;
+    }
+    assign_int(p, l);
 }
 
-static void z_test(val_t *v) {
-    assign_int((sp-1), test(v));
+void z_test(val_t *p, val_t *v) {
+    assign_int(p, test(v));
 }
 
-static void z_get(val_t *l, val_t *r) {
+void z_cat(val_t *p, val_t *l, val_t *r) {
+    switch (l->type) {
+    case TYPE_INT: l->u.s = s_int2str(intval(l)); break;
+    case TYPE_FLT: l->u.s = s_flt2str(fltval(l)); break;
+    default: break;
+    }
+
+    switch (r->type) {
+    case TYPE_INT: r->u.s = s_int2str(intval(r)); break;
+    case TYPE_FLT: r->u.s = s_flt2str(fltval(r)); break;
+    default: break;
+    }
+
+    assign_str(p, s_concat(l->u.s, r->u.s));
+}
+
+void z_get(val_t *p, val_t *l, val_t *r) {
     switch (l->type) {
     case TYPE_STR:
-        assign_str((sp-2), s_newstr(&l->u.s->str[intval(r)], 1));
+        assign_str(p, s_newstr(&l->u.s->str[intval(r)], 1));
         break;
     case TYPE_ARR: // TODO
     default:
-        assign_int((sp-2), 0);
+        assign_int(p, 0);
         break;
     }
 }
@@ -162,13 +186,13 @@ static void put(val_t *v) {
 
 // Standard binary operations
 #define binop(x) \
-    z_##x(deref(sp-2), deref(sp-1));\
+    z_##x(&sp[-2], deref(sp-2), deref(sp-1));\
     sp--; \
     ip++;
 
 // Unary operations
 #define unop(x) \
-    z_##x(deref(sp-1)); \
+    z_##x(&sp[-1], deref(sp-1)); \
     ip++;
 
 // Pre-increment/decrement
@@ -220,65 +244,63 @@ static void put(val_t *v) {
 
 int z_exec(code_t *c) {
     h_init(&globals);
-    sp = malloc(256 * sizeof(val_t));
+    val_t *sp = malloc(256 * sizeof(val_t));
     val_t *t;
     uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
-        case OP_JMP8:    j8; break;
-        case OP_JMP16:   j16; break;
-        case OP_JNZ8:    jc8(test(deref((sp-1)))); break;
-        case OP_JNZ16:   jc16(test(deref((sp-1)))); break;
-        case OP_JZ8:     jc8(!test(deref((sp-1)))); break;
-        case OP_JZ16:    jc16(!test(deref((sp-1)))); break;
-        case OP_XJNZ8:   xjc8(test(deref((sp-1)))); break;
-        case OP_XJNZ16:  xjc16(test(deref((sp-1)))); break;
-        case OP_XJZ8:    xjc8(!test(deref((sp-1)))); break;
-        case OP_XJZ16:   xjc16(!test(deref((sp-1)))); break;
-        case OP_TEST:    unop(test); break;
-        case OP_ADD:     binop(add); break;
-        case OP_SUB:     binop(sub); break;
-        case OP_MUL:     binop(mul); break;
-        case OP_DIV:     binop(div); break;
-        case OP_MOD:     binop(mod); break;
-        case OP_POW:     binop(pow); break;
-        case OP_AND:     binop(and); break;
-        case OP_OR:      binop(or);  break;
-        case OP_XOR:     binop(xor); break;
-        case OP_SHL:     binop(shl); break;
-        case OP_SHR:     binop(shr); break;
-        case OP_NUM:     unop(num);  break;
-        case OP_NEG:     unop(neg);  break;
-        case OP_NOT:     unop(not);  break;
-        case OP_EQ:      binop(eq);  break;
-        case OP_NE:      binop(ne);  break;
-        case OP_GT:      binop(gt);  break;
-        case OP_GE:      binop(ge);  break;
-        case OP_LT:      binop(lt);  break;
-        case OP_LE:      binop(le);  break;
-        case OP_LNOT:    unop(lnot); break;
+        case OP_JMP8:    j8;                 break;
+        case OP_JMP16:   j16;                break;
+        case OP_JNZ8:    jc8(test(sp-1));    break;
+        case OP_JNZ16:   jc16(test(sp-1));   break;
+        case OP_JZ8:     jc8(!test(sp-1));   break;
+        case OP_JZ16:    jc16(!test(sp-1));  break;
+        case OP_XJNZ8:   xjc8(test(sp-1));   break;
+        case OP_XJNZ16:  xjc16(test(sp-1));  break;
+        case OP_XJZ8:    xjc8(!test(sp-1));  break;
+        case OP_XJZ16:   xjc16(!test(sp-1)); break;
+        case OP_TEST:    unop(test);         break;
+        case OP_ADD:     binop(add);         break;
+        case OP_SUB:     binop(sub);         break;
+        case OP_MUL:     binop(mul);         break;
+        case OP_DIV:     binop(div);         break;
+        case OP_MOD:     binop(mod);         break;
+        case OP_POW:     binop(pow);         break;
+        case OP_AND:     binop(and);         break;
+        case OP_OR:      binop(or);          break;
+        case OP_XOR:     binop(xor);         break;
+        case OP_SHL:     binop(shl);         break;
+        case OP_SHR:     binop(shr);         break;
+        case OP_NUM:     unop(num);          break;
+        case OP_NEG:     unop(neg);          break;
+        case OP_NOT:     unop(not);          break;
+        case OP_EQ:      binop(eq);          break;
+        case OP_NE:      binop(ne);          break;
+        case OP_GT:      binop(gt);          break;
+        case OP_GE:      binop(ge);          break;
+        case OP_LT:      binop(lt);          break;
+        case OP_LE:      binop(le);          break;
+        case OP_LNOT:    unop(lnot);         break;
         case OP_CALL: // TODO
             break;
-        case OP_CAT:     // TODO binop(cat);
-            break;
-        case OP_PREINC:  pre(1); break;
-        case OP_PREDEC:  pre(-1); break;
-        case OP_POSTINC: post(1); break;
-        case OP_POSTDEC: post(-1); break;
-        case OP_LEN:     unop(len); break;
-        case OP_ADDX:    cbinop(add); break;
-        case OP_SUBX:    cbinop(sub); break;
-        case OP_MULX:    cbinop(mul); break;
-        case OP_DIVX:    cbinop(div); break;
-        case OP_MODX:    cbinop(mod); break;
-        case OP_CATX:    // TODO cbinop(cat);
-            break;
-        case OP_POWX:    cbinop(pow); break;
-        case OP_ANDX:    cbinop(and); break;
-        case OP_ORX:     cbinop(or);  break;
-        case OP_SHLX:    cbinop(shl); break;
-        case OP_SHRX:    cbinop(shr); break;
-        case OP_XORX:    cbinop(xor); break;
+        case OP_CAT:     binop(cat);         break;
+        case OP_PREINC:  pre(1);             break;
+        case OP_PREDEC:  pre(-1);            break;
+        case OP_POSTINC: post(1);            break;
+        case OP_POSTDEC: post(-1);           break;
+        case OP_LEN:     unop(len);          break;
+        case OP_ADDX:    cbinop(add);        break;
+        case OP_SUBX:    cbinop(sub);        break;
+        case OP_MULX:    cbinop(mul);        break;
+        case OP_DIVX:    cbinop(div);        break;
+        case OP_MODX:    cbinop(mod);        break;
+        case OP_CATX:    cbinop(cat);        break;
+        case OP_POWX:    cbinop(pow);        break;
+        case OP_ANDX:    cbinop(and);        break;
+        case OP_ORX:     cbinop(or);         break;
+        case OP_SHLX:    cbinop(shl);        break;
+        case OP_SHRX:    cbinop(shr);        break;
+        case OP_XORX:    cbinop(xor);        break;
         case OP_POP:
             sp--;
             ip++;
@@ -336,7 +358,7 @@ int z_exec(code_t *c) {
         case OP_RET1: // TODO
             break;
         case OP_GET: // TODO
-            z_get(sp-2, deref(sp-1));
+            z_get(&sp[-2], sp-2, deref(sp-1));
             sp--;
             ip++;
             break;
