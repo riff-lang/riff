@@ -43,9 +43,9 @@ typedef struct {
 } val_t;
 
 // Assign value x to val_t *p
-#define ASSIGN_INT(p, x) (p)->u.i = (x); (p)->type = TYPE_INT
-#define ASSIGN_FLT(p, x) (p)->u.f = (x); (p)->type = TYPE_FLT
-#define ASSIGN_STR(p, x) (p)->u.s = (x); (p)->type = TYPE_STR
+#define assign_int(p, x) (p)->u.i = (x); (p)->type = TYPE_INT
+#define assign_flt(p, x) (p)->u.f = (x); (p)->type = TYPE_FLT
+#define assign_str(p, x) (p)->u.s = (x); (p)->type = TYPE_STR
 
 str_t *s_newstr(const char *, size_t);
 val_t *v_newvoid(void);
