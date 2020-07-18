@@ -173,8 +173,7 @@ static void put(val_t *v) {
 
 // Pre-increment/decrement
 #define pre(x) { \
-    str_t *k = sp[-1].u.s; \
-    val_t *v = h_lookup(&globals, k); \
+    val_t *v = h_lookup(&globals, sp[-1].u.s); \
     switch (v->type) { \
     case TYPE_INT: v->u.i += x; break; \
     case TYPE_FLT: v->u.f += x; break; \
@@ -187,9 +186,8 @@ static void put(val_t *v) {
 
 // Post-increment/decrement
 #define post(x) { \
-    str_t *k = sp[-1].u.s; \
+    val_t *v = h_lookup(&globals, sp[-1].u.s); \
     unop(num); \
-    val_t *v = h_lookup(&globals, k); \
     switch (v->type) { \
     case TYPE_INT: v->u.i += x; break; \
     case TYPE_FLT: v->u.f += x; break; \
