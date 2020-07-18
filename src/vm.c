@@ -173,12 +173,12 @@ static void put(val_t *v) {
 
 // Pre-increment/decrement
 #define pre(x) { \
-    val_t *v = h_lookup(&globals, sp[-1].u.s); \
-    switch (v->type) { \
-    case TYPE_INT: v->u.i += x; break; \
-    case TYPE_FLT: v->u.f += x; break; \
+    t = h_lookup(&globals, sp[-1].u.s); \
+    switch (t->type) { \
+    case TYPE_INT: t->u.i += x; break; \
+    case TYPE_FLT: t->u.f += x; break; \
     default: \
-        assign_int(v, x); \
+        assign_int(t, x); \
         break; \
     } \
     ip++; \
@@ -186,13 +186,13 @@ static void put(val_t *v) {
 
 // Post-increment/decrement
 #define post(x) { \
-    val_t *v = h_lookup(&globals, sp[-1].u.s); \
+    t = h_lookup(&globals, sp[-1].u.s); \
     unop(num); \
-    switch (v->type) { \
-    case TYPE_INT: v->u.i += x; break; \
-    case TYPE_FLT: v->u.f += x; break; \
+    switch (t->type) { \
+    case TYPE_INT: t->u.i += x; break; \
+    case TYPE_FLT: t->u.f += x; break; \
     default: \
-        assign_int(v, x); \
+        assign_int(t, x); \
         break; \
     } \
 }
@@ -221,7 +221,8 @@ static void put(val_t *v) {
 int z_exec(code_t *c) {
     h_init(&globals);
     sp = malloc(256 * sizeof(val_t));
-    register uint8_t *ip = c->code;
+    val_t *t;
+    uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
         case OP_JMP8:    j8; break;
