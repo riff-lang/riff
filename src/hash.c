@@ -8,10 +8,8 @@
 
 void h_init(hash_t *h) {
     h->n   = 0;
-    h->cap = 8;
-    h->e   = malloc(8 * sizeof(entry_t *));
-    for (int i = 0; i < 8; i++)
-        h->e[i] = NULL;
+    h->cap = 0;
+    h->e   = NULL;
 }
 
 static entry_t *new_entry(str_t *k, val_t *v) {
@@ -48,6 +46,9 @@ static int exists(hash_t *h, str_t *k) {
 }
 
 val_t *h_lookup(hash_t *h, str_t *k) {
+    if (!h->e) {
+        h_insert(h, k, v_newvoid());
+    }
     if (!k->hash)
         k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
@@ -63,6 +64,8 @@ void h_insert(hash_t *h, str_t *k, val_t *v) {
     if ((h->cap * LOAD_FACTOR) <= h->n + 1) {
         int nc = h->cap < 8 ? 8 : h->cap * 2;
         entry_t **ne = malloc(nc * sizeof(entry_t *));
+        for (int i = 0; i < nc; i++)
+            ne[i] = NULL;
         int nn = 0;
         int j;
         if (h->n) {
