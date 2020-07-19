@@ -4,11 +4,6 @@
 
 #include "types.h"
 
-#define copystr(d,s,n) \
-    d = malloc(n * sizeof(char)); \
-    memcpy(d, s, n * sizeof(char)); \
-    d[n] = '\0';
-
 // djb2; source: http://www.cse.yorku.ca/~oz/hash.html
 static uint32_t s_hash(const char *str) {
     uint32_t h = 5381;
@@ -22,8 +17,9 @@ static uint32_t s_hash(const char *str) {
 // of memory
 
 str_t *s_newstr(const char *start, size_t l) {
-    char *str;
-    copystr(str, start, l);
+    char *str = malloc(l * sizeof(char));
+    memcpy(str, start, l);
+    str[l] = '\0';
     str_t *s = malloc(sizeof(str_t));
     s->l = l;
     s->hash = s_hash(str);
@@ -32,10 +28,16 @@ str_t *s_newstr(const char *start, size_t l) {
 }
 
 str_t *s_concat(str_t *l, str_t *r) {
-    char *new;
-    copystr(new, l->str, l->l);
-    strncat(new, r->str, l->l + r->l);
-    return s_newstr(new, l->l + r->l);
+    size_t nl = l->l + r->l;
+    char *new = malloc(nl * sizeof(char));
+    memcpy(new, l->str, l->l);
+    memcpy(new + l->l, r->str, r->l);
+    new[nl] = '\0';
+    str_t *s = malloc(sizeof(str_t));
+    s->l = nl;
+    s->hash = s_hash(new);
+    s->str = new;
+    return s;
 }
 
 str_t *s_int2str(int_t i) {
@@ -51,5 +53,3 @@ str_t *s_flt2str(flt_t f) {
     snprintf(buf, len + 1, "%g", f);
     return s_newstr(buf, len);
 }
-
-#undef copystr
