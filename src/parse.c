@@ -190,11 +190,13 @@ static int led(parser_t *y, int p, int tk) {
         p = conditional(y);
         break;
     case TK_AND: case TK_OR:
+        set(ox);
         adv(y);
         logical(y, tk);
         p = y->x->tk.kind;
         break;
     case '[':
+        set(ox);
         adv(y);
         expr(y, 0);
         consume(y, ']', "Expected ']'");

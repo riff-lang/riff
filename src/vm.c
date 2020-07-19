@@ -367,9 +367,7 @@ int z_exec(code_t *c) {
         case OP_RET1: // TODO
             break;
         case OP_IDX: // TODO
-            z_idx(&sp[-2], sp-2, deref(sp-1));
-            sp--;
-            ip++;
+            binop(idx);
             break;
         case OP_SET:
             h_insert(&globals, sp[-2].u.s, deref(sp-1));
