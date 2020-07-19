@@ -4,6 +4,11 @@
 
 #include "types.h"
 
+#define copystr(d,s,n) \
+    d = malloc(n * sizeof(char)); \
+    memcpy(d, s, n * sizeof(char)); \
+    d[n] = '\0';
+
 // djb2; source: http://www.cse.yorku.ca/~oz/hash.html
 static uint32_t s_hash(const char *str) {
     uint32_t h = 5381;
@@ -13,13 +18,13 @@ static uint32_t s_hash(const char *str) {
     return h;
 }
 
+// TODO These strings functions are likely extremely slow and wasteful
+// of memory
+
 str_t *s_newstr(const char *start, size_t l) {
     char *str;
-    str = malloc(l * sizeof(char) + 1);
-    memcpy(str, start, l * sizeof(char));
-    str[l] = '\0';
-    str_t *s = NULL;
-    s = malloc(sizeof(str_t) + 1);
+    copystr(str, start, l);
+    str_t *s = malloc(sizeof(str_t));
     s->l = l;
     s->hash = s_hash(str);
     s->str = str;
@@ -27,7 +32,9 @@ str_t *s_newstr(const char *start, size_t l) {
 }
 
 str_t *s_concat(str_t *l, str_t *r) {
-    char *new = strncat(l->str, r->str, l->l + r->l);
+    char *new;
+    copystr(new, l->str, l->l);
+    strncat(new, r->str, l->l + r->l);
     return s_newstr(new, l->l + r->l);
 }
 
@@ -44,3 +51,5 @@ str_t *s_flt2str(flt_t f) {
     snprintf(buf, len + 1, "%g", f);
     return s_newstr(buf, len);
 }
+
+#undef copystr
