@@ -28,12 +28,13 @@ static entry_t *new_entry(str_t *k, val_t *v) {
     return e;
 }
 
-// Given a string's hash, return index of the element exists in the
-// hash, or an index of a suitble empty slot
+// Given a string's hash, return index of the element if it exists in the
+// table, or an index of a suitble empty slot
 static int index(entry_t **e, int cap, uint32_t hash) {
-    int i = hash & (cap - 1);
+    cap -= 1;
+    int i = hash & cap;
     while (e[i] && e[i]->key->hash != hash) {
-        i = (i + 1) & (cap - 1); // Linear probing
+        i = (i + 1) & cap; // Linear probing
     }
     return i;
 }
@@ -46,9 +47,9 @@ static int exists(hash_t *h, str_t *k) {
 }
 
 val_t *h_lookup(hash_t *h, str_t *k) {
-    if (!h->e) {
+    // If the table is empty, insert void value
+    if (!h->e)
         h_insert(h, k, v_newvoid());
-    }
     if (!k->hash)
         k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
