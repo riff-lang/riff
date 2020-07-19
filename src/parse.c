@@ -198,7 +198,7 @@ static int led(parser_t *y, int p, int tk) {
         adv(y);
         expr(y, 0);
         consume(y, ']', "Expected ']'");
-        push(OP_GET);
+        push(OP_IDX);
         break;
     case '(':
         break;

@@ -151,7 +151,7 @@ void z_cat(val_t *p, val_t *l, val_t *r) {
 // Potentially very slow; allocates 2 new string objects for every int
 // or float LHS
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
-void z_get(val_t *p, val_t *l, val_t *r) {
+void z_idx(val_t *p, val_t *l, val_t *r) {
     switch (l->type) {
     case TYPE_INT:
         assign_str(p, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1));
@@ -366,8 +366,8 @@ int z_exec(code_t *c) {
             exit(0);
         case OP_RET1: // TODO
             break;
-        case OP_GET: // TODO
-            z_get(&sp[-2], sp-2, deref(sp-1));
+        case OP_IDX: // TODO
+            z_idx(&sp[-2], sp-2, deref(sp-1));
             sp--;
             ip++;
             break;

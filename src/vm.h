@@ -30,7 +30,7 @@ void z_lnot(val_t *, val_t *);
 void z_len(val_t *, val_t *);
 void z_test(val_t *, val_t *);
 void z_cat(val_t *, val_t *, val_t *);
-void z_get(val_t *, val_t *, val_t *);
+void z_idx(val_t *, val_t *, val_t *);
 
 int  z_exec(code_t *);
 

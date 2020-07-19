@@ -18,7 +18,7 @@ enum opcodes {
     OP_XJNZ16,  // "Exclusive" jump if non-zero (2-byte offset)
     OP_XJZ8,    // "Exclusive" jump if zero (1-byte offset)
     OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
-    OP_TEST,
+    OP_TEST,    // Logical test
     OP_ADD,     // Add
     OP_SUB,     // Substract
     OP_MUL,     // Multiply
@@ -74,7 +74,7 @@ enum opcodes {
     OP_PUSHS2,  // Push 2nd symbol on stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
-    OP_GET,
+    OP_IDX,     // Index of a string/array
     OP_SET,     // Set
     OP_PRINT,   // Print
     OP_EXIT     // exit(0) (probably temporary)
