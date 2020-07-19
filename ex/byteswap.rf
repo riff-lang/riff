@@ -1,0 +1,20 @@
+// Swap bytes n and m in integer x
+// x = 0xDEADBEEF, n = 0, m = 2 => 0xDEEFBEAD (3740253869)
+
+x = 0xDEADBEEF
+n = 0
+m = 2
+
+n <<= 3
+m <<= 3
+
+maskn = 0xFF << n
+maskm = 0xFF << m
+
+nth_byte = ((x & maskn) >> n) & 0xFF
+mth_byte = ((x & maskm) >> m) & 0xFF
+
+nth_byte <<= m
+mth_byte <<= n
+
+x ^ (x & (maskn ^ maskm)) ^ nth_byte ^ mth_byte
