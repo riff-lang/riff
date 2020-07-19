@@ -92,7 +92,7 @@ static int read_str(lexer_t *x, token_t *tk) {
         switch(c) {
         case '\\': adv(x); adv(x); count += 2; break;
         case '"': {
-            str_t *s = s_newstr(start, count);
+            str_t *s = s_newstr(start, count, 1);
             adv(x);
             tk->lexeme.s = s;
             return TK_STR;
@@ -186,7 +186,7 @@ static int read_id(lexer_t *x, token_t *tk) {
         count++;
         adv(x);
     }
-    str_t *s = s_newstr(start, count);
+    str_t *s = s_newstr(start, count, 1);
     tk->lexeme.s = s;
     return TK_ID;
 }

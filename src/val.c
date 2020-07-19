@@ -22,9 +22,10 @@ val_t *v_newflt(flt_t f) {
 }
 
 val_t *v_newstr(str_t *s) {
-    str_t *ns = s_newstr(s->str, s->l);
+    str_t *ns = s_newstr(s->str, s->l, 0);
     val_t *v = malloc(sizeof(val_t));
     v->type = TYPE_STR;
     v->u.s  = ns;
+    v->u.s->hash = s->hash;
     return v;
 }

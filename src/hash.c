@@ -9,11 +9,13 @@
 void h_init(hash_t *h) {
     h->n   = 0;
     h->cap = 8;
-    h->e   = calloc(8, sizeof(entry_t *));
+    h->e   = malloc(8 * sizeof(entry_t *));
+    for (int i = 0; i < 8; i++)
+        h->e[i] = NULL;
 }
 
 static entry_t *new_entry(str_t *k, val_t *v) {
-    str_t *nk = s_newstr(k->str, k->l);
+    str_t *nk = s_newstr(k->str, k->l, 1);
     val_t *nv;
     switch (v->type) {
     case TYPE_VOID: nv = v_newvoid();      break;
@@ -39,11 +41,15 @@ static int index(entry_t **e, int cap, uint32_t hash) {
 }
 
 static int exists(hash_t *h, str_t *k) {
+    if (!k->hash)
+        k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
     return h->e[i] && h->e[i]->key->hash == k->hash;
 }
 
 val_t *h_lookup(hash_t *h, str_t *k) {
+    if (!k->hash)
+        k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
     if (!h->e[i])
         h_insert(h, k, v_newvoid());
@@ -51,10 +57,12 @@ val_t *h_lookup(hash_t *h, str_t *k) {
 }
 
 void h_insert(hash_t *h, str_t *k, val_t *v) {
+    if (!k->hash)
+        k->hash = s_hash(k->str);
     // Evaluate hash table size
     if ((h->cap * LOAD_FACTOR) <= h->n + 1) {
         int nc = h->cap < 8 ? 8 : h->cap * 2;
-        entry_t **ne = calloc(nc, sizeof(entry_t *));
+        entry_t **ne = malloc(nc * sizeof(entry_t *));
         int nn = 0;
         int j;
         if (h->n) {

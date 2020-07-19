@@ -134,18 +134,20 @@ void z_test(val_t *p, val_t *v) {
 
 void z_cat(val_t *p, val_t *l, val_t *r) {
     switch (l->type) {
+    case TYPE_VOID: l->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT: l->u.s = s_int2str(intval(l)); break;
     case TYPE_FLT: l->u.s = s_flt2str(fltval(l)); break;
     default: break;
     }
 
     switch (r->type) {
+    case TYPE_VOID: r->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT: r->u.s = s_int2str(intval(r)); break;
     case TYPE_FLT: r->u.s = s_flt2str(fltval(r)); break;
     default: break;
     }
 
-    assign_str(p, s_concat(l->u.s, r->u.s));
+    assign_str(p, s_concat(l->u.s, r->u.s, 0));
 }
 
 // Potentially very slow; allocates 2 new string objects for every int
@@ -154,13 +156,13 @@ void z_cat(val_t *p, val_t *l, val_t *r) {
 void z_idx(val_t *p, val_t *l, val_t *r) {
     switch (l->type) {
     case TYPE_INT:
-        assign_str(p, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1));
+        assign_str(p, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1, 0));
         break;
     case TYPE_FLT:
-        assign_str(p, s_newstr(&s_flt2str(l->u.f)->str[intval(r)], 1));
+        assign_str(p, s_newstr(&s_flt2str(l->u.f)->str[intval(r)], 1, 0));
         break;
     case TYPE_STR:
-        assign_str(p, s_newstr(&l->u.s->str[intval(r)], 1));
+        assign_str(p, s_newstr(&l->u.s->str[intval(r)], 1, 0));
         break;
     case TYPE_ARR: // TODO
     default:
