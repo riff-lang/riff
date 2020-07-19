@@ -13,8 +13,7 @@ static uint32_t s_hash(const char *str) {
     return h;
 }
 
-// TODO These strings functions are likely extremely slow and wasteful
-// of memory
+// TODO Only compute string hashes on demand
 
 str_t *s_newstr(const char *start, size_t l) {
     char *str = malloc(l * sizeof(char) + 1);
