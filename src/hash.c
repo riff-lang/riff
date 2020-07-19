@@ -13,7 +13,8 @@ void h_init(hash_t *h) {
 }
 
 static entry_t *new_entry(str_t *k, val_t *v) {
-    str_t *nk = s_newstr(k->str, k->l, 1);
+    str_t *nk = s_newstr(k->str, k->l, 0);
+    nk->hash = k->hash;
     val_t *nv;
     switch (v->type) {
     case TYPE_VOID: nv = v_newvoid();      break;
@@ -47,7 +48,7 @@ static int exists(hash_t *h, str_t *k) {
 }
 
 val_t *h_lookup(hash_t *h, str_t *k) {
-    // If the table is empty, insert void value
+    // If the table is empty, call h_insert, which allocates memory
     if (!h->e)
         h_insert(h, k, v_newvoid());
     if (!k->hash)
