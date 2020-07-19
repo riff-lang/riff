@@ -33,7 +33,7 @@ static entry_t *new_entry(str_t *k, val_t *v) {
 static int index(entry_t **e, int cap, uint32_t hash) {
     int i = hash & (cap - 1);
     while (e[i] && e[i]->key->hash != hash) {
-        i = (i << 1) & (cap - 1); // Quadratic probing
+        i = (i + 1) & (cap - 1); // Linear probing
     }
     return i;
 }
