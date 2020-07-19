@@ -17,10 +17,10 @@ static uint32_t s_hash(const char *str) {
 // of memory
 
 str_t *s_newstr(const char *start, size_t l) {
-    char *str = malloc(l * sizeof(char));
+    char *str = malloc(l * sizeof(char) + 1);
     memcpy(str, start, l);
     str[l] = '\0';
-    str_t *s = malloc(sizeof(str_t));
+    str_t *s = malloc(sizeof(str_t) + 1);
     s->l = l;
     s->hash = s_hash(str);
     s->str = str;
@@ -29,11 +29,11 @@ str_t *s_newstr(const char *start, size_t l) {
 
 str_t *s_concat(str_t *l, str_t *r) {
     size_t nl = l->l + r->l;
-    char *new = malloc(nl * sizeof(char));
+    char *new = malloc(nl * sizeof(char) + 1);
     memcpy(new, l->str, l->l);
     memcpy(new + l->l, r->str, r->l);
     new[nl] = '\0';
-    str_t *s = malloc(sizeof(str_t));
+    str_t *s = malloc(sizeof(str_t) + 1);
     s->l = nl;
     s->hash = s_hash(new);
     s->str = new;
