@@ -5,7 +5,9 @@ di2 = 429           // Decimal integer > 255
 dr1 = 1.2           // Decimal real
 dr2 = .2            // Decimal real (no leading integer)
 hi  = 0xE           // Hexadecimal integer
-hr1 = 0xa.f         // Hexidecimal real
-hr2 = 0x.f          // Hexidecimal real (no leading integer)
+hr1 = 0xa.f         // Hexadecimal real
+hr2 = 0x.f          // Hexadecimal real (no leading integer)
 str = "hello"       // String
 e   = ""            // Empty string
+
+di1 di2 dr1 dr2 hi hr1 hr2 str e
