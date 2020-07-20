@@ -17,10 +17,10 @@ static char *stringify_file(const char *path) {
     fseek(file, 0L, SEEK_END);
     size_t s = ftell(file);
     rewind(file);
-    char *buffer = (char *) malloc(s + 1);
-    size_t b = fread(buffer, sizeof(char), s, file);
-    buffer[b] = '\0';
-    return buffer;
+    char *buf = malloc(s + 1);
+    size_t b = fread(buf, sizeof(char), s, file);
+    buf[b] = '\0';
+    return buf;
 }
 
 // TODO handle piped input (stdin)
