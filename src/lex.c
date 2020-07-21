@@ -28,8 +28,8 @@ static int read_flt(lexer_t *x, token_t *tk, const char *start, int base) {
     if (base == 16)
         start -= 2;
     double d = strtod(start, &end);
-    if (valid_alphanum(*end))
-        err(x, "Invalid numeral");
+    // if (valid_alphanum(*end))
+    //     err(x, "Invalid numeral");
     x->p = end;
     tk->lexeme.f = d;
     return TK_FLT;
@@ -44,8 +44,11 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
         else
             err(x, "Invalid numeral");
     }
-    else if (valid_alphanum(*end))
-        err(x, "Invalid numeral");
+
+    // TODO Monitor any errors as a result of the following 2 lines
+    // being commented out.
+    // else if (valid_alphanum(*end))
+    //     err(x, "Invalid numeral");
 
     // Interpret as float if base-10 int exceeds INT64_MAX, or if
     // there's overflow in general.
