@@ -192,7 +192,7 @@ static int nud(parser_t *y) {
 static int led(parser_t *y, int p, int tk) {
     switch (tk) {
     case TK_INC: case TK_DEC:
-        if (is_const(p))
+        if (is_const(p) || y->rx)
             return p;
         set(px);
         c_postfix(y->c, tk);
@@ -249,6 +249,8 @@ static int expr(parser_t *y, int rbp) {
         // succeeding token to be parsed as a new expression instead
         // of throwing an error
         if ((is_const(p) || is_incdec(p) || p == ')') && !const_follow_ok(tk))
+            return p;
+        if (y->rx && is_incdec(tk))
             return p;
         p  = led(y, p, tk);
         tk = y->x->tk.kind;

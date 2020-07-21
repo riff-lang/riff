@@ -398,10 +398,22 @@ int z_exec(code_t *c) {
         case OP_IDX: // TODO
             binop(idx);
             break;
+// #define cbinop(x) { \
+//     tp = sp[-2]; \
+//     t.type = sp[-2]->type; \
+//     t.u    = sp[-2]->u; \
+//     sp[-2] = &t; \
+//     binop(x); \
+//     tp->type = sp[-1]->type; \
+//     tp->u    = sp[-1]->u; \
+// }
         case OP_SET:
-            *sp[-2]      = *sp[-1];
-            sp[-2]->type = sp[-1]->type;
-            sp[-2]->u    = sp[-1]->u;
+            tp = sp[-2];
+            t.type = sp[-1]->type;
+            t.u = sp[-1]->u;
+            sp[-2] = &t;
+            tp->type = t.type;
+            tp->u    = t.u;
             --sp;
             ++ip;
             break;
