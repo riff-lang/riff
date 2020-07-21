@@ -68,10 +68,14 @@ enum opcodes {
     OP_PUSHK0,  // Push 0th constant on stack as value
     OP_PUSHK1,  // Push 1st constant on stack as value
     OP_PUSHK2,  // Push 2nd constant on stack as value
-    OP_PUSHS,   // Push symbol on stack
-    OP_PUSHS0,  // Push 0th symbol on stack
-    OP_PUSHS1,  // Push 1st symbol on stack
-    OP_PUSHS2,  // Push 2nd symbol on stack
+    OP_PUSHA,   // Push address of symbol IP+1 on stack
+    OP_PUSHA0,  // Push address of 0th symbol on stack
+    OP_PUSHA1,  // Push address of 1st symbol on stack
+    OP_PUSHA2,  // Push address of 2nd symbol on stack
+    OP_PUSHV,   // Push value of symbol IP+1 on stack
+    OP_PUSHV0,  // Push value of 0th symbol on stack
+    OP_PUSHV1,  // Push value of 1st symbol on stack
+    OP_PUSHV2,  // Push value of 2nd symbol on stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
     OP_IDX,     // Index of a string/array
@@ -103,7 +107,7 @@ void c_init(code_t *);
 void c_push(code_t *, uint8_t);
 void c_free(code_t *);
 void c_constant(code_t *, token_t *);
-void c_symbol(code_t *, token_t *);
+void c_symbol(code_t *, token_t *, int);
 void c_prefix(code_t *, int);
 void c_infix(code_t *, int);
 void c_postfix(code_t *, int);

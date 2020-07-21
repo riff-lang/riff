@@ -165,24 +165,39 @@ void c_constant(code_t *c, token_t *tk) {
     c_pushk(c, c->k.n - 1);
 }
 
-static void c_pushs(code_t *c, int i) {
+static void c_pusha(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHS0); break;
-    case 1: push(OP_PUSHS1); break;
-    case 2: push(OP_PUSHS2); break;
+    case 0: push(OP_PUSHA0); break;
+    case 1: push(OP_PUSHA1); break;
+    case 2: push(OP_PUSHA2); break;
     default:
-        push(OP_PUSHS);
+        push(OP_PUSHA);
         push((uint8_t) i);
         break;
     }
 }
 
-void c_symbol(code_t *c, token_t *tk) {
+static void c_pushv(code_t *c, int i) {
+    switch (i) {
+    case 0: push(OP_PUSHV0); break;
+    case 1: push(OP_PUSHV1); break;
+    case 2: push(OP_PUSHV2); break;
+    default:
+        push(OP_PUSHV);
+        push((uint8_t) i);
+        break;
+    }
+}
+
+void c_symbol(code_t *c, token_t *tk, int mode) {
     // Search for existing symbol
     for (int i = 0; i < c->k.n; i++) {
         if (c->k.v[i]->type == TYPE_STR &&
             tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
-            c_pushs(c, i);
+            if (mode)
+                c_pusha(c, i);
+            else
+                c_pushv(c, i);
             return;
         }
     }
@@ -192,7 +207,10 @@ void c_symbol(code_t *c, token_t *tk) {
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
-    c_pushs(c, c->k.n - 1);
+    if (mode)
+        c_pusha(c, c->k.n - 1);
+    else
+        c_pushv(c, c->k.n - 1);
 }
 
 // TODO this function will be used to evaluate infix expression

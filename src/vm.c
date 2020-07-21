@@ -348,19 +348,19 @@ int z_exec(code_t *c) {
             push(c->k.v[2]);
             ip++;
             break;
-        case OP_PUSHS:
+        case OP_PUSHA:
             pushs(ip[1]);
             ip += 2;
             break;
-        case OP_PUSHS0:
+        case OP_PUSHA0:
             pushs(0);
             ip++;
             break;
-        case OP_PUSHS1:
+        case OP_PUSHA1:
             pushs(1);
             ip++;
             break;
-        case OP_PUSHS2:
+        case OP_PUSHA2:
             pushs(2);
             ip++;
             break;

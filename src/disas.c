@@ -51,15 +51,19 @@ static struct {
     [OP_PUSH0]   = { "pushi  0", 0 },
     [OP_PUSH1]   = { "pushi  1", 0 },
     [OP_PUSH2]   = { "pushi  2", 0 },
+    [OP_PUSHA0]  = { "pusha  0", 0 },
+    [OP_PUSHA1]  = { "pusha  1", 0 },
+    [OP_PUSHA2]  = { "pusha  2", 0 },
+    [OP_PUSHA]   = { "pusha",    1 },
     [OP_PUSHI]   = { "pushi",    1 },
     [OP_PUSHK0]  = { "pushk  0", 0 },
     [OP_PUSHK1]  = { "pushk  1", 0 },
     [OP_PUSHK2]  = { "pushk  2", 0 },
     [OP_PUSHK]   = { "pushk",    1 },
-    [OP_PUSHS0]  = { "pushs  0", 0 },
-    [OP_PUSHS1]  = { "pushs  1", 0 },
-    [OP_PUSHS2]  = { "pushs  2", 0 },
-    [OP_PUSHS]   = { "pushs",    1 },
+    [OP_PUSHV0]  = { "pushv  0", 0 },
+    [OP_PUSHV1]  = { "pushv  1", 0 },
+    [OP_PUSHV2]  = { "pushv  2", 0 },
+    [OP_PUSHV]   = { "pushv",    1 },
     [OP_RET1]    = { "ret    1", 0 },
     [OP_RET]     = { "ret",      0 },
     [OP_SET]     = { "set",      0 },
@@ -136,7 +140,7 @@ void d_code_chunk(code_t *c) {
                 }
                 printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
                 break;
-            case OP_PUSHS:
+            case OP_PUSHA: case OP_PUSHV:
                 sprintf(s, "%s", OPND(s->str));
                 printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
                 break;
@@ -155,7 +159,7 @@ void d_code_chunk(code_t *c) {
                 break;
             }
             ip += 2;
-        } else if (b0 >= OP_PUSHK0 && b0 <= OP_PUSHS2) {
+        } else if (b0 >= OP_PUSHK0 && b0 <= OP_PUSHA2) {
             switch (b0) {
             case OP_PUSHK0:
                 switch (c->k.v[0]->type) {
@@ -205,15 +209,15 @@ void d_code_chunk(code_t *c) {
                 }
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
-            case OP_PUSHS0:
+            case OP_PUSHA0: case OP_PUSHV0:
                 sprintf(s, "%s", OPND0(s->str));
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
-            case OP_PUSHS1:
+            case OP_PUSHA1: case OP_PUSHV1:
                 sprintf(s, "%s", OPND1(s->str));
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
-            case OP_PUSHS2:
+            case OP_PUSHA2: case OP_PUSHV2:
                 sprintf(s, "%s", OPND2(s->str));
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;

@@ -4,8 +4,9 @@
 
 #define adv(y)      x_adv(y->x)
 #define push(b)     c_push(y->c, b)
-#define unset_all() y->ax = 0; y->ox = 0; y->px = 0;
-#define set(x)      y->x = 1;
+#define unset_all() y->ax = 0; y->ox = 0; y->px = 0; y->rx = 0;
+#define set(f)      y->f = 1;
+#define unset(f)    y->f = 0;
 
 // General TODO: hardcoded logic for valid "follow" tokens should be
 // cleaned up
@@ -94,8 +95,12 @@ static void literal(parser_t *y) {
 }
 
 static void identifier(parser_t *y) {
-    c_symbol(y->c, &y->x->tk);
+    token_t tk = y->x->tk;
     adv(y);
+    if (y->rx || is_incdec(y->x->tk.kind) || is_asgmt(y->x->tk.kind))
+        c_symbol(y->c, &tk, 1);
+    else
+        c_symbol(y->c, &tk, 0);
 }
 
 static int conditional(parser_t *y) {
@@ -155,6 +160,7 @@ static int nud(parser_t *y) {
             err(y, "Expected symbol following prefix increment/decrement");
         if (y->x->tk.kind != TK_ID)
             err(y, "Unexpected symbol following prefix increment/decrement");
+        set(rx);
         expr(y, 14);
         c_prefix(y->c, tk);
         set(px);
@@ -208,6 +214,7 @@ static int led(parser_t *y, int p, int tk) {
         if (lbop(tk) || rbop(tk)) {
             if (is_asgmt(tk))
                 set(ax);
+            unset(rx);
             set(ox);
             adv(y);
             p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
