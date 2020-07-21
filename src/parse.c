@@ -95,12 +95,21 @@ static void literal(parser_t *y) {
 }
 
 static void identifier(parser_t *y) {
-    token_t tk = y->x->tk;
+    if (y->rx) {
+        c_symbol(y->c, &y->x->tk, 1);
+        adv(y);
+        return;
+    }
+    token_t *tk = malloc(sizeof(token_t));
+    tk->kind = y->x->tk.kind;
+    tk->lexeme.s = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
     adv(y);
-    if (y->rx || is_incdec(y->x->tk.kind) || is_asgmt(y->x->tk.kind))
-        c_symbol(y->c, &tk, 1);
+    if (is_incdec(y->x->tk.kind) || is_asgmt(y->x->tk.kind)
+            || y->x->tk.kind == '[')
+        c_symbol(y->c, tk, 1);
     else
-        c_symbol(y->c, &tk, 0);
+        c_symbol(y->c, tk, 0);
+    free(tk);
 }
 
 static int conditional(parser_t *y) {
@@ -189,13 +198,16 @@ static int led(parser_t *y, int p, int tk) {
         c_postfix(y->c, tk);
         adv(y);
         p = y->x->tk.kind;
+        unset(rx);
         break;
     case '?':
+        unset(rx);
         set(ox);
         adv(y);
         p = conditional(y);
         break;
     case TK_AND: case TK_OR:
+        unset(rx);
         set(ox);
         adv(y);
         logical(y, tk);

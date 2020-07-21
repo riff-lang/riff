@@ -159,7 +159,7 @@ void d_code_chunk(code_t *c) {
                 break;
             }
             ip += 2;
-        } else if (b0 >= OP_PUSHK0 && b0 <= OP_PUSHA2) {
+        } else if (b0 >= OP_PUSHK0 && b0 <= OP_PUSHV2) {
             switch (b0) {
             case OP_PUSHK0:
                 switch (c->k.v[0]->type) {

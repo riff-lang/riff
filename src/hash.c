@@ -50,16 +50,16 @@ static int exists(hash_t *h, str_t *k) {
 val_t *h_lookup(hash_t *h, str_t *k) {
     // If the table is empty, call h_insert, which allocates memory
     if (!h->e)
-        h_insert(h, k, v_newvoid());
+        return h_insert(h, k, v_newvoid());
     if (!k->hash)
         k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
     if (!h->e[i])
-        h_insert(h, k, v_newvoid());
+        return h_insert(h, k, v_newvoid());
     return h->e[i]->val;
 }
 
-void h_insert(hash_t *h, str_t *k, val_t *v) {
+val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!k->hash)
         k->hash = s_hash(k->str);
     // Evaluate hash table size
@@ -96,6 +96,7 @@ void h_insert(hash_t *h, str_t *k, val_t *v) {
         h->e[i]->val->type = v->type;
         h->e[i]->val->u    = v->u;
     }
+    return h->e[i]->val;
 }
 
 // TODO

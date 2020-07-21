@@ -12,10 +12,6 @@ static void err(const char *msg) {
 
 static hash_t globals;
 
-static val_t *deref(val_t *v) {
-    return IS_SYM(v) ? h_lookup(&globals, v->u.s) : v;
-}
-
 // Return logical result of value
 static int test(val_t *v) {
     switch (v->type) {
@@ -207,35 +203,43 @@ static void put(val_t *v) {
 
 // Pre-increment/decrement
 #define pre(x) { \
-    t = sp[-1]; \
-    switch (t->type) { \
-    case TYPE_INT: t->u.i += x; break; \
-    case TYPE_FLT: t->u.f += x; break; \
+    switch (sp[-1]->type) { \
+    case TYPE_INT: sp[-1]->u.i += x; break; \
+    case TYPE_FLT: sp[-1]->u.f += x; break; \
     default: \
-        assign_int(t, x); \
+        assign_int(sp[-1], x); \
         break; \
     } \
+    t.type = sp[-1]->type; \
+    t.u    = sp[-1]->u; \
+    sp[-1] = &t; \
     ++ip; \
 }
 
 // Post-increment/decrement
 #define post(x) { \
-    t = h_lookup(&globals, sp[-1]->u.s); \
-    unop(num); \
-    switch (t->type) { \
-    case TYPE_INT: t->u.i += x; break; \
-    case TYPE_FLT: t->u.f += x; break; \
+    t.type = sp[-1]->type; \
+    t.u    = sp[-1]->u; \
+    switch (sp[-1]->type) { \
+    case TYPE_INT: sp[-1]->u.i += x; break; \
+    case TYPE_FLT: sp[-1]->u.f += x; break; \
     default: \
-        assign_int(t, x); \
+        assign_int(sp[-1], x); \
         break; \
     } \
+    sp[-1] = &t; \
+    unop(num); \
 }
 
 // Compound assignment operations
 #define cbinop(x) { \
-    str_t *k = sp[-2]->u.s; \
+    tp = sp[-2]; \
+    t.type = sp[-2]->type; \
+    t.u    = sp[-2]->u; \
+    sp[-2] = &t; \
     binop(x); \
-    h_insert(&globals, k, sp[-1]); \
+    tp->type = sp[-1]->type; \
+    tp->u    = sp[-1]->u; \
 }
 
 #define push(x) \
@@ -252,22 +256,18 @@ static void put(val_t *v) {
     ++sp;
 
 #define pushv(x) \
-    t = h_lookup(&globals, c->k.v[(x)]->u.s); \
-    sp[0]->type = t->type; \
-    sp[0]->u = t->u; \
+    t = *h_lookup(&globals, c->k.v[(x)]->u.s); \
+    sp[0]->type = t.type; \
+    sp[0]->u    = t.u; \
     ++sp;
-
-// #define pushs(x) \
-//     sp->type = TYPE_SYM; \
-//     sp->u    = c->k.v[(x)]->u; \
-//     ++sp;
 
 int z_exec(code_t *c) {
     h_init(&globals);
     val_t **sp = malloc(256 * sizeof(val_t *));
     for (int i = 0; i < 256; i++)
-        sp[i] = NULL;
-    val_t *t;
+        sp[i] = malloc(sizeof(val_t));
+    val_t t;
+    val_t *tp = malloc(sizeof(val_t));
     uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
@@ -333,7 +333,6 @@ int z_exec(code_t *c) {
             break;
         case OP_PUSH1:
             pushi(1);
-    printf("here\n");
             ++ip;
             break;
         case OP_PUSH2:
@@ -400,11 +399,9 @@ int z_exec(code_t *c) {
             binop(idx);
             break;
         case OP_SET:
-            // if (!IS_SYM((sp[-2])))
-            //     err("Attempt to assign to constant value");
-            // h_insert(&globals, sp[-2]->u.s, deref(sp[-1]));
+            *sp[-2]      = *sp[-1];
             sp[-2]->type = sp[-1]->type;
-            sp[-2]->u = sp[-1]->u;
+            sp[-2]->u    = sp[-1]->u;
             --sp;
             ++ip;
             break;
