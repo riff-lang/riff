@@ -2,11 +2,15 @@
 
 #include "parse.h"
 
-#define adv(y)    x_adv(y->x)
+#define adv       x_adv(y->x)
+#define peek      x_peek(y->x)
 #define push(b)   c_push(y->c, b)
 #define set(f)    y->f = 1;
 #define unset(f)  y->f = 0;
-#define unset_all y->ax = 0; y->ox = 0; y->px = 0; y->rx = 0;
+#define unset_all y->ax = 0; \
+                  y->ox = 0; \
+                  y->px = 0; \
+                  y->rx = 0;
 
 // General TODO: hardcoded logic for valid "follow" tokens should be
 // cleaned up
@@ -39,7 +43,7 @@ static void check(parser_t *y, int tk, const char *msg) {
 
 static void consume(parser_t *y, int tk, const char *msg) {
     check(y, tk, msg);
-    adv(y);
+    adv;
 }
 
 // LBP for non-prefix operators
@@ -88,29 +92,32 @@ static int expr(parser_t *y, int rbp);
 
 static void literal(parser_t *y) {
     c_constant(y->c, &y->x->tk);
-    adv(y);
+    adv;
     // Assert no assignment appears following a constant literal
     if (is_asgmt(y->x->tk.kind))
         err(y, "Attempt to assign to constant value");
 }
 
-// TODO cleanup
 static void identifier(parser_t *y) {
+    // If symbol succeeds a pre/post ++/-- operation, signal codegen
+    // to push the address of the symbol
     if (y->rx) {
         c_symbol(y->c, &y->x->tk, 1);
-        adv(y);
+        adv;
         return;
     }
-    token_t *tk = malloc(sizeof(token_t));
-    tk->kind = y->x->tk.kind;
-    tk->lexeme.s = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
-    adv(y);
-    if (is_incdec(y->x->tk.kind) || is_asgmt(y->x->tk.kind)
-            || y->x->tk.kind == '[')
-        c_symbol(y->c, tk, 1);
+
+    // Else, peek at the next token. If the following token is
+    // assignment, ++/--, or '[', signal codegen to push the address
+    // of the symbol. Otherwise, push the value itself.
+    peek;
+    if (is_incdec(y->x->la.kind) ||
+        is_asgmt(y->x->la.kind)  ||
+        y->x->la.kind == '[')
+        c_symbol(y->c, &y->x->tk, 1);
     else
-        c_symbol(y->c, tk, 0);
-    free(tk);
+        c_symbol(y->c, &y->x->tk, 0);
+    adv;
 }
 
 static int conditional(parser_t *y) {
@@ -118,7 +125,7 @@ static int conditional(parser_t *y) {
 
     // x ?: y
     if (y->x->tk.kind == ':') {
-        adv(y);
+        adv;
         l1 = c_prep_jump(y->c, XJNZ);
         e = expr(y, 0);
         c_patch(y->c, l1);
@@ -150,14 +157,14 @@ static int nud(parser_t *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
         set(ox);
-        adv(y);
+        adv;
         expr(y, 12);
         c_prefix(y->c, tk);
         return 0;
     }
     switch (tk) {
     case '(':
-        adv(y);
+        adv;
         expr(y, 0);
         consume(y, ')', "Expected ')'");
         if (is_asgmt(y->x->tk.kind))
@@ -166,7 +173,7 @@ static int nud(parser_t *y) {
     case '{': // TODO New array/table
         break;
     case TK_INC: case TK_DEC:
-        if (adv(y))
+        if (adv)
             err(y, "Expected symbol following prefix increment/decrement");
         if (y->x->tk.kind != TK_ID)
             err(y, "Unexpected symbol following prefix increment/decrement");
@@ -197,26 +204,26 @@ static int led(parser_t *y, int p, int tk) {
             return p;
         set(px);
         c_postfix(y->c, tk);
-        adv(y);
+        adv;
         p = y->x->tk.kind;
         unset(rx);
         break;
     case '?':
         unset(rx);
         set(ox);
-        adv(y);
+        adv;
         p = conditional(y);
         break;
     case TK_AND: case TK_OR:
         unset(rx);
         set(ox);
-        adv(y);
+        adv;
         logical(y, tk);
         p = y->x->tk.kind;
         break;
     case '[':
         set(ox);
-        adv(y);
+        adv;
         expr(y, 0);
         consume(y, ']', "Expected ']'");
         push(OP_IDX);
@@ -229,7 +236,7 @@ static int led(parser_t *y, int p, int tk) {
                 set(ax);
             unset(rx);
             set(ox);
-            adv(y);
+            adv;
             p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
         }
@@ -251,8 +258,14 @@ static int expr(parser_t *y, int rbp) {
         // of throwing an error
         if ((is_const(p) || is_incdec(p) || p == ')') && !const_follow_ok(tk))
             return p;
+
+        // Return if the previous nud had a prefix ++/-- attached and
+        // the following token is also ++/--. This would be an
+        // invalid operation; this allows the ++/-- to be parsed as
+        // a prefix op for the following expression.
         if (y->rx && is_incdec(tk))
             return p;
+
         p  = led(y, p, tk);
         tk = y->x->tk.kind;
     }
@@ -288,7 +301,7 @@ static void stmt(parser_t *);
 static void do_stmt(parser_t *y) {
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
-        adv(y);
+        adv;
         stmt_list(y);
         consume(y, '}', "Expected '}'");
     } else {
@@ -314,18 +327,18 @@ static void if_stmt(parser_t *y) {
     int l1, l2;
     l1 = c_prep_jump(y->c, JZ);
     if (y->x->tk.kind == '{') {
-        adv(y);
+        adv;
         stmt_list(y);
         consume(y, '}', "Expected '}'");
     } else {
         stmt(y);
     }
     if (y->x->tk.kind == TK_ELSE) {
-        adv(y);
+        adv;
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         if (y->x->tk.kind == '{') {
-            adv(y);
+            adv;
             stmt_list(y);
             consume(y, '}', "Expected '}'");
         } else {
@@ -360,7 +373,7 @@ static void while_stmt(parser_t *y) {
     expr(y, 0);
     l2 = c_prep_jump(y->c, JZ);
     if (y->x->tk.kind == '{') {
-        adv(y);
+        adv;
         stmt_list(y);
         consume(y, '}', "Expected '}'");
     } else {
@@ -372,17 +385,17 @@ static void while_stmt(parser_t *y) {
 
 static void stmt(parser_t *y) {
     switch (y->x->tk.kind) {
-    case ';':       adv(y);                break;
-    case TK_DO:     adv(y); do_stmt(y);    break;
-    case TK_EXIT:   adv(y); exit_stmt(y);  break;
-    case TK_FN:     adv(y); fn_def(y);     break;
-    case TK_FOR:    adv(y); for_stmt(y);   break;
-    case TK_IF:     adv(y); if_stmt(y);    break;
+    case ';':       adv;                break;
+    case TK_DO:     adv; do_stmt(y);    break;
+    case TK_EXIT:   adv; exit_stmt(y);  break;
+    case TK_FN:     adv; fn_def(y);     break;
+    case TK_FOR:    adv; for_stmt(y);   break;
+    case TK_IF:     adv; if_stmt(y);    break;
     case TK_LOCAL: break;
-    case TK_PRINT:  adv(y); print_stmt(y); break;
-    case TK_RETURN: adv(y); ret_stmt(y);   break;
-    case TK_WHILE:  adv(y); while_stmt(y); break;
-    default: expr_stmt(y);                 break;
+    case TK_PRINT:  adv; print_stmt(y); break;
+    case TK_RETURN: adv; ret_stmt(y);   break;
+    case TK_WHILE:  adv; while_stmt(y); break;
+    default: expr_stmt(y);              break;
     }
 }
 
@@ -409,6 +422,7 @@ int y_compile(const char *src, code_t *c) {
 }
 
 #undef adv
+#undef peek
 #undef push
 #undef set
 #undef unset

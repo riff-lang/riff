@@ -327,9 +327,9 @@ int x_adv(lexer_t *x) {
     // If a lookahead token already exists, assign it to the current
     // token
     if (x->la.kind != 0) {
-        x->tk = x->la;
-        x->la.kind = 0;
-        // x->la.lexeme.i = 0;
+        x->tk.kind   = x->la.kind;
+        x->tk.lexeme = x->la.lexeme;
+        x->la.kind   = 0;
     } else if ((x->tk.kind = tokenize(x, &x->tk)) == 1) {
         x->tk.kind = TK_EOI;
         return 1;

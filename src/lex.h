@@ -79,6 +79,6 @@ typedef struct {
 
 int x_init(lexer_t *, const char *);
 int x_adv(lexer_t *);
-int x_peek(lexer_t *x);
+int x_peek(lexer_t *);
 
 #endif

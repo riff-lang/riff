@@ -189,15 +189,17 @@ static void c_pushv(code_t *c, int i) {
     }
 }
 
+// mode = 1 => VM will push the pointer to the val_t in the global
+//             hash table onto the stack
+// mode = 0 => VM will make a copy of the symbol's val_t and push it
+//             onto the stack
 void c_symbol(code_t *c, token_t *tk, int mode) {
     // Search for existing symbol
     for (int i = 0; i < c->k.n; i++) {
         if (c->k.v[i]->type == TYPE_STR &&
             tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
-            if (mode)
-                c_pusha(c, i);
-            else
-                c_pushv(c, i);
+            if (mode) c_pusha(c, i);
+            else      c_pushv(c, i);
             return;
         }
     }
@@ -207,10 +209,8 @@ void c_symbol(code_t *c, token_t *tk, int mode) {
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
-    if (mode)
-        c_pusha(c, c->k.n - 1);
-    else
-        c_pushv(c, c->k.n - 1);
+    if (mode) c_pusha(c, c->k.n - 1);
+    else      c_pushv(c, c->k.n - 1);
 }
 
 // TODO this function will be used to evaluate infix expression

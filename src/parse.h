@@ -6,11 +6,11 @@
 #include "types.h"
 
 typedef struct {
-    lexer_t *x;
+    lexer_t *x;  // Parser controls lexical analysis
     code_t  *c;  // Current code object
     uint8_t  ax; // Assignment flag
-    uint8_t  ox; // Typical operation flag
-    uint8_t  px; // Prefix/postfix increment/decrement flag
+    uint8_t  ox; // Typical (i.e. not ++/--) operation flag
+    uint8_t  px; // Prefix or postfix increment/decrement flag
     uint8_t  rx; // Reference flag
 } parser_t;
 

@@ -59,37 +59,37 @@ enum opcodes {
     OP_SHLX,    // Bitwise shift left assign
     OP_SHRX,    // Bitwise shift right assign
     OP_XORX,    // Bitwise XOR assign
-    OP_POP,     // Pop from stack
+    OP_POP,     // Pop (--SP)
     OP_PUSH0,   // Push literal `0` on stack
     OP_PUSH1,   // Push literal `1` on stack
     OP_PUSH2,   // Push literal `2` on stack
-    OP_PUSHI,   // Push immediate value on stack
-    OP_PUSHK,   // Push constant as literal value on stack
-    OP_PUSHK0,  // Push 0th constant on stack as value
-    OP_PUSHK1,  // Push 1st constant on stack as value
-    OP_PUSHK2,  // Push 2nd constant on stack as value
-    OP_PUSHA,   // Push address of symbol IP+1 on stack
-    OP_PUSHA0,  // Push address of 0th symbol on stack
-    OP_PUSHA1,  // Push address of 1st symbol on stack
-    OP_PUSHA2,  // Push address of 2nd symbol on stack
-    OP_PUSHV,   // Push value of symbol IP+1 on stack
-    OP_PUSHV0,  // Push value of 0th symbol on stack
-    OP_PUSHV1,  // Push value of 1st symbol on stack
-    OP_PUSHV2,  // Push value of 2nd symbol on stack
+    OP_PUSHI,   // Push (IP+1) as literal value on stack
+    OP_PUSHK,   // Push K[IP+1] on stack as value
+    OP_PUSHK0,  // Push K[0] on stack as value
+    OP_PUSHK1,  // Push K[1] on stack as value
+    OP_PUSHK2,  // Push K[2] on stack as value
+    OP_PUSHA,   // Push pointer to symbol K[IP+1] on stack
+    OP_PUSHA0,  // Push pointer to symbol K[0] on stack
+    OP_PUSHA1,  // Push pointer to symbol K[1] on stack
+    OP_PUSHA2,  // Push pointer to symbol K[2] on stack
+    OP_PUSHV,   // Copy value of symbol K[IP+1] onto stack
+    OP_PUSHV0,  // Copy value of symbol K[0] onto stack
+    OP_PUSHV1,  // Copy value of symbol K[1] onto stack
+    OP_PUSHV2,  // Copy value of symbol K[2] onto stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
     OP_IDX,     // Index of a string/array
-    OP_SET,     // Set
-    OP_PRINT,   // Print
-    OP_EXIT     // exit(0) (probably temporary)
+    OP_SET,     // Assignment
+    OP_PRINT,   // Print value at SP[-1], --SP
+    OP_EXIT     // exit(0) (maybe temporary)
 };
 
 enum jumps {
-    JMP,    // Unconditional jump
-    JZ,     // Pop from stack, jump if zero
-    JNZ,    // Pop from stack, jump if non-zero
-    XJZ,    // Pop from stack OR jump if zero
-    XJNZ    // Pop from stack OR jump if non-zero
+    JMP,        // Unconditional jump
+    JZ,         // Pop stack, jump if zero
+    JNZ,        // Pop stack, jump if non-zero
+    XJZ,        // Pop stack OR jump if zero
+    XJNZ        // Pop stack OR jump if non-zero
 };
 
 typedef struct {
@@ -100,7 +100,7 @@ typedef struct {
         int     n;
         int     cap;
         val_t **v;
-    } k; // Constants table
+    } k;        // Constants table
 } code_t;
 
 void c_init(code_t *);
