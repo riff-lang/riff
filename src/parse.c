@@ -2,11 +2,11 @@
 
 #include "parse.h"
 
-#define adv(y)      x_adv(y->x)
-#define push(b)     c_push(y->c, b)
-#define unset_all() y->ax = 0; y->ox = 0; y->px = 0; y->rx = 0;
-#define set(f)      y->f = 1;
-#define unset(f)    y->f = 0;
+#define adv(y)    x_adv(y->x)
+#define push(b)   c_push(y->c, b)
+#define set(f)    y->f = 1;
+#define unset(f)  y->f = 0;
+#define unset_all y->ax = 0; y->ox = 0; y->px = 0; y->rx = 0;
 
 // General TODO: hardcoded logic for valid "follow" tokens should be
 // cleaned up
@@ -94,6 +94,7 @@ static void literal(parser_t *y) {
         err(y, "Attempt to assign to constant value");
 }
 
+// TODO cleanup
 static void identifier(parser_t *y) {
     if (y->rx) {
         c_symbol(y->c, &y->x->tk, 1);
@@ -260,7 +261,7 @@ static int expr(parser_t *y, int rbp) {
 
 // Standalone expressions
 static void expr_stmt(parser_t *y) {
-    unset_all();
+    unset_all;
     expr(y, 0);
 
     // Implicit printing conditions
@@ -392,7 +393,7 @@ static void stmt_list(parser_t *y) {
 }
 
 static void y_init(parser_t *y, const char *src) {
-    unset_all();
+    unset_all;
     x_init(y->x, src);
 }
 
@@ -409,3 +410,6 @@ int y_compile(const char *src, code_t *c) {
 
 #undef adv
 #undef push
+#undef set
+#undef unset
+#undef unset_all

@@ -255,12 +255,6 @@ static void put(val_t *v) {
     sp[0] = h_lookup(&globals, c->k.v[(x)]->u.s); \
     ++sp;
 
-// #define pushv(x) \
-//     sp[0]->type = h_lookup(&globals, c->k.v[(x)]->u.s)->type; \
-//     sp[0]->u    = h_lookup(&globals, c->k.v[(x)]->u.s)->u; \
-//     printf("Symbol: %s %lld\n", c->k.v[(x)]->u.s->str, sp[0]->u.i);\
-//     ++sp;
-
 #define pushv(x) \
     tt = h_lookup(&globals, c->k.v[(x)]->u.s); \
     sp[0]->type = tt->type; \
@@ -405,15 +399,6 @@ int z_exec(code_t *c) {
         case OP_IDX: // TODO
             binop(idx);
             break;
-// #define cbinop(x) { \
-//     tp = sp[-2]; \
-//     t.type = sp[-2]->type; \
-//     t.u    = sp[-2]->u; \
-//     sp[-2] = &t; \
-//     binop(x); \
-//     tp->type = sp[-1]->type; \
-//     tp->u    = sp[-1]->u; \
-// }
         case OP_SET:
             tp = sp[-2];
             t.type = sp[-1]->type;
@@ -438,4 +423,18 @@ int z_exec(code_t *c) {
     return 0;
 }
 
+#undef j8
+#undef j16
+#undef jc8
+#undef jc16
+#undef xjc8
+#undef xjc16
+#undef binop
+#undef unop
+#undef pre
+#undef post
+#undef cbinop
 #undef push
+#undef pusha
+#undef pushi
+#undef pushv
