@@ -210,16 +210,16 @@ static void put(val_t *v) {
         assign_int(sp[-1], x); \
         break; \
     } \
-    t.type = sp[-1]->type; \
-    t.u    = sp[-1]->u; \
-    sp[-1] = &t; \
+    tv.type = sp[-1]->type; \
+    tv.u    = sp[-1]->u; \
+    sp[-1]  = &tv; \
     ++ip; \
 }
 
 // Post-increment/decrement
 #define post(x) { \
-    t.type = sp[-1]->type; \
-    t.u    = sp[-1]->u; \
+    tv.type = sp[-1]->type; \
+    tv.u    = sp[-1]->u; \
     switch (sp[-1]->type) { \
     case TYPE_INT: sp[-1]->u.i += x; break; \
     case TYPE_FLT: sp[-1]->u.f += x; break; \
@@ -227,16 +227,16 @@ static void put(val_t *v) {
         assign_int(sp[-1], x); \
         break; \
     } \
-    sp[-1] = &t; \
+    sp[-1] = &tv; \
     unop(num); \
 }
 
 // Compound assignment operations
 #define cbinop(x) { \
-    tp = sp[-2]; \
-    t.type = sp[-2]->type; \
-    t.u    = sp[-2]->u; \
-    sp[-2] = &t; \
+    tp      = sp[-2]; \
+    tv.type = sp[-2]->type; \
+    tv.u    = sp[-2]->u; \
+    sp[-2]  = &tv; \
     binop(x); \
     tp->type = sp[-1]->type; \
     tp->u    = sp[-1]->u; \
@@ -266,13 +266,13 @@ int z_exec(code_t *c) {
     val_t **sp = malloc(256 * sizeof(val_t *));
     for (int i = 0; i < 256; i++)
         sp[i] = malloc(sizeof(val_t));
-    val_t t;
-    val_t *tp = malloc(sizeof(val_t));
+    val_t  tv;                          // Temp value
+    val_t *tp = malloc(sizeof(val_t));  // Temp pointer
     uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
-        case OP_JMP8:    j8;                 break;
-        case OP_JMP16:   j16;                break;
+        case OP_JMP8:    j8;                   break;
+        case OP_JMP16:   j16;                  break;
         case OP_JNZ8:    jc8(test(sp[-1]));    break;
         case OP_JNZ16:   jc16(test(sp[-1]));   break;
         case OP_JZ8:     jc8(!test(sp[-1]));   break;
@@ -281,48 +281,48 @@ int z_exec(code_t *c) {
         case OP_XJNZ16:  xjc16(test(sp[-1]));  break;
         case OP_XJZ8:    xjc8(!test(sp[-1]));  break;
         case OP_XJZ16:   xjc16(!test(sp[-1])); break;
-        case OP_TEST:    unop(test);         break;
-        case OP_ADD:     binop(add);         break;
-        case OP_SUB:     binop(sub);         break;
-        case OP_MUL:     binop(mul);         break;
-        case OP_DIV:     binop(div);         break;
-        case OP_MOD:     binop(mod);         break;
-        case OP_POW:     binop(pow);         break;
-        case OP_AND:     binop(and);         break;
-        case OP_OR:      binop(or);          break;
-        case OP_XOR:     binop(xor);         break;
-        case OP_SHL:     binop(shl);         break;
-        case OP_SHR:     binop(shr);         break;
-        case OP_NUM:     unop(num);          break;
-        case OP_NEG:     unop(neg);          break;
-        case OP_NOT:     unop(not);          break;
-        case OP_EQ:      binop(eq);          break;
-        case OP_NE:      binop(ne);          break;
-        case OP_GT:      binop(gt);          break;
-        case OP_GE:      binop(ge);          break;
-        case OP_LT:      binop(lt);          break;
-        case OP_LE:      binop(le);          break;
-        case OP_LNOT:    unop(lnot);         break;
+        case OP_TEST:    unop(test);           break;
+        case OP_ADD:     binop(add);           break;
+        case OP_SUB:     binop(sub);           break;
+        case OP_MUL:     binop(mul);           break;
+        case OP_DIV:     binop(div);           break;
+        case OP_MOD:     binop(mod);           break;
+        case OP_POW:     binop(pow);           break;
+        case OP_AND:     binop(and);           break;
+        case OP_OR:      binop(or);            break;
+        case OP_XOR:     binop(xor);           break;
+        case OP_SHL:     binop(shl);           break;
+        case OP_SHR:     binop(shr);           break;
+        case OP_NUM:     unop(num);            break;
+        case OP_NEG:     unop(neg);            break;
+        case OP_NOT:     unop(not);            break;
+        case OP_EQ:      binop(eq);            break;
+        case OP_NE:      binop(ne);            break;
+        case OP_GT:      binop(gt);            break;
+        case OP_GE:      binop(ge);            break;
+        case OP_LT:      binop(lt);            break;
+        case OP_LE:      binop(le);            break;
+        case OP_LNOT:    unop(lnot);           break;
         case OP_CALL: // TODO
             break;
-        case OP_CAT:     binop(cat);         break;
-        case OP_PREINC:  pre(1);             break;
-        case OP_PREDEC:  pre(-1);            break;
-        case OP_POSTINC: post(1);            break;
-        case OP_POSTDEC: post(-1);           break;
-        case OP_LEN:     unop(len);          break;
-        case OP_ADDX:    cbinop(add);        break;
-        case OP_SUBX:    cbinop(sub);        break;
-        case OP_MULX:    cbinop(mul);        break;
-        case OP_DIVX:    cbinop(div);        break;
-        case OP_MODX:    cbinop(mod);        break;
-        case OP_CATX:    cbinop(cat);        break;
-        case OP_POWX:    cbinop(pow);        break;
-        case OP_ANDX:    cbinop(and);        break;
-        case OP_ORX:     cbinop(or);         break;
-        case OP_SHLX:    cbinop(shl);        break;
-        case OP_SHRX:    cbinop(shr);        break;
-        case OP_XORX:    cbinop(xor);        break;
+        case OP_CAT:     binop(cat);           break;
+        case OP_PREINC:  pre(1);               break;
+        case OP_PREDEC:  pre(-1);              break;
+        case OP_POSTINC: post(1);              break;
+        case OP_POSTDEC: post(-1);             break;
+        case OP_LEN:     unop(len);            break;
+        case OP_ADDX:    cbinop(add);          break;
+        case OP_SUBX:    cbinop(sub);          break;
+        case OP_MULX:    cbinop(mul);          break;
+        case OP_DIVX:    cbinop(div);          break;
+        case OP_MODX:    cbinop(mod);          break;
+        case OP_CATX:    cbinop(cat);          break;
+        case OP_POWX:    cbinop(pow);          break;
+        case OP_ANDX:    cbinop(and);          break;
+        case OP_ORX:     cbinop(or);           break;
+        case OP_SHLX:    cbinop(shl);          break;
+        case OP_SHRX:    cbinop(shr);          break;
+        case OP_XORX:    cbinop(xor);          break;
         case OP_POP:
             --sp;
             ++ip;
@@ -399,12 +399,12 @@ int z_exec(code_t *c) {
             binop(idx);
             break;
         case OP_SET:
-            tp = sp[-2];
-            t.type = sp[-1]->type;
-            t.u = sp[-1]->u;
-            sp[-2] = &t;
-            tp->type = t.type;
-            tp->u    = t.u;
+            tp       = sp[-2];
+            tv.type  = sp[-1]->type;
+            tv.u     = sp[-1]->u;
+            sp[-2]   = &tv;
+            tp->type = tv.type;
+            tp->u    = tv.u;
             --sp;
             ++ip;
             break;
