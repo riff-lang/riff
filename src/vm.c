@@ -256,9 +256,9 @@ static void put(val_t *v) {
     ++sp;
 
 #define pushv(x) \
-    tt = h_lookup(&globals, c->k.v[(x)]->u.s); \
-    sp[0]->type = tt->type; \
-    sp[0]->u    = tt->u; \
+    tp = h_lookup(&globals, c->k.v[(x)]->u.s); \
+    sp[0]->type = tp->type; \
+    sp[0]->u    = tp->u; \
     ++sp;
 
 int z_exec(code_t *c) {
@@ -267,7 +267,6 @@ int z_exec(code_t *c) {
     for (int i = 0; i < 256; i++)
         sp[i] = malloc(sizeof(val_t));
     val_t t;
-    val_t *tt = malloc(sizeof(val_t));
     val_t *tp = malloc(sizeof(val_t));
     uint8_t *ip = c->code;
     while (1) {
