@@ -31,86 +31,86 @@ static int test(val_t *v) {
 #define fltval(x) (IS_FLT(x) ? x->u.f : \
                    IS_INT(x) ? (flt_t) x->u.i : 0)
 
-#define int_arith(p,l,r,op) \
-    assign_int(p, (intval(l) op intval(r)));
+#define int_arith(l,r,op) \
+    assign_int(l, (intval(l) op intval(r)));
 
-#define flt_arith(p,l,r,op) \
-    assign_flt(p, (numval(l) op numval(r)));
+#define flt_arith(l,r,op) \
+    assign_flt(l, (numval(l) op numval(r)));
 
-#define num_arith(p,l,r,op) \
+#define num_arith(l,r,op) \
     if (IS_FLT(l) || IS_FLT(r)) { \
-        flt_arith(p,l,r,op); \
+        flt_arith(l,r,op); \
     } else { \
-        int_arith(p,l,r,op); \
+        int_arith(l,r,op); \
     }
 
-void z_add(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,+); }
-void z_sub(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,-); }
-void z_mul(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,*); }
-void z_div(val_t *p, val_t *l, val_t *r) { flt_arith(p,l,r,/); }
+void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
+void z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
+void z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
+void z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
 
 // TODO Make sure this works as intended
 // TODO Error handling, e.g. RHS = 0
-void z_mod(val_t *p, val_t *l, val_t *r) {
+void z_mod(val_t *l, val_t *r) {
     flt_t res = fmod(numval(l), numval(r));
-    assign_flt(p, res < 0 ? res + numval(r) : res);
+    assign_flt(l, res < 0 ? res + numval(r) : res);
 }
 
-void z_pow(val_t *p, val_t *l, val_t *r) {
-    assign_flt(p, pow(fltval(l), fltval(r)));
+void z_pow(val_t *l, val_t *r) {
+    assign_flt(l, pow(fltval(l), fltval(r)));
 }
 
-void z_and(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,&);  }
-void z_or(val_t *p, val_t *l, val_t *r)  { int_arith(p,l,r,|);  }
-void z_xor(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,^);  }
-void z_shl(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,<<); }
-void z_shr(val_t *p, val_t *l, val_t *r) { int_arith(p,l,r,>>); }
+void z_and(val_t *l, val_t *r) { int_arith(l,r,&);  }
+void z_or(val_t *l, val_t *r)  { int_arith(l,r,|);  }
+void z_xor(val_t *l, val_t *r) { int_arith(l,r,^);  }
+void z_shl(val_t *l, val_t *r) { int_arith(l,r,<<); }
+void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
 // TODO
-void z_num(val_t *p, val_t *v) {
+void z_num(val_t *v) {
     switch (v->type) {
     case TYPE_INT:
-        assign_int(p, intval(v));
+        assign_int(v, intval(v));
         break;
     case TYPE_FLT:
-        assign_flt(p, fltval(v));
+        assign_flt(v, fltval(v));
         break;
     default:
-        assign_int(p, 0);
+        assign_int(v, 0);
         break;
     }
 }
 
-void z_neg(val_t *p, val_t *v) {
+void z_neg(val_t *v) {
     switch (v->type) {
     case TYPE_INT:
-        assign_int(p, -intval(v));
+        assign_int(v, -intval(v));
         break;
     case TYPE_FLT:
-        assign_flt(p, -fltval(v));
+        assign_flt(v, -fltval(v));
         break;
     default:
-        assign_int(p, -1); // TODO type coercion
+        assign_int(v, -1); // TODO type coercion
         break;
     }
 }
 
-void z_not(val_t *p, val_t *v) {
+void z_not(val_t *v) {
     assign_int(v, ~intval(v));
 }
 
-void z_eq(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,==); }
-void z_ne(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,!=); }
-void z_gt(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,>);  }
-void z_ge(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,>=); }
-void z_lt(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,<);  }
-void z_le(val_t *p, val_t *l, val_t *r) { num_arith(p,l,r,<=); }
+void z_eq(val_t *l, val_t *r) { num_arith(l,r,==); }
+void z_ne(val_t *l, val_t *r) { num_arith(l,r,!=); }
+void z_gt(val_t *l, val_t *r) { num_arith(l,r,>);  }
+void z_ge(val_t *l, val_t *r) { num_arith(l,r,>=); }
+void z_lt(val_t *l, val_t *r) { num_arith(l,r,<);  }
+void z_le(val_t *l, val_t *r) { num_arith(l,r,<=); }
 
-void z_lnot(val_t *p, val_t *v) {
-    assign_int(p, !numval(v));
+void z_lnot(val_t *v) {
+    assign_int(v, !numval(v));
 }
 
-void z_len(val_t *p, val_t *v) {
+void z_len(val_t *v) {
     int_t l = 0;
     switch (v->type) {
     case TYPE_INT: l = s_int2str(v->u.i)->l; break;
@@ -120,14 +120,14 @@ void z_len(val_t *p, val_t *v) {
     case TYPE_FN:  // TODO
     default: break;
     }
-    assign_int(p, l);
+    assign_int(v, l);
 }
 
-void z_test(val_t *p, val_t *v) {
-    assign_int(p, test(v));
+void z_test(val_t *v) {
+    assign_int(v, test(v));
 }
 
-void z_cat(val_t *p, val_t *l, val_t *r) {
+void z_cat(val_t *l, val_t *r) {
     switch (l->type) {
     case TYPE_VOID: l->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT:  l->u.s = s_int2str(intval(l)); break;
@@ -142,26 +142,26 @@ void z_cat(val_t *p, val_t *l, val_t *r) {
     default: break;
     }
 
-    assign_str(p, s_concat(l->u.s, r->u.s, 0));
+    assign_str(l, s_concat(l->u.s, r->u.s, 0));
 }
 
 // Potentially very slow; allocates 2 new string objects for every int
 // or float LHS
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
-void z_idx(val_t *p, val_t *l, val_t *r) {
+void z_idx(val_t *l, val_t *r) {
     switch (l->type) {
     case TYPE_INT:
-        assign_str(p, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1, 0));
+        assign_str(l, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1, 0));
         break;
     case TYPE_FLT:
-        assign_str(p, s_newstr(&s_flt2str(l->u.f)->str[intval(r)], 1, 0));
+        assign_str(l, s_newstr(&s_flt2str(l->u.f)->str[intval(r)], 1, 0));
         break;
     case TYPE_STR:
-        assign_str(p, s_newstr(&l->u.s->str[intval(r)], 1, 0));
+        assign_str(l, s_newstr(&l->u.s->str[intval(r)], 1, 0));
         break;
     case TYPE_ARR: // TODO
     default:
-        assign_int(p, 0);
+        assign_int(l, 0);
         break;
     }
 }
@@ -192,15 +192,13 @@ static void put(val_t *v) {
 
 // Standard binary operations
 #define binop(x) \
-    z_##x(tp, sp[-2], sp[-1]); \
-    sp[-2] = tp;\
+    z_##x(sp[-2], sp[-1]); \
     --sp; \
     ++ip;
 
 // Unary operations
 #define unop(x) \
-    z_##x(tp, sp[-1]); \
-    sp[-1] = tp;\
+    z_##x(sp[-1]); \
     ++ip;
 
 // Pre-increment/decrement
@@ -257,11 +255,16 @@ static void put(val_t *v) {
     sp[0] = h_lookup(&globals, c->k.v[(x)]->u.s); \
     ++sp;
 
+// #define pushv(x) \
+//     sp[0]->type = h_lookup(&globals, c->k.v[(x)]->u.s)->type; \
+//     sp[0]->u    = h_lookup(&globals, c->k.v[(x)]->u.s)->u; \
+//     printf("Symbol: %s %lld\n", c->k.v[(x)]->u.s->str, sp[0]->u.i);\
+//     ++sp;
+
 #define pushv(x) \
-    t = *h_lookup(&globals, c->k.v[(x)]->u.s); \
-    sp[0]->type = t.type; \
-    sp[0]->u    = t.u; \
-    t = *v_newvoid();\
+    tt = h_lookup(&globals, c->k.v[(x)]->u.s); \
+    sp[0]->type = tt->type; \
+    sp[0]->u    = tt->u; \
     ++sp;
 
 int z_exec(code_t *c) {
@@ -270,6 +273,7 @@ int z_exec(code_t *c) {
     for (int i = 0; i < 256; i++)
         sp[i] = malloc(sizeof(val_t));
     val_t t;
+    val_t *tt = malloc(sizeof(val_t));
     val_t *tp = malloc(sizeof(val_t));
     uint8_t *ip = c->code;
     while (1) {
