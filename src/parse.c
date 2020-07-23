@@ -163,6 +163,7 @@ static void set_index(parser_t *y) {
         push(OP_IDXA);
     else
         push(OP_IDXV);
+    y->rx = rx;     // Restore flag
 }
 
 static int nud(parser_t *y) {
