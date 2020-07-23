@@ -393,10 +393,10 @@ int z_exec(code_t *c) {
             break;
         case OP_RET:
             exit(0);
-        case OP_RET1: // TODO
+        case OP_RET1:   // TODO
             break;
-        case OP_IDXA:
-        case OP_IDXV:
+        case OP_IDXA:   // TODO
+        case OP_IDXV:   // TODO
             binop(idx);
             break;
         case OP_SET:

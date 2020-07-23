@@ -12,8 +12,10 @@
                   y->px = 0; \
                   y->rx = 0;
 
-// General TODO: hardcoded logic for valid "follow" tokens should be
-// cleaned up
+// TODO Hardcoded logic for valid "follow" tokens should be cleaned
+// up
+// TODO Syntax error handling; parser should do as much heavy lifting
+// as possible
 
 static void err(parser_t *y, const char *msg) {
     fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
