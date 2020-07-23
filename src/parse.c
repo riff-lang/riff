@@ -153,6 +153,18 @@ static void logical(parser_t *y, int tk) {
     c_patch(y->c, l1);
 }
 
+// Retrieve index of a set (string/array, but works for numbers as well)
+static void set_index(parser_t *y) {
+    int rx = y->rx; // Save flag
+    unset(rx);      // Unset
+    expr(y, 0);
+    consume(y, ']', "Expected ']'");
+    if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind))
+        push(OP_IDXA);
+    else
+        push(OP_IDXV);
+}
+
 static int nud(parser_t *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
@@ -224,9 +236,7 @@ static int led(parser_t *y, int p, int tk) {
     case '[':
         set(ox);
         adv;
-        expr(y, 0);
-        consume(y, ']', "Expected ']'");
-        push(OP_IDX);
+        set_index(y);
         break;
     case '(':
         break;
