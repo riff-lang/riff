@@ -1,3 +1,4 @@
+#include "array.h"
 #include "types.h"
 
 val_t *v_newvoid(void) {
@@ -27,5 +28,14 @@ val_t *v_newstr(str_t *s) {
     v->type = TYPE_STR;
     v->u.s  = ns;
     v->u.s->hash = s->hash;
+    return v;
+}
+
+val_t *v_newarr(void) {
+    val_t *v = malloc(sizeof(val_t));
+    arr_t *a = malloc(sizeof(arr_t));
+    a_init(a);
+    v->type = TYPE_ARR;
+    v->u.a  = a;
     return v;
 }

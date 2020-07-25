@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "array.h"
 #include "vm.h"
 
 static void err(const char *msg) {
@@ -18,7 +19,7 @@ static int test(val_t *v) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
     case TYPE_STR: return !!(v->u.s->l);
-    case TYPE_ARR: return 0; // TODO
+    case TYPE_ARR: return !!(v->u.a->h->n); // TODO
     case TYPE_FN:  return 1;
     default:       return 0;
     }
@@ -116,7 +117,7 @@ void z_len(val_t *v) {
     case TYPE_INT: l = s_int2str(v->u.i)->l; break;
     case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
     case TYPE_STR: l = v->u.s->l;            break;
-    case TYPE_ARR: // TODO
+    case TYPE_ARR: l = v->u.a->h->n;         break; // TODO
     case TYPE_FN:  // TODO
     default: break;
     }
@@ -145,8 +146,8 @@ void z_cat(val_t *l, val_t *r) {
     assign_str(l, s_concat(l->u.s, r->u.s, 0));
 }
 
-// Potentially very slow; allocates 2 new string objects for every int
-// or float LHS
+// Potentially very slow for strings; allocates 2 new string objects
+// for every int or float LHS
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
 void z_idx(val_t *l, val_t *r) {
     switch (l->type) {
@@ -159,16 +160,20 @@ void z_idx(val_t *l, val_t *r) {
     case TYPE_STR:
         assign_str(l, s_newstr(&l->u.s->str[intval(r)], 1, 0));
         break;
-    case TYPE_ARR: // TODO
+    case TYPE_ARR: // TODO? e.g. {2,4,7,1}[0]
+        break;
     default:
         assign_int(l, 0);
         break;
     }
 }
 
+// OP_PRINT functionality
+// TODO Provide command-line switches for integer format? (hex,
+// binary, etc)
 static void put(val_t *v) {
     switch (v->type) {
-    case TYPE_VOID: printf("\n");                break;
+    case TYPE_VOID: printf("[void]\n");          break; // TODO remove
     case TYPE_INT:  printf("%lld\n", v->u.i);    break;
     case TYPE_FLT:  printf("%g\n", v->u.f);      break;
     case TYPE_STR:  printf("%s\n", v->u.s->str); break;
@@ -191,18 +196,23 @@ static void put(val_t *v) {
 #define xjc16(x) if (x) j16; else {--sp; ip += 3;}
 
 // Standard binary operations
+// sp[-2] and sp[-1] are assumed to be safe to overwrite
 #define binop(x) \
     z_##x(sp[-2], sp[-1]); \
     --sp; \
     ++ip;
 
 // Unary operations
+// sp[-1] is assumed to be safe to overwrite
 #define unop(x) \
     z_##x(sp[-1]); \
     ++ip;
 
 // Pre-increment/decrement
-#define pre(x) { \
+// sp[-1] is address of some variable's val_t. Increment/decrement
+// this value directly and replace the stack element with a copy of
+// the value.
+#define pre(x) \
     switch (sp[-1]->type) { \
     case TYPE_INT: sp[-1]->u.i += x; break; \
     case TYPE_FLT: sp[-1]->u.f += x; break; \
@@ -213,11 +223,14 @@ static void put(val_t *v) {
     tv.type = sp[-1]->type; \
     tv.u    = sp[-1]->u; \
     sp[-1]  = &tv; \
-    ++ip; \
-}
+    ++ip;
 
 // Post-increment/decrement
-#define post(x) { \
+// sp[-1] is address of some variable's val_t. Create a copy of the
+// raw value, then increment/decrement the val_t at the given address.
+// Replace the stack element with the previously made copy and coerce
+// to a numeric value if needed.
+#define post(x) \
     tv.type = sp[-1]->type; \
     tv.u    = sp[-1]->u; \
     switch (sp[-1]->type) { \
@@ -228,33 +241,50 @@ static void put(val_t *v) {
         break; \
     } \
     sp[-1] = &tv; \
-    unop(num); \
-}
+    unop(num);
 
 // Compound assignment operations
-#define cbinop(x) { \
+// sp[-2] is address of some variable's val_t. Save the address and
+// replace sp[-2] with a copy of the value. Perform the binary
+// operation x and assign the result to the saved address.
+#define cbinop(x) \
     tp      = sp[-2]; \
     tv.type = sp[-2]->type; \
     tv.u    = sp[-2]->u; \
     sp[-2]  = &tv; \
     binop(x); \
     tp->type = sp[-1]->type; \
-    tp->u    = sp[-1]->u; \
-}
+    tp->u    = sp[-1]->u;
 
-#define push(x) \
+// Push constant
+// Copy constant x from code object's constant table to the top of the
+// stack.
+#define pushk(x) \
     sp[0]->type = x->type; \
     sp[0]->u    = x->u; \
     ++sp;
 
+// Push immediate
+// Assign integer value x to the top of the stack.
 #define pushi(x) \
     assign_int(sp[0], x); \
     ++sp;
 
+// Push address
+// Assign the address of variable x's val_t in the globals table.
+// h_lookup() will create an entry if needed, accommodating
+// undeclared/uninitialized variable usage.
+// Parser signals for this opcode for assignment or pre/post ++/--.
 #define pusha(x) \
     sp[0] = h_lookup(&globals, c->k.v[(x)]->u.s); \
     ++sp;
 
+// Push value
+// Copy the value of variable x to the top of the stack.  h_lookup()
+// will create an entry if needed, accommodating
+// undeclared/uninitialized variable usage.
+// Parser signals for this opcode to be used when only needing the
+// value, e.g. arithmetic.
 #define pushv(x) \
     tp = h_lookup(&globals, c->k.v[(x)]->u.s); \
     sp[0]->type = tp->type; \
@@ -266,8 +296,8 @@ int z_exec(code_t *c) {
     val_t **sp = malloc(256 * sizeof(val_t *));
     for (int i = 0; i < 256; i++)
         sp[i] = malloc(sizeof(val_t));
-    val_t  tv;                          // Temp value
-    val_t *tp = malloc(sizeof(val_t));  // Temp pointer
+    val_t  tv; // Temp value
+    val_t *tp; // Temp pointer
     uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
@@ -344,19 +374,19 @@ int z_exec(code_t *c) {
             ip += 2;
             break;
         case OP_PUSHK:
-            push(c->k.v[ip[1]]);
+            pushk(c->k.v[ip[1]]);
             ip += 2;
             break;
         case OP_PUSHK0:
-            push(c->k.v[0]);
+            pushk(c->k.v[0]);
             ++ip;
             break;
         case OP_PUSHK1:
-            push(c->k.v[1]);
+            pushk(c->k.v[1]);
             ++ip;
             break;
         case OP_PUSHK2:
-            push(c->k.v[2]);
+            pushk(c->k.v[2]);
             ++ip;
             break;
         case OP_PUSHA:
@@ -395,9 +425,67 @@ int z_exec(code_t *c) {
             exit(0);
         case OP_RET1:   // TODO
             break;
-        case OP_IDXA:   // TODO
-        case OP_IDXV:   // TODO
-            binop(idx);
+
+        // IDXA
+        // Perform the lookup and leave the corresponding element's
+        // val_t address on the stack.
+        case OP_IDXA:
+            switch (sp[-2]->type) {
+
+            // Create array if sp[-2] is an uninitialized variable
+            case TYPE_VOID:
+                tp           = v_newarr();
+                sp[-2]->type = tp->type;
+                sp[-2]->u    = tp->u;
+                // Fall-through
+            case TYPE_ARR:
+                sp[-2] = a_lookup(sp[-2]->u.a, sp[-1]);
+                break;
+
+            // IDXA is invalid for all other types
+            case TYPE_INT: case TYPE_FLT: case TYPE_STR:
+            case TYPE_FN:
+                err("idxa called with invalid type");
+            default: break;
+            }
+            --sp;
+            ++ip;
+            break;
+
+        // IDXV
+        // Perform the lookup and leave a copy of the corresponding
+        // element's value on the stack.
+        case OP_IDXV:
+            switch (sp[-2]->type) {
+
+            // Create array if sp[-2] is an uninitialized variable
+            case TYPE_VOID:
+                sp[-2] = v_newarr();
+                // Fall-through
+            case TYPE_ARR: {
+                tp = a_lookup(sp[-2]->u.a, sp[-1]);
+
+                // TODO please no more malloc
+                val_t *new = malloc(sizeof(val_t));
+                new->type  = tp->type;
+                new->u     = tp->u;
+                sp[-2]     = new;
+                --sp;
+                ++ip;
+                break;
+            }
+
+            // TODO parser should be signaling OP_PUSHV, this handles
+            // OP_PUSHA usage for now
+            case TYPE_INT: case TYPE_FLT: case TYPE_STR:
+                tv.type = sp[-2]->type;
+                tv.u    = sp[-2]->u;
+                sp[-2]  = &tv;
+                binop(idx);
+                break;
+            default:
+                break;
+            }
             break;
         case OP_SET:
             tp       = sp[-2];
@@ -434,7 +522,7 @@ int z_exec(code_t *c) {
 #undef pre
 #undef post
 #undef cbinop
-#undef push
 #undef pusha
 #undef pushi
+#undef pushk
 #undef pushv

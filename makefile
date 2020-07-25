@@ -10,6 +10,7 @@ WFLAGS += -Wpedantic
 WFLAGS += -Weverything
 
 SRC     = src/riff.c
+SRC    += src/array.c
 SRC    += src/code.c
 SRC    += src/disas.c
 SRC    += src/hash.c

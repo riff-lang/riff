@@ -4,13 +4,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define TYPE_VOID 1  // 0000001
-#define TYPE_INT  2  // 0000010
-#define TYPE_FLT  4  // 0000100
-#define TYPE_STR  8  // 0001000
-#define TYPE_ARR  16 // 0010000
-#define TYPE_FN   32 // 0100000
-#define TYPE_SYM  64 // 1000000
+#define TYPE_VOID 1  // 000001
+#define TYPE_INT  2  // 000010
+#define TYPE_FLT  4  // 000100
+#define TYPE_STR  8  // 001000
+#define TYPE_ARR  16 // 010000
+#define TYPE_FN   32 // 100000
 
 #define IS_VOID(x) (x->type & TYPE_VOID)
 #define IS_INT(x)  (x->type & TYPE_INT)
@@ -18,7 +17,6 @@
 #define IS_STR(x)  (x->type & TYPE_STR)
 #define IS_ARR(x)  (x->type & TYPE_ARR)
 #define IS_FN(x)   (x->type & TYPE_FN)
-#define IS_SYM(x)  (x->type & TYPE_SYM)
 
 #define IS_NUM(x)  (x->type & (TYPE_INT | TYPE_FLT))
 
@@ -31,13 +29,16 @@ typedef struct {
     char     *str;
 } str_t;
 
+// Forward declaration
+typedef struct arr_t arr_t;
+
 typedef struct {
     int type;
     union {
         flt_t  f;
         int_t  i;
         str_t *s;
-        // Add array
+        arr_t *a;
         // Add function
     } u;
 } val_t;
@@ -56,5 +57,6 @@ val_t    *v_newvoid(void);
 val_t    *v_newint(int_t);
 val_t    *v_newflt(flt_t);
 val_t    *v_newstr(str_t *);
+val_t    *v_newarr(void);
 
 #endif
