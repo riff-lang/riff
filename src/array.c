@@ -28,6 +28,8 @@ static val_t *a_lookup_str(arr_t *a, str_t *k) {
     return h_lookup(a->h, k);
 }
 
+// If int k is within the capacity of the "array" part, perform the
+// lookup. Otherwise, defer to a_lookup_str().
 // static val_t *a_lookup_int(arr_t *a, int_t k) {
 // }
 
@@ -64,12 +66,12 @@ val_t *a_insert(arr_t *a, val_t *k, val_t *v) {
 }
 
 // TODO
-static void a_delete_str(arr_t *a, str_t *k) {
-}
+// static void a_delete_str(arr_t *a, str_t *k) {
+// }
 
 // TODO
-static void a_delete_int(arr_t *a, int_t k) {
-}
+// static void a_delete_int(arr_t *a, int_t k) {
+// }
 
 // TODO
 void a_delete(arr_t *a, val_t *k) {

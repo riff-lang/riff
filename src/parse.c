@@ -168,6 +168,9 @@ static void set_index(parser_t *y) {
     y->rx = rx;     // Restore flag
 }
 
+static void array(parser_t *y) {
+}
+
 static int nud(parser_t *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
@@ -185,7 +188,8 @@ static int nud(parser_t *y) {
         if (is_asgmt(y->x->tk.kind))
             err(y, "Invalid operator following expr");
         return ')';
-    case '{': // TODO New array/table
+    case '{':
+        array(y);
         break;
     case TK_INC: case TK_DEC:
         if (adv)
@@ -311,6 +315,14 @@ static void expr_stmt(parser_t *y) {
 static void stmt_list(parser_t *);
 static void stmt(parser_t *);
 
+// TODO
+static void break_stmt(parser_t *y) {
+}
+
+// TODO
+static void cont_stmt(parser_t *y) {
+}
+
 static void do_stmt(parser_t *y) {
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
@@ -329,9 +341,11 @@ static void exit_stmt(parser_t *y) {
     push(OP_EXIT);
 }
 
+// TODO
 static void fn_def(parser_t *y) {
 }
 
+// TODO
 static void for_stmt(parser_t *y) {
 }
 
@@ -361,6 +375,10 @@ static void if_stmt(parser_t *y) {
     } else {
         c_patch(y->c, l1);
     }
+}
+
+// TODO
+static void local_stmt(parser_t *y) {
 }
 
 static void print_stmt(parser_t *y) {
@@ -399,16 +417,18 @@ static void while_stmt(parser_t *y) {
 static void stmt(parser_t *y) {
     switch (y->x->tk.kind) {
     case ';':       adv;                break;
+    case TK_BREAK:  adv; break_stmt(y); break; // TODO
+    case TK_CONT:   adv; cont_stmt(y);  break; // TODO
     case TK_DO:     adv; do_stmt(y);    break;
     case TK_EXIT:   adv; exit_stmt(y);  break;
-    case TK_FN:     adv; fn_def(y);     break;
-    case TK_FOR:    adv; for_stmt(y);   break;
+    case TK_FN:     adv; fn_def(y);     break; // TODO
+    case TK_FOR:    adv; for_stmt(y);   break; // TODO
     case TK_IF:     adv; if_stmt(y);    break;
-    case TK_LOCAL: break;
+    case TK_LOCAL:  adv; local_stmt(y); break; // TODO
     case TK_PRINT:  adv; print_stmt(y); break;
     case TK_RETURN: adv; ret_stmt(y);   break;
     case TK_WHILE:  adv; while_stmt(y); break;
-    default: expr_stmt(y);              break;
+    default:             expr_stmt(y);  break;
     }
 }
 
