@@ -169,8 +169,7 @@ void z_idx(val_t *l, val_t *r) {
 }
 
 // OP_PRINT functionality
-// TODO Provide command-line switches for integer format? (hex,
-// binary, etc)
+// TODO Command-line switches for integer format? (hex, binary, etc)
 static void put(val_t *v) {
     switch (v->type) {
     case TYPE_VOID: printf("void\n");              break;
@@ -183,17 +182,57 @@ static void put(val_t *v) {
     }
 }
 
+// Main interpreter loop
+int z_exec(code_t *c) {
+    h_init(&globals);
+    val_t *stk[256];
+    register int sp = 0;
+    for (int i = 0; i < 256; i++)
+        stk[i] = malloc(sizeof(val_t));
+    val_t  tv; // Temp value
+    val_t *tp; // Temp pointer
+    uint8_t *ip = c->code;
+    while (1) {
+        switch (*ip) {
+        // case OP_NOP: ++ip; break;
+
 // Unconditional jumps
 #define j8  (ip += (int8_t) ip[1])
 #define j16 (ip += (int16_t) ((ip[1] << 8) + ip[2]))
+
+        case OP_JMP8:  j8;  break;
+        case OP_JMP16: j16; break;
 
 // Conditional jumps (pop stack unconditionally)
 #define jc8(x)  (x ? j8  : (ip += 2)); --sp;
 #define jc16(x) (x ? j16 : (ip += 3)); --sp;
 
+        case OP_JNZ8:  jc8(test(stk[sp-1]));   break;
+        case OP_JNZ16: jc16(test(stk[sp-1]));  break;
+        case OP_JZ8:   jc8(!test(stk[sp-1]));  break;
+        case OP_JZ16:  jc16(!test(stk[sp-1])); break;
+
 // Conditional jumps (pop stack if jump not taken)
 #define xjc8(x)  if (x) j8;  else {--sp; ip += 2;}
 #define xjc16(x) if (x) j16; else {--sp; ip += 3;}
+
+        case OP_XJNZ8:  xjc8(test(stk[sp-1]));   break;
+        case OP_XJNZ16: xjc16(test(stk[sp-1]));  break;
+        case OP_XJZ8:   xjc8(!test(stk[sp-1]));  break;
+        case OP_XJZ16:  xjc16(!test(stk[sp-1])); break;
+
+// Unary operations
+// stk[sp-1] is assumed to be safe to overwrite
+#define unop(x) \
+    z_##x(stk[sp-1]); \
+    ++ip;
+
+        case OP_LEN:  unop(len);  break;
+        case OP_LNOT: unop(lnot); break;
+        case OP_NEG:  unop(neg);  break;
+        case OP_NOT:  unop(not);  break;
+        case OP_NUM:  unop(num);  break;
+        case OP_TEST: unop(test); break;
 
 // Standard binary operations
 // stk[sp-2] and stk[sp-1] are assumed to be safe to overwrite
@@ -202,11 +241,26 @@ static void put(val_t *v) {
     --sp; \
     ++ip;
 
-// Unary operations
-// stk[sp-1] is assumed to be safe to overwrite
-#define unop(x) \
-    z_##x(stk[sp-1]); \
-    ++ip;
+        case OP_ADD: binop(add); break;
+        case OP_SUB: binop(sub); break;
+        case OP_MUL: binop(mul); break;
+        case OP_DIV: binop(div); break;
+        case OP_MOD: binop(mod); break;
+        case OP_POW: binop(pow); break;
+        case OP_AND: binop(and); break;
+        case OP_OR:  binop(or);  break;
+        case OP_XOR: binop(xor); break;
+        case OP_SHL: binop(shl); break;
+        case OP_SHR: binop(shr); break;
+        case OP_EQ:  binop(eq);  break;
+        case OP_NE:  binop(ne);  break;
+        case OP_GT:  binop(gt);  break;
+        case OP_GE:  binop(ge);  break;
+        case OP_LT:  binop(lt);  break;
+        case OP_LE:  binop(le);  break;
+        case OP_CAT: binop(cat); break;
+
+        case OP_CALL: break; // TODO
 
 // Pre-increment/decrement
 // stk[sp-1] is address of some variable's val_t. Increment/decrement
@@ -224,6 +278,9 @@ static void put(val_t *v) {
     tv.u      = stk[sp-1]->u; \
     stk[sp-1] = &tv; \
     ++ip;
+
+        case OP_PREINC: pre(1);  break;
+        case OP_PREDEC: pre(-1); break;
 
 // Post-increment/decrement
 // stk[sp-1] is address of some variable's val_t. Create a copy of the
@@ -243,6 +300,9 @@ static void put(val_t *v) {
     stk[sp-1] = &tv; \
     unop(num);
 
+        case OP_POSTINC: post(1);  break;
+        case OP_POSTDEC: post(-1); break;
+
 // Compound assignment operations
 // stk[sp-2] is address of some variable's val_t. Save the address and
 // replace stk[sp-2] with a copy of the value. Perform the binary
@@ -256,19 +316,45 @@ static void put(val_t *v) {
     tp->type = stk[sp-1]->type; \
     tp->u    = stk[sp-1]->u;
 
-// Push constant
-// Copy constant x from code object's constant table to the top of the
-// stack.
-#define pushk(x) \
-    stk[sp]->type = x->type; \
-    stk[sp]->u    = x->u; \
-    ++sp;
+        case OP_ADDX: cbinop(add); break;
+        case OP_SUBX: cbinop(sub); break;
+        case OP_MULX: cbinop(mul); break;
+        case OP_DIVX: cbinop(div); break;
+        case OP_MODX: cbinop(mod); break;
+        case OP_CATX: cbinop(cat); break;
+        case OP_POWX: cbinop(pow); break;
+        case OP_ANDX: cbinop(and); break;
+        case OP_ORX:  cbinop(or);  break;
+        case OP_SHLX: cbinop(shl); break;
+        case OP_SHRX: cbinop(shr); break;
+        case OP_XORX: cbinop(xor); break;
+
+        // Simple pop operation
+        case OP_POP: --sp; ++ip; break;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
 #define pushi(x) \
     assign_int(stk[sp], x); \
     ++sp;
+
+        case OP_PUSHI: pushi(ip[1]); ip += 2; break;
+        case OP_PUSH0: pushi(0);     ++ip;    break;
+        case OP_PUSH1: pushi(1);     ++ip;    break;
+        case OP_PUSH2: pushi(2);     ++ip;    break;
+
+// Push constant
+// Copy constant x from code object's constant table to the top of the
+// stack.
+#define pushk(x) \
+    stk[sp]->type = c->k.v[(x)]->type; \
+    stk[sp]->u    = c->k.v[(x)]->u; \
+    ++sp;
+
+        case OP_PUSHK:  pushk(ip[1]); ip += 2; break;
+        case OP_PUSHK0: pushk(0);     ++ip;    break;
+        case OP_PUSHK1: pushk(1);     ++ip;    break;
+        case OP_PUSHK2: pushk(2);     ++ip;    break;
 
 // Push address
 // Assign the address of variable x's val_t in the globals table.
@@ -278,6 +364,11 @@ static void put(val_t *v) {
 #define pusha(x) \
     stk[sp] = h_lookup(&globals, c->k.v[(x)]->u.s); \
     ++sp;
+
+        case OP_PUSHA:  pusha(ip[1]); ip += 2; break;
+        case OP_PUSHA0: pusha(0);     ++ip;    break;
+        case OP_PUSHA1: pusha(1);     ++ip;    break;
+        case OP_PUSHA2: pusha(2);     ++ip;    break;
 
 // Push value
 // Copy the value of variable x to the top of the stack. h_lookup()
@@ -291,141 +382,13 @@ static void put(val_t *v) {
     stk[sp]->u    = tp->u; \
     ++sp;
 
-int z_exec(code_t *c) {
-    h_init(&globals);
-    val_t *stk[256];
-    register int sp = 0;
-    for (int i = 0; i < 256; i++)
-        stk[i] = malloc(sizeof(val_t));
-    val_t  tv; // Temp value
-    val_t *tp; // Temp pointer
-    uint8_t *ip = c->code;
-    while (1) {
-        switch (*ip) {
-        case OP_JMP8:    j8;                      break;
-        case OP_JMP16:   j16;                     break;
-        case OP_JNZ8:    jc8(test(stk[sp-1]));    break;
-        case OP_JNZ16:   jc16(test(stk[sp-1]));   break;
-        case OP_JZ8:     jc8(!test(stk[sp-1]));   break;
-        case OP_JZ16:    jc16(!test(stk[sp-1]));  break;
-        case OP_XJNZ8:   xjc8(test(stk[sp-1]));   break;
-        case OP_XJNZ16:  xjc16(test(stk[sp-1]));  break;
-        case OP_XJZ8:    xjc8(!test(stk[sp-1]));  break;
-        case OP_XJZ16:   xjc16(!test(stk[sp-1])); break;
-        case OP_TEST:    unop(test);              break;
-        case OP_ADD:     binop(add);              break;
-        case OP_SUB:     binop(sub);              break;
-        case OP_MUL:     binop(mul);              break;
-        case OP_DIV:     binop(div);              break;
-        case OP_MOD:     binop(mod);              break;
-        case OP_POW:     binop(pow);              break;
-        case OP_AND:     binop(and);              break;
-        case OP_OR:      binop(or);               break;
-        case OP_XOR:     binop(xor);              break;
-        case OP_SHL:     binop(shl);              break;
-        case OP_SHR:     binop(shr);              break;
-        case OP_NUM:     unop(num);               break;
-        case OP_NEG:     unop(neg);               break;
-        case OP_NOT:     unop(not);               break;
-        case OP_EQ:      binop(eq);               break;
-        case OP_NE:      binop(ne);               break;
-        case OP_GT:      binop(gt);               break;
-        case OP_GE:      binop(ge);               break;
-        case OP_LT:      binop(lt);               break;
-        case OP_LE:      binop(le);               break;
-        case OP_LNOT:    unop(lnot);              break;
-        case OP_CALL: // TODO
-            break;
-        case OP_CAT:     binop(cat);              break;
-        case OP_PREINC:  pre(1);                  break;
-        case OP_PREDEC:  pre(-1);                 break;
-        case OP_POSTINC: post(1);                 break;
-        case OP_POSTDEC: post(-1);                break;
-        case OP_LEN:     unop(len);               break;
-        case OP_ADDX:    cbinop(add);             break;
-        case OP_SUBX:    cbinop(sub);             break;
-        case OP_MULX:    cbinop(mul);             break;
-        case OP_DIVX:    cbinop(div);             break;
-        case OP_MODX:    cbinop(mod);             break;
-        case OP_CATX:    cbinop(cat);             break;
-        case OP_POWX:    cbinop(pow);             break;
-        case OP_ANDX:    cbinop(and);             break;
-        case OP_ORX:     cbinop(or);              break;
-        case OP_SHLX:    cbinop(shl);             break;
-        case OP_SHRX:    cbinop(shr);             break;
-        case OP_XORX:    cbinop(xor);             break;
-        case OP_POP:
-            --sp;
-            ++ip;
-            break;
-        case OP_PUSH0:
-            pushi(0);
-            ++ip;
-            break;
-        case OP_PUSH1:
-            pushi(1);
-            ++ip;
-            break;
-        case OP_PUSH2:
-            pushi(2);
-            ++ip;
-            break;
-        case OP_PUSHI:
-            pushi(ip[1]);
-            ip += 2;
-            break;
-        case OP_PUSHK:
-            pushk(c->k.v[ip[1]]);
-            ip += 2;
-            break;
-        case OP_PUSHK0:
-            pushk(c->k.v[0]);
-            ++ip;
-            break;
-        case OP_PUSHK1:
-            pushk(c->k.v[1]);
-            ++ip;
-            break;
-        case OP_PUSHK2:
-            pushk(c->k.v[2]);
-            ++ip;
-            break;
-        case OP_PUSHA:
-            pusha(ip[1]);
-            ip += 2;
-            break;
-        case OP_PUSHA0:
-            pusha(0);
-            ++ip;
-            break;
-        case OP_PUSHA1:
-            pusha(1);
-            ++ip;
-            break;
-        case OP_PUSHA2:
-            pusha(2);
-            ++ip;
-            break;
-        case OP_PUSHV:
-            pushv(ip[1]);
-            ip += 2;
-            break;
-        case OP_PUSHV0:
-            pushv(0);
-            ++ip;
-            break;
-        case OP_PUSHV1:
-            pushv(1);
-            ++ip;
-            break;
-        case OP_PUSHV2:
-            pushv(2);
-            ++ip;
-            break;
-        case OP_RET:
-            exit(0);
-        case OP_RET1:   // TODO
-            break;
+        case OP_PUSHV:  pushv(ip[1]); ip += 2; break;
+        case OP_PUSHV0: pushv(0);     ++ip;    break;
+        case OP_PUSHV1: pushv(1);     ++ip;    break;
+        case OP_PUSHV2: pushv(2);     ++ip;    break;
+
+        case OP_RET:  exit(0); // TODO
+        case OP_RET1: break;   // TODO
 
         // IDXA
         // Perform the lookup and leave the corresponding element's
@@ -518,8 +481,8 @@ int z_exec(code_t *c) {
 #undef jc16
 #undef xjc8
 #undef xjc16
-#undef binop
 #undef unop
+#undef binop
 #undef pre
 #undef post
 #undef cbinop

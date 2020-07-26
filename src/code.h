@@ -40,8 +40,8 @@ enum opcodes {
     OP_LT,      // Less-than
     OP_LE,      // Less-than or equal-to
     OP_LNOT,    // Logical NOT
-    OP_CALL,    // Function call
     OP_CAT,     // Concatenate
+    OP_CALL,    // Function call
     OP_PREINC,  // Pre-increment
     OP_PREDEC,  // Pre-decrement
     OP_POSTINC, // Post-increment
@@ -60,10 +60,10 @@ enum opcodes {
     OP_SHRX,    // Bitwise shift right assign
     OP_XORX,    // Bitwise XOR assign
     OP_POP,     // Pop (--SP)
+    OP_PUSHI,   // Push (IP+1) as literal value on stack
     OP_PUSH0,   // Push literal `0` on stack
     OP_PUSH1,   // Push literal `1` on stack
     OP_PUSH2,   // Push literal `2` on stack
-    OP_PUSHI,   // Push (IP+1) as literal value on stack
     OP_PUSHK,   // Push K[IP+1] on stack as value
     OP_PUSHK0,  // Push K[0] on stack as value
     OP_PUSHK1,  // Push K[1] on stack as value
