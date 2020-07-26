@@ -8,6 +8,13 @@
 #include "parse.h"
 #include "vm.h"
 
+#define VERSION "0.1a"
+
+static void version(void) {
+    printf("riff %s Copyright 2020, Darryl Abbate\n", VERSION);
+    exit(0);
+}
+
 static char *stringify_file(const char *path) {
     FILE *file = fopen(path, "rb");
     if (!file) {
@@ -40,10 +47,11 @@ int main(int argc, char **argv) {
     opterr = 0;
 
     int o;
-    while ((o = getopt(argc, argv, "df")) != -1) {
+    while ((o = getopt(argc, argv, "dfv")) != -1) {
         switch (o) {
         case 'd': df = 1; break;
         case 'f': ff = 1; break;
+        case 'v': version();
         case '?': uf = 1; break;
         default: break;
         }
