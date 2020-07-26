@@ -196,78 +196,78 @@ static void put(val_t *v) {
 #define xjc16(x) if (x) j16; else {--sp; ip += 3;}
 
 // Standard binary operations
-// sp[-2] and sp[-1] are assumed to be safe to overwrite
+// stk[sp-2] and stk[sp-1] are assumed to be safe to overwrite
 #define binop(x) \
-    z_##x(sp[-2], sp[-1]); \
+    z_##x(stk[sp-2], stk[sp-1]); \
     --sp; \
     ++ip;
 
 // Unary operations
-// sp[-1] is assumed to be safe to overwrite
+// stk[sp-1] is assumed to be safe to overwrite
 #define unop(x) \
-    z_##x(sp[-1]); \
+    z_##x(stk[sp-1]); \
     ++ip;
 
 // Pre-increment/decrement
-// sp[-1] is address of some variable's val_t. Increment/decrement
+// stk[sp-1] is address of some variable's val_t. Increment/decrement
 // this value directly and replace the stack element with a copy of
 // the value.
 #define pre(x) \
-    switch (sp[-1]->type) { \
-    case TYPE_INT: sp[-1]->u.i += x; break; \
-    case TYPE_FLT: sp[-1]->u.f += x; break; \
+    switch (stk[sp-1]->type) { \
+    case TYPE_INT: stk[sp-1]->u.i += x; break; \
+    case TYPE_FLT: stk[sp-1]->u.f += x; break; \
     default: \
-        assign_int(sp[-1], x); \
+        assign_int(stk[sp-1], x); \
         break; \
     } \
-    tv.type = sp[-1]->type; \
-    tv.u    = sp[-1]->u; \
-    sp[-1]  = &tv; \
+    tv.type   = stk[sp-1]->type; \
+    tv.u      = stk[sp-1]->u; \
+    stk[sp-1] = &tv; \
     ++ip;
 
 // Post-increment/decrement
-// sp[-1] is address of some variable's val_t. Create a copy of the
+// stk[sp-1] is address of some variable's val_t. Create a copy of the
 // raw value, then increment/decrement the val_t at the given address.
 // Replace the stack element with the previously made copy and coerce
 // to a numeric value if needed.
 #define post(x) \
-    tv.type = sp[-1]->type; \
-    tv.u    = sp[-1]->u; \
-    switch (sp[-1]->type) { \
-    case TYPE_INT: sp[-1]->u.i += x; break; \
-    case TYPE_FLT: sp[-1]->u.f += x; break; \
+    tv.type = stk[sp-1]->type; \
+    tv.u    = stk[sp-1]->u; \
+    switch (stk[sp-1]->type) { \
+    case TYPE_INT: stk[sp-1]->u.i += x; break; \
+    case TYPE_FLT: stk[sp-1]->u.f += x; break; \
     default: \
-        assign_int(sp[-1], x); \
+        assign_int(stk[sp-1], x); \
         break; \
     } \
-    sp[-1] = &tv; \
+    stk[sp-1] = &tv; \
     unop(num);
 
 // Compound assignment operations
-// sp[-2] is address of some variable's val_t. Save the address and
-// replace sp[-2] with a copy of the value. Perform the binary
+// stk[sp-2] is address of some variable's val_t. Save the address and
+// replace stk[sp-2] with a copy of the value. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
-    tp      = sp[-2]; \
-    tv.type = sp[-2]->type; \
-    tv.u    = sp[-2]->u; \
-    sp[-2]  = &tv; \
+    tp        = stk[sp-2]; \
+    tv.type   = stk[sp-2]->type; \
+    tv.u      = stk[sp-2]->u; \
+    stk[sp-2] = &tv; \
     binop(x); \
-    tp->type = sp[-1]->type; \
-    tp->u    = sp[-1]->u;
+    tp->type = stk[sp-1]->type; \
+    tp->u    = stk[sp-1]->u;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the
 // stack.
 #define pushk(x) \
-    sp[0]->type = x->type; \
-    sp[0]->u    = x->u; \
+    stk[sp]->type = x->type; \
+    stk[sp]->u    = x->u; \
     ++sp;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
 #define pushi(x) \
-    assign_int(sp[0], x); \
+    assign_int(stk[sp], x); \
     ++sp;
 
 // Push address
@@ -276,83 +276,84 @@ static void put(val_t *v) {
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
 #define pusha(x) \
-    sp[0] = h_lookup(&globals, c->k.v[(x)]->u.s); \
+    stk[sp] = h_lookup(&globals, c->k.v[(x)]->u.s); \
     ++sp;
 
 // Push value
-// Copy the value of variable x to the top of the stack.  h_lookup()
+// Copy the value of variable x to the top of the stack. h_lookup()
 // will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
 #define pushv(x) \
     tp = h_lookup(&globals, c->k.v[(x)]->u.s); \
-    sp[0]->type = tp->type; \
-    sp[0]->u    = tp->u; \
+    stk[sp]->type = tp->type; \
+    stk[sp]->u    = tp->u; \
     ++sp;
 
 int z_exec(code_t *c) {
     h_init(&globals);
-    val_t **sp = malloc(256 * sizeof(val_t *));
+    val_t *stk[256];
+    register int sp = 0;
     for (int i = 0; i < 256; i++)
-        sp[i] = malloc(sizeof(val_t));
+        stk[i] = malloc(sizeof(val_t));
     val_t  tv; // Temp value
     val_t *tp; // Temp pointer
     uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
-        case OP_JMP8:    j8;                   break;
-        case OP_JMP16:   j16;                  break;
-        case OP_JNZ8:    jc8(test(sp[-1]));    break;
-        case OP_JNZ16:   jc16(test(sp[-1]));   break;
-        case OP_JZ8:     jc8(!test(sp[-1]));   break;
-        case OP_JZ16:    jc16(!test(sp[-1]));  break;
-        case OP_XJNZ8:   xjc8(test(sp[-1]));   break;
-        case OP_XJNZ16:  xjc16(test(sp[-1]));  break;
-        case OP_XJZ8:    xjc8(!test(sp[-1]));  break;
-        case OP_XJZ16:   xjc16(!test(sp[-1])); break;
-        case OP_TEST:    unop(test);           break;
-        case OP_ADD:     binop(add);           break;
-        case OP_SUB:     binop(sub);           break;
-        case OP_MUL:     binop(mul);           break;
-        case OP_DIV:     binop(div);           break;
-        case OP_MOD:     binop(mod);           break;
-        case OP_POW:     binop(pow);           break;
-        case OP_AND:     binop(and);           break;
-        case OP_OR:      binop(or);            break;
-        case OP_XOR:     binop(xor);           break;
-        case OP_SHL:     binop(shl);           break;
-        case OP_SHR:     binop(shr);           break;
-        case OP_NUM:     unop(num);            break;
-        case OP_NEG:     unop(neg);            break;
-        case OP_NOT:     unop(not);            break;
-        case OP_EQ:      binop(eq);            break;
-        case OP_NE:      binop(ne);            break;
-        case OP_GT:      binop(gt);            break;
-        case OP_GE:      binop(ge);            break;
-        case OP_LT:      binop(lt);            break;
-        case OP_LE:      binop(le);            break;
-        case OP_LNOT:    unop(lnot);           break;
+        case OP_JMP8:    j8;                      break;
+        case OP_JMP16:   j16;                     break;
+        case OP_JNZ8:    jc8(test(stk[sp-1]));    break;
+        case OP_JNZ16:   jc16(test(stk[sp-1]));   break;
+        case OP_JZ8:     jc8(!test(stk[sp-1]));   break;
+        case OP_JZ16:    jc16(!test(stk[sp-1]));  break;
+        case OP_XJNZ8:   xjc8(test(stk[sp-1]));   break;
+        case OP_XJNZ16:  xjc16(test(stk[sp-1]));  break;
+        case OP_XJZ8:    xjc8(!test(stk[sp-1]));  break;
+        case OP_XJZ16:   xjc16(!test(stk[sp-1])); break;
+        case OP_TEST:    unop(test);              break;
+        case OP_ADD:     binop(add);              break;
+        case OP_SUB:     binop(sub);              break;
+        case OP_MUL:     binop(mul);              break;
+        case OP_DIV:     binop(div);              break;
+        case OP_MOD:     binop(mod);              break;
+        case OP_POW:     binop(pow);              break;
+        case OP_AND:     binop(and);              break;
+        case OP_OR:      binop(or);               break;
+        case OP_XOR:     binop(xor);              break;
+        case OP_SHL:     binop(shl);              break;
+        case OP_SHR:     binop(shr);              break;
+        case OP_NUM:     unop(num);               break;
+        case OP_NEG:     unop(neg);               break;
+        case OP_NOT:     unop(not);               break;
+        case OP_EQ:      binop(eq);               break;
+        case OP_NE:      binop(ne);               break;
+        case OP_GT:      binop(gt);               break;
+        case OP_GE:      binop(ge);               break;
+        case OP_LT:      binop(lt);               break;
+        case OP_LE:      binop(le);               break;
+        case OP_LNOT:    unop(lnot);              break;
         case OP_CALL: // TODO
             break;
-        case OP_CAT:     binop(cat);           break;
-        case OP_PREINC:  pre(1);               break;
-        case OP_PREDEC:  pre(-1);              break;
-        case OP_POSTINC: post(1);              break;
-        case OP_POSTDEC: post(-1);             break;
-        case OP_LEN:     unop(len);            break;
-        case OP_ADDX:    cbinop(add);          break;
-        case OP_SUBX:    cbinop(sub);          break;
-        case OP_MULX:    cbinop(mul);          break;
-        case OP_DIVX:    cbinop(div);          break;
-        case OP_MODX:    cbinop(mod);          break;
-        case OP_CATX:    cbinop(cat);          break;
-        case OP_POWX:    cbinop(pow);          break;
-        case OP_ANDX:    cbinop(and);          break;
-        case OP_ORX:     cbinop(or);           break;
-        case OP_SHLX:    cbinop(shl);          break;
-        case OP_SHRX:    cbinop(shr);          break;
-        case OP_XORX:    cbinop(xor);          break;
+        case OP_CAT:     binop(cat);              break;
+        case OP_PREINC:  pre(1);                  break;
+        case OP_PREDEC:  pre(-1);                 break;
+        case OP_POSTINC: post(1);                 break;
+        case OP_POSTDEC: post(-1);                break;
+        case OP_LEN:     unop(len);               break;
+        case OP_ADDX:    cbinop(add);             break;
+        case OP_SUBX:    cbinop(sub);             break;
+        case OP_MULX:    cbinop(mul);             break;
+        case OP_DIVX:    cbinop(div);             break;
+        case OP_MODX:    cbinop(mod);             break;
+        case OP_CATX:    cbinop(cat);             break;
+        case OP_POWX:    cbinop(pow);             break;
+        case OP_ANDX:    cbinop(and);             break;
+        case OP_ORX:     cbinop(or);              break;
+        case OP_SHLX:    cbinop(shl);             break;
+        case OP_SHRX:    cbinop(shr);             break;
+        case OP_XORX:    cbinop(xor);             break;
         case OP_POP:
             --sp;
             ++ip;
@@ -430,16 +431,16 @@ int z_exec(code_t *c) {
         // Perform the lookup and leave the corresponding element's
         // val_t address on the stack.
         case OP_IDXA:
-            switch (sp[-2]->type) {
+            switch (stk[sp-2]->type) {
 
-            // Create array if sp[-2] is an uninitialized variable
+            // Create array if stk[sp-2] is an uninitialized variable
             case TYPE_VOID:
-                tp           = v_newarr();
-                sp[-2]->type = tp->type;
-                sp[-2]->u    = tp->u;
+                tp              = v_newarr();
+                stk[sp-2]->type = tp->type;
+                stk[sp-2]->u    = tp->u;
                 // Fall-through
             case TYPE_ARR:
-                sp[-2] = a_lookup(sp[-2]->u.a, sp[-1]);
+                stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1]);
                 break;
 
             // IDXA is invalid for all other types
@@ -456,20 +457,20 @@ int z_exec(code_t *c) {
         // Perform the lookup and leave a copy of the corresponding
         // element's value on the stack.
         case OP_IDXV:
-            switch (sp[-2]->type) {
+            switch (stk[sp-2]->type) {
 
-            // Create array if sp[-2] is an uninitialized variable
+            // Create array if stk[sp-2] is an uninitialized variable
             case TYPE_VOID:
-                sp[-2] = v_newarr();
+                stk[sp-2] = v_newarr();
                 // Fall-through
             case TYPE_ARR: {
-                tp = a_lookup(sp[-2]->u.a, sp[-1]);
+                tp = a_lookup(stk[sp-2]->u.a, stk[sp-1]);
 
                 // TODO please no more malloc
                 val_t *new = malloc(sizeof(val_t));
                 new->type  = tp->type;
                 new->u     = tp->u;
-                sp[-2]     = new;
+                stk[sp-2]  = new;
                 --sp;
                 ++ip;
                 break;
@@ -478,9 +479,9 @@ int z_exec(code_t *c) {
             // TODO parser should be signaling OP_PUSHV, this handles
             // OP_PUSHA usage for now
             case TYPE_INT: case TYPE_FLT: case TYPE_STR:
-                tv.type = sp[-2]->type;
-                tv.u    = sp[-2]->u;
-                sp[-2]  = &tv;
+                tv.type    = stk[sp-2]->type;
+                tv.u       = stk[sp-2]->u;
+                stk[sp-2]  = &tv;
                 binop(idx);
                 break;
             default:
@@ -488,17 +489,17 @@ int z_exec(code_t *c) {
             }
             break;
         case OP_SET:
-            tp       = sp[-2];
-            tv.type  = sp[-1]->type;
-            tv.u     = sp[-1]->u;
-            sp[-2]   = &tv;
-            tp->type = tv.type;
-            tp->u    = tv.u;
+            tp        = stk[sp-2];
+            tv.type   = stk[sp-1]->type;
+            tv.u      = stk[sp-1]->u;
+            stk[sp-2] = &tv;
+            tp->type  = tv.type;
+            tp->u     = tv.u;
             --sp;
             ++ip;
             break;
         case OP_PRINT:
-            put(sp[-1]);
+            put(stk[sp-1]);
             --sp;
             ++ip;
             break;
