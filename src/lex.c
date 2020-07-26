@@ -122,6 +122,11 @@ static int read_id(lexer_t *x, token_t *tk) {
             x->p += 4;
             return TK_BREAK;
         } else break;
+    case 'c':
+        if (check_kw(x, "ontinue", 7)) {
+            x->p += 7;
+            return TK_CONT;
+        } else break;
     case 'd':
         if (check_kw(x, "o", 1)) {
             x->p += 1;
