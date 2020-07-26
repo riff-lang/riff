@@ -173,11 +173,11 @@ void z_idx(val_t *l, val_t *r) {
 // binary, etc)
 static void put(val_t *v) {
     switch (v->type) {
-    case TYPE_VOID: printf("[void]\n");          break; // TODO remove
-    case TYPE_INT:  printf("%lld\n", v->u.i);    break;
-    case TYPE_FLT:  printf("%g\n", v->u.f);      break;
-    case TYPE_STR:  printf("%s\n", v->u.s->str); break;
-    case TYPE_ARR:  // TODO
+    case TYPE_VOID: printf("void\n");              break;
+    case TYPE_INT:  printf("%lld\n", v->u.i);      break;
+    case TYPE_FLT:  printf("%g\n", v->u.f);        break;
+    case TYPE_STR:  printf("%s\n", v->u.s->str);   break;
+    case TYPE_ARR:  printf("array: %p\n", v->u.a); break;
     case TYPE_FN:   // TODO
     default: break;
     }
