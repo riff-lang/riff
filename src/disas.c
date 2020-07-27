@@ -10,6 +10,7 @@ static struct {
     [OP_ADD]     = { "add",      0 },
     [OP_ANDX]    = { "andx",     0 },
     [OP_AND]     = { "and",      0 },
+    [OP_ARRAY]   = { "array",    1 },
     [OP_CALL]    = { "call",     1 },
     [OP_CATX]    = { "catx",     0 },
     [OP_CAT]     = { "cat",      0 },

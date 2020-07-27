@@ -185,9 +185,9 @@ static void put(val_t *v) {
 // Main interpreter loop
 int z_exec(code_t *c) {
     h_init(&globals);
-    val_t *stk[256];
+    val_t *stk[1024];
     register int sp = 0;
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < 1024; i++)
         stk[i] = malloc(sizeof(val_t));
     val_t  tv; // Temp value
     val_t *tp; // Temp pointer
@@ -389,6 +389,18 @@ int z_exec(code_t *c) {
 
         case OP_RET:  exit(0); // TODO
         case OP_RET1: break;   // TODO
+
+        // Create a sequential array of (IP+1) elements from the top
+        // of the stack. Leave the array val_t on the stack.
+        // Arrays index at 0 by default.
+        case OP_ARRAY:
+            tp = v_newarr();
+            for (int i = ip[1] - 1; i >= 0; --i) {
+                a_insert_int(tp->u.a, i, stk[--sp]);
+            }
+            stk[sp++] = tp;
+            ip += 2;
+            break;
 
         // IDXA
         // Perform the lookup and leave the corresponding element's

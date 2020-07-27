@@ -1,13 +1,27 @@
 // Arrays
 
-j = {0,1,2,3,4}     // Standard array
+a = {7,3,5,1,2}
+
+while i < #a a[i++] // Print the elements in a (in order)
+
+
+b = {
+    3 << 4,
+    -5 % 3,
+    7 / 4,
+    32
+}
+
+j = #b - 1
+while j >= 0 b[j--] // Print the elements in b (reverse order)
 
 // Array holding anonymous functions
-ops = {
-    fn () = exit 0,
-    fn () { r[w] = y                     ip += 3 },
-    fn () { s[si++] = x                  ip += 2 },
-    fn () { r[w] = s[si] delete(s[si--]) ip += 2 },
-    fn () { r[w] = y == z                ip += 4 },
-    fn () { r[w] = y >  z                ip += 4 }
-}
+// Functions not yet implemented
+/* ops = { */
+/*     fn () = exit 0, */
+/*     fn () { r[w] = y                     ip += 3 }, */
+/*     fn () { s[si++] = x                  ip += 2 }, */
+/*     fn () { r[w] = s[si] delete(s[si--]) ip += 2 }, */
+/*     fn () { r[w] = y == z                ip += 4 }, */
+/*     fn () { r[w] = y >  z                ip += 4 } */
+/* } */

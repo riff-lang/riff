@@ -168,7 +168,21 @@ static void set_index(parser_t *y) {
     y->rx = rx;     // Restore flag
 }
 
+// TODO Currently limited to 255 elements
+// TODO Support arbitrary indexing a la C99 designators
 static void array(parser_t *y) {
+    int e = 0;
+    while (y->x->tk.kind != '}') {
+        expr(y, 0);
+        ++e;
+        if (y->x->tk.kind == ',')
+            adv;
+        else
+            break;
+    }
+    consume(y, '}', "Expected '}'");
+    push(OP_ARRAY);
+    push((uint8_t) e);
 }
 
 static int nud(parser_t *y) {
@@ -189,6 +203,7 @@ static int nud(parser_t *y) {
             err(y, "Invalid operator following expr");
         return ')';
     case '{':
+        adv;
         array(y);
         break;
     case TK_INC: case TK_DEC:
@@ -211,6 +226,8 @@ static int nud(parser_t *y) {
         // TODO Handle invalid nuds
         if (lbop(tk) || rbop(tk))
             err(y, "Invalid start of expression");
+        else
+            err(y, "Unexpected symbol");
         break;
     }
     return tk;

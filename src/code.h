@@ -78,6 +78,7 @@ enum opcodes {
     OP_PUSHV2,  // Copy value of symbol K[2] onto stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
+    OP_ARRAY,   // Create array of the top (IP+1) stack elements
     OP_IDXA,    // Index of a set, leaving pointer on stack
     OP_IDXV,    // Index of a set, leaving value on stack
     OP_SET,     // Assignment

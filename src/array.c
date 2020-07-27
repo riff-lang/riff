@@ -50,8 +50,9 @@ static val_t *a_insert_str(arr_t *a, str_t *k, val_t *v) {
     return h_insert(a->h, k, v);
 }
 
-// static val_t *a_insert_int(arr_t *a, int_t k, val_t *v) {
-// }
+val_t *a_insert_int(arr_t *a, int_t k, val_t *v) {
+    return h_insert(a->h, s_int2str(k), v);
+}
 
 val_t *a_insert(arr_t *a, val_t *k, val_t *v) {
     switch (k->type) {
