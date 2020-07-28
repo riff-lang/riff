@@ -168,21 +168,36 @@ static void set_index(parser_t *y) {
     y->rx = rx;     // Restore flag
 }
 
-// TODO Currently limited to 255 elements
-// TODO Support arbitrary indexing a la C99 designators
-static void array(parser_t *y) {
+static int expr_list(parser_t *y, int c) {
     int e = 0;
-    while (y->x->tk.kind != '}') {
+    while (y->x->tk.kind != c) {
+        int rx = y->rx; // Save flag
+        unset(rx);      // Unset
         expr(y, 0);
+        y->rx = rx;     // Restore flag
         ++e;
         if (y->x->tk.kind == ',')
             adv;
         else
             break;
     }
+    return e;
+}
+
+static void call(parser_t *y) {
+    int n = expr_list(y, ')');
+    consume(y, ')', "Expected ')'");
+    push(OP_CALL);
+    push((uint8_t) n);
+}
+
+// TODO Currently limited to 255 elements
+// TODO Support arbitrary indexing a la C99 designators
+static void array(parser_t *y) {
+    int n = expr_list(y, '}');
     consume(y, '}', "Expected '}'");
     push(OP_ARRAY);
-    push((uint8_t) e);
+    push((uint8_t) n);
 }
 
 static int nud(parser_t *y) {
@@ -263,6 +278,9 @@ static int led(parser_t *y, int p, int tk) {
         set_index(y);
         break;
     case '(':
+        set(ox);
+        adv;
+        call(y);
         break;
     default:
         if (lbop(tk) || rbop(tk)) {
