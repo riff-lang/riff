@@ -1,9 +1,9 @@
 #include "array.h"
 #include "types.h"
 
-val_t *v_newvoid(void) {
+val_t *v_newnull(void) {
     val_t *v = malloc(sizeof(val_t));
-    v->type = TYPE_VOID;
+    v->type = TYPE_NULL;
     v->u.s  = NULL;
     return v;
 }

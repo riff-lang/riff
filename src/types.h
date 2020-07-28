@@ -4,21 +4,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define TYPE_VOID 1  // 000001
+#define TYPE_NULL 1  // 000001
 #define TYPE_INT  2  // 000010
 #define TYPE_FLT  4  // 000100
 #define TYPE_STR  8  // 001000
 #define TYPE_ARR  16 // 010000
 #define TYPE_FN   32 // 100000
 
-#define IS_VOID(x) (x->type & TYPE_VOID)
-#define IS_INT(x)  (x->type & TYPE_INT)
-#define IS_FLT(x)  (x->type & TYPE_FLT)
-#define IS_STR(x)  (x->type & TYPE_STR)
-#define IS_ARR(x)  (x->type & TYPE_ARR)
-#define IS_FN(x)   (x->type & TYPE_FN)
+#define is_null(x) (x->type & TYPE_NULL)
+#define is_int(x)  (x->type & TYPE_INT)
+#define is_flt(x)  (x->type & TYPE_FLT)
+#define is_str(x)  (x->type & TYPE_STR)
+#define is_arr(x)  (x->type & TYPE_ARR)
+#define is_fn(x)   (x->type & TYPE_FN)
 
-#define IS_NUM(x)  (x->type & (TYPE_INT | TYPE_FLT))
+#define is_num(x)  (x->type & (TYPE_INT | TYPE_FLT))
 
 typedef double  flt_t;
 typedef int64_t int_t;
@@ -53,7 +53,7 @@ str_t    *s_newstr(const char *, size_t, int);
 str_t    *s_concat(str_t *, str_t *, int);
 str_t    *s_int2str(int_t);
 str_t    *s_flt2str(flt_t);
-val_t    *v_newvoid(void);
+val_t    *v_newnull(void);
 val_t    *v_newint(int_t);
 val_t    *v_newflt(flt_t);
 val_t    *v_newstr(str_t *);

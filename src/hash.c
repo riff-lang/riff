@@ -17,7 +17,7 @@ static entry_t *new_entry(str_t *k, val_t *v) {
     nk->hash = k->hash;
     val_t *nv;
     switch (v->type) {
-    case TYPE_VOID: nv = v_newvoid();      break;
+    case TYPE_NULL: nv = v_newnull();      break;
     case TYPE_INT:  nv = v_newint(v->u.i); break;
     case TYPE_FLT:  nv = v_newflt(v->u.f); break;
     case TYPE_STR:  nv = v_newstr(v->u.s); break;
@@ -50,12 +50,12 @@ static int exists(hash_t *h, str_t *k) {
 val_t *h_lookup(hash_t *h, str_t *k) {
     // If the table is empty, call h_insert, which allocates memory
     if (!h->e)
-        return h_insert(h, k, v_newvoid());
+        return h_insert(h, k, v_newnull());
     if (!k->hash)
         k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
     if (!h->e[i])
-        return h_insert(h, k, v_newvoid());
+        return h_insert(h, k, v_newnull());
     return h->e[i]->val;
 }
 
@@ -91,7 +91,7 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!exists(h, k)) {
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
-        if (!IS_VOID(v))
+        if (!is_null(v))
             h->n++;
     } else {
         h->e[i]->val->type = v->type;

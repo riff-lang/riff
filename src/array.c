@@ -35,7 +35,7 @@ static val_t *a_lookup_str(arr_t *a, str_t *k) {
 
 val_t *a_lookup(arr_t *a, val_t *k) {
     switch (k->type) {
-    case TYPE_VOID: return a_lookup_str(a, s_int2str(0)); // TODO
+    case TYPE_NULL: return a_lookup_str(a, s_int2str(0)); // TODO
     case TYPE_INT:  return a_lookup_str(a, s_int2str(k->u.i));
     case TYPE_FLT:  return a_lookup_str(a, s_flt2str(k->u.f)); // TODO
     case TYPE_STR:  return a_lookup_str(a, k->u.s);

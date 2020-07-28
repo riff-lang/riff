@@ -25,12 +25,12 @@ static int test(val_t *v) {
     }
 }
 
-#define numval(x) (IS_INT(x) ? x->u.i : \
-                   IS_FLT(x) ? x->u.f : 0)
-#define intval(x) (IS_INT(x) ? x->u.i : \
-                   IS_FLT(x) ? (int_t) x->u.f : 0)
-#define fltval(x) (IS_FLT(x) ? x->u.f : \
-                   IS_INT(x) ? (flt_t) x->u.i : 0)
+#define numval(x) (is_int(x) ? x->u.i : \
+                   is_flt(x) ? x->u.f : 0)
+#define intval(x) (is_int(x) ? x->u.i : \
+                   is_flt(x) ? (int_t) x->u.f : 0)
+#define fltval(x) (is_flt(x) ? x->u.f : \
+                   is_int(x) ? (flt_t) x->u.i : 0)
 
 #define int_arith(l,r,op) \
     assign_int(l, (intval(l) op intval(r)));
@@ -39,7 +39,7 @@ static int test(val_t *v) {
     assign_flt(l, (numval(l) op numval(r)));
 
 #define num_arith(l,r,op) \
-    if (IS_FLT(l) || IS_FLT(r)) { \
+    if (is_flt(l) || is_flt(r)) { \
         flt_arith(l,r,op); \
     } else { \
         int_arith(l,r,op); \
@@ -130,14 +130,14 @@ void z_test(val_t *v) {
 
 void z_cat(val_t *l, val_t *r) {
     switch (l->type) {
-    case TYPE_VOID: l->u.s = s_newstr(NULL, 0, 0); break;
+    case TYPE_NULL: l->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT:  l->u.s = s_int2str(intval(l)); break;
     case TYPE_FLT:  l->u.s = s_flt2str(fltval(l)); break;
     default: break;
     }
 
     switch (r->type) {
-    case TYPE_VOID: r->u.s = s_newstr(NULL, 0, 0); break;
+    case TYPE_NULL: r->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT:  r->u.s = s_int2str(intval(r)); break;
     case TYPE_FLT:  r->u.s = s_flt2str(fltval(r)); break;
     default: break;
@@ -172,7 +172,7 @@ void z_idx(val_t *l, val_t *r) {
 // TODO Command-line switches for integer format? (hex, binary, etc)
 static void put(val_t *v) {
     switch (v->type) {
-    case TYPE_VOID: printf("void\n");              break;
+    case TYPE_NULL: printf("null\n");              break;
     case TYPE_INT:  printf("%lld\n", v->u.i);      break;
     case TYPE_FLT:  printf("%g\n", v->u.f);        break;
     case TYPE_STR:  printf("%s\n", v->u.s->str);   break;
@@ -411,7 +411,7 @@ int z_exec(code_t *c) {
             switch (stk[sp-2]->type) {
 
             // Create array if stk[sp-2] is an uninitialized variable
-            case TYPE_VOID:
+            case TYPE_NULL:
                 tp              = v_newarr();
                 stk[sp-2]->type = tp->type;
                 stk[sp-2]->u    = tp->u;
@@ -437,7 +437,7 @@ int z_exec(code_t *c) {
             switch (stk[sp-2]->type) {
 
             // Create array if stk[sp-2] is an uninitialized variable
-            case TYPE_VOID:
+            case TYPE_NULL:
                 stk[sp-2] = v_newarr();
                 // Fall-through
             case TYPE_ARR:
