@@ -185,11 +185,13 @@ static void put(val_t *v) {
 // Main interpreter loop
 int z_exec(code_t *c) {
     h_init(&globals);
-    val_t *stk[1024];
+    val_t *stk[1024]; // Stack
+    val_t *res[1024]; // Reserve pointers
     register int sp = 0;
+
+    // Allocate and save pointers
     for (int i = 0; i < 1024; i++)
-        stk[i] = malloc(sizeof(val_t));
-    val_t  tv; // Temp value
+        res[i] = stk[i] = malloc(sizeof(val_t));
     val_t *tp; // Temp pointer
     uint8_t *ip = c->code;
     while (1) {
@@ -274,9 +276,9 @@ int z_exec(code_t *c) {
         assign_int(stk[sp-1], x); \
         break; \
     } \
-    tv.type   = stk[sp-1]->type; \
-    tv.u      = stk[sp-1]->u; \
-    stk[sp-1] = &tv; \
+    res[sp-1]->type = stk[sp-1]->type; \
+    res[sp-1]->u    = stk[sp-1]->u; \
+    stk[sp-1]       = res[sp-1]; \
     ++ip;
 
         case OP_PREINC: pre(1);  break;
@@ -288,8 +290,8 @@ int z_exec(code_t *c) {
 // Replace the stack element with the previously made copy and coerce
 // to a numeric value if needed.
 #define post(x) \
-    tv.type = stk[sp-1]->type; \
-    tv.u    = stk[sp-1]->u; \
+    res[sp-1]->type = stk[sp-1]->type; \
+    res[sp-1]->u    = stk[sp-1]->u; \
     switch (stk[sp-1]->type) { \
     case TYPE_INT: stk[sp-1]->u.i += x; break; \
     case TYPE_FLT: stk[sp-1]->u.f += x; break; \
@@ -297,7 +299,7 @@ int z_exec(code_t *c) {
         assign_int(stk[sp-1], x); \
         break; \
     } \
-    stk[sp-1] = &tv; \
+    stk[sp-1] = res[sp-1]; \
     unop(num);
 
         case OP_POSTINC: post(1);  break;
@@ -308,10 +310,10 @@ int z_exec(code_t *c) {
 // replace stk[sp-2] with a copy of the value. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
-    tp        = stk[sp-2]; \
-    tv.type   = stk[sp-2]->type; \
-    tv.u      = stk[sp-2]->u; \
-    stk[sp-2] = &tv; \
+    tp              = stk[sp-2]; \
+    res[sp-2]->type = stk[sp-2]->type; \
+    res[sp-2]->u    = stk[sp-2]->u; \
+    stk[sp-2]       = res[sp-2]; \
     binop(x); \
     tp->type = stk[sp-1]->type; \
     tp->u    = stk[sp-1]->u;
@@ -438,25 +440,21 @@ int z_exec(code_t *c) {
             case TYPE_VOID:
                 stk[sp-2] = v_newarr();
                 // Fall-through
-            case TYPE_ARR: {
+            case TYPE_ARR:
                 tp = a_lookup(stk[sp-2]->u.a, stk[sp-1]);
-
-                // TODO please no more malloc
-                val_t *new = malloc(sizeof(val_t));
-                new->type  = tp->type;
-                new->u     = tp->u;
-                stk[sp-2]  = new;
+                res[sp-2]->type = tp->type;
+                res[sp-2]->u    = tp->u;
+                stk[sp-2]       = res[sp-2];
                 --sp;
                 ++ip;
                 break;
-            }
 
             // TODO parser should be signaling OP_PUSHV, this handles
             // OP_PUSHA usage for now
             case TYPE_INT: case TYPE_FLT: case TYPE_STR:
-                tv.type    = stk[sp-2]->type;
-                tv.u       = stk[sp-2]->u;
-                stk[sp-2]  = &tv;
+                res[sp-2]->type = stk[sp-2]->type;
+                res[sp-2]->u    = stk[sp-2]->u;
+                stk[sp-2]       = res[sp-2];
                 binop(idx);
                 break;
             default:
@@ -464,12 +462,12 @@ int z_exec(code_t *c) {
             }
             break;
         case OP_SET:
-            tp        = stk[sp-2];
-            tv.type   = stk[sp-1]->type;
-            tv.u      = stk[sp-1]->u;
-            stk[sp-2] = &tv;
-            tp->type  = tv.type;
-            tp->u     = tv.u;
+            tp              = stk[sp-2];
+            res[sp-1]->type = stk[sp-1]->type;
+            res[sp-1]->u    = stk[sp-1]->u;
+            stk[sp-2] = res[sp-1];
+            tp->type  = res[sp-1]->type;
+            tp->u     = res[sp-1]->u;
             --sp;
             ++ip;
             break;

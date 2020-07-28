@@ -1,19 +1,21 @@
 // Arrays
 
-a = {7,3,5,1,2}
+a = {7,3,5,13,2}
 
 while i < #a a[i++] // Print the elements in a (in order)
 
-
 b = {
+    6,
     3 << 4,
-    -5 % 3,
+    (-5 % 3) + 11,
     7 / 4,
-    32
+    32,
+    ++y
 }
 
 j = #b - 1
 while j >= 0 b[j--] // Print the elements in b (reverse order)
+
 
 // Array holding anonymous functions
 // Functions not yet implemented
