@@ -89,9 +89,10 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     }
     int i = index(h->e, h->cap, k->hash);
     if (!exists(h, k)) {
-        h->n++;
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
+        if (!IS_VOID(v))
+            h->n++;
     } else {
         h->e[i]->val->type = v->type;
         h->e[i]->val->u    = v->u;
