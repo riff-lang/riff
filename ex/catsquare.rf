@@ -1,0 +1,17 @@
+// Smallest number such that concatenation is a square
+// https://codegolf.stackexchange.com/q/198121/91720
+// 1   => 6     (4^2)
+// 10  => 0     (10^2)
+// 35  => 344   (188^2)
+// 164 => 836   (406^2)
+// 284 => 2596  (1686^2)
+
+a = { 1, 10, 35, 164, 284 }
+
+i = 0
+while i < #a {
+    while (a[i]::x++)**.5 % 1; 
+    x - 1
+    x = 0
+    ++i
+}
