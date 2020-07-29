@@ -9,7 +9,8 @@ typedef struct {
 } entry_t;
 
 typedef struct {
-    int       n;
+    int       n;    // Number of elements (excluding null values)
+    int       an;   // Number of elements (including null values)
     int       cap;
     entry_t **e;
 } hash_t;

@@ -8,6 +8,7 @@
 
 void h_init(hash_t *h) {
     h->n   = 0;
+    h->an  = 0;
     h->cap = 0;
     h->e   = NULL;
 }
@@ -63,7 +64,7 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!k->hash)
         k->hash = s_hash(k->str);
     // Evaluate hash table size
-    if ((h->cap * LOAD_FACTOR) <= h->n + 1) {
+    if ((h->cap * LOAD_FACTOR) <= h->an + 1) {
         int nc = h->cap < 8 ? 8 : h->cap * 2;
         entry_t **ne = malloc(nc * sizeof(entry_t *));
         for (int i = 0; i < nc; i++)
@@ -91,6 +92,7 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!exists(h, k)) {
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
+        h->an++;
         if (!is_null(v))
             h->n++;
     } else {
