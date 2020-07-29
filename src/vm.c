@@ -25,12 +25,25 @@ static int test(val_t *v) {
     }
 }
 
+static int_t str2int(str_t *s) {
+    char *end;
+    return (int_t) strtoull(s->str, &end, 0);
+}
+
+static flt_t str2flt(str_t *s) {
+    char *end;
+    return strtod(s->str, &end);
+}
+
 #define numval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? x->u.f : 0)
+                   is_flt(x) ? x->u.f : \
+                   is_str(x) ? str2flt(x->u.s) : 0)
 #define intval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? (int_t) x->u.f : 0)
+                   is_flt(x) ? (int_t) x->u.f : \
+                   is_str(x) ? str2int(x->u.s) : 0)
 #define fltval(x) (is_flt(x) ? x->u.f : \
-                   is_int(x) ? (flt_t) x->u.i : 0)
+                   is_int(x) ? (flt_t) x->u.i : \
+                   is_str(x) ? str2flt(x->u.s) : 0)
 
 #define int_arith(l,r,op) \
     assign_int(l, (intval(l) op intval(r)));
@@ -131,15 +144,15 @@ void z_test(val_t *v) {
 void z_cat(val_t *l, val_t *r) {
     switch (l->type) {
     case TYPE_NULL: l->u.s = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  l->u.s = s_int2str(intval(l)); break;
-    case TYPE_FLT:  l->u.s = s_flt2str(fltval(l)); break;
+    case TYPE_INT:  l->u.s = s_int2str(l->u.i); break;
+    case TYPE_FLT:  l->u.s = s_flt2str(l->u.f); break;
     default: break;
     }
 
     switch (r->type) {
     case TYPE_NULL: r->u.s = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  r->u.s = s_int2str(intval(r)); break;
-    case TYPE_FLT:  r->u.s = s_flt2str(fltval(r)); break;
+    case TYPE_INT:  r->u.s = s_int2str(r->u.i); break;
+    case TYPE_FLT:  r->u.s = s_flt2str(r->u.f); break;
     default: break;
     }
 
@@ -196,7 +209,6 @@ int z_exec(code_t *c) {
     uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
-        // case OP_NOP: ++ip; break;
 
 // Unconditional jumps
 #define j8  (ip += (int8_t) ip[1])
@@ -461,13 +473,14 @@ int z_exec(code_t *c) {
                 break;
             }
             break;
+
         case OP_SET:
             tp              = stk[sp-2];
-            res[sp-1]->type = stk[sp-1]->type;
-            res[sp-1]->u    = stk[sp-1]->u;
-            stk[sp-2] = res[sp-1];
-            tp->type  = res[sp-1]->type;
-            tp->u     = res[sp-1]->u;
+            res[sp-2]->type = stk[sp-1]->type;
+            res[sp-2]->u    = stk[sp-1]->u;
+            stk[sp-2]       = res[sp-2];
+            tp->type        = res[sp-2]->type;
+            tp->u           = res[sp-2]->u;
             --sp;
             ++ip;
             break;
