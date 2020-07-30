@@ -60,6 +60,7 @@ val_t *h_lookup(hash_t *h, str_t *k) {
     return h->e[i]->val;
 }
 
+// TODO cleanup
 val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!k->hash)
         k->hash = s_hash(k->str);
@@ -69,23 +70,27 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
         entry_t **ne = malloc(nc * sizeof(entry_t *));
         for (int i = 0; i < nc; i++)
             ne[i] = NULL;
-        int nn = 0;
+        int nn  = 0;
+        int ann = 0;
         int j;
-        if (h->n) {
-            for (int i = 0; h->n || i < h->cap; i++) {
+        if (h->an) {
+            for (int i = 0; h->an || i < h->cap; i++) {
                 if (!h->e[i]) {
                     continue;
                 } else {
                     j = index(ne, nc, h->e[i]->key->hash);
                     ne[j] = h->e[i];
-                    nn++;
-                    h->n--;
+                    ++ann;
+                    h->an--;
+                    if (!is_null(h->e[i]->val))
+                        ++nn;
                 }
             }
         }
         free(h->e);
         h->e   = ne;
         h->n   = nn;
+        h->an  = ann;
         h->cap = nc;
     }
     int i = index(h->e, h->cap, k->hash);
