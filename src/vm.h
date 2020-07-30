@@ -5,6 +5,8 @@
 #include "hash.h"
 #include "types.h"
 
+#define STACK_SIZE 256
+
 // VM operations exposed for (future) codegen optimizations
 void z_add(val_t *, val_t *);
 void z_sub(val_t *, val_t *);

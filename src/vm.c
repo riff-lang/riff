@@ -198,15 +198,15 @@ static void put(val_t *v) {
 // Main interpreter loop
 int z_exec(code_t *c) {
     h_init(&globals);
-    val_t *stk[1024]; // Stack
-    val_t *res[1024]; // Reserve pointers
-    register int sp = 0;
+    val_t *stk[STACK_SIZE]; // Stack
+    val_t *res[STACK_SIZE]; // Reserve pointers
 
     // Allocate and save pointers
-    for (int i = 0; i < 1024; i++)
+    for (int i = 0; i < STACK_SIZE; i++)
         res[i] = stk[i] = malloc(sizeof(val_t));
     val_t *tp; // Temp pointer
-    uint8_t *ip = c->code;
+    register int      sp = 0;
+    register uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
 
