@@ -223,9 +223,9 @@ static int nud(parser_t *y) {
         break;
     case TK_INC: case TK_DEC:
         if (adv)
-            err(y, "Expected symbol following prefix increment/decrement");
+            err(y, "Expected symbol following prefix ++/--");
         if (y->x->tk.kind != TK_ID)
-            err(y, "Unexpected symbol following prefix increment/decrement");
+            err(y, "Unexpected symbol following prefix ++/--");
         set(rx);
         expr(y, 14);
         c_prefix(y->c, tk);
@@ -352,13 +352,18 @@ static void stmt(parser_t *);
 
 // TODO
 static void break_stmt(parser_t *y) {
+    if (!y->depth)
+        err(y, "break statement outside of loop");
 }
 
 // TODO
 static void cont_stmt(parser_t *y) {
+    if (!y->depth)
+        err(y, "continue statement outside of loop");
 }
 
 static void do_stmt(parser_t *y) {
+    y->depth++;
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
         adv;
@@ -367,9 +372,12 @@ static void do_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
+    // TODO continue stmts jump here
     consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
     expr(y, 0);
     c_jump(y->c, JNZ, l1);
+    // TODO break stmts jump here
+    y->depth--;
 }
 
 static void exit_stmt(parser_t *y) {
@@ -434,6 +442,7 @@ static void ret_stmt(parser_t *y) {
 }
 
 static void while_stmt(parser_t *y) {
+    y->depth++;
     int l1, l2;
     l1 = y->c->n;
     expr(y, 0);
@@ -445,8 +454,11 @@ static void while_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
+    // TODO continue stmts jump here
     c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
+    // TODO break stmts jump here
+    y->depth--;
 }
 
 static void stmt(parser_t *y) {
@@ -475,6 +487,7 @@ static void stmt_list(parser_t *y) {
 
 static void y_init(parser_t *y, const char *src) {
     unset_all;
+    y->depth = 0;
     x_init(y->x, src);
 }
 

@@ -12,6 +12,7 @@ typedef struct {
     uint8_t  ox; // Typical (i.e. not ++/--) operation flag
     uint8_t  px; // Prefix or postfix increment/decrement flag
     uint8_t  rx; // Reference flag
+    uint8_t  depth;
 } parser_t;
 
 int y_compile(const char *, code_t *);
