@@ -60,38 +60,38 @@ val_t *h_lookup(hash_t *h, str_t *k) {
     return h->e[i]->val;
 }
 
-// TODO cleanup
 val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
     if (!k->hash)
         k->hash = s_hash(k->str);
     // Evaluate hash table size
     if ((h->cap * LOAD_FACTOR) <= h->an + 1) {
-        int nc = h->cap < 8 ? 8 : h->cap * 2;
-        entry_t **ne = malloc(nc * sizeof(entry_t *));
-        for (int i = 0; i < nc; i++)
-            ne[i] = NULL;
-        int nn  = 0;
-        int ann = 0;
+        int new_cap = h->cap < 8 ? 8 : h->cap * 2;
+        entry_t **new_e = malloc(new_cap * sizeof(entry_t *));
+        for (int i = 0; i < new_cap; i++)
+            new_e[i] = NULL;
+        int new_n  = 0;
+        int new_an = 0;
+        int old_an = h->an;
         int j;
-        if (h->an) {
-            for (int i = 0; h->an || i < h->cap; i++) {
+        if (old_an) {
+            for (int i = 0; old_an || i < h->cap; i++) {
                 if (!h->e[i]) {
                     continue;
                 } else {
-                    j = index(ne, nc, h->e[i]->key->hash);
-                    ne[j] = h->e[i];
-                    ++ann;
-                    h->an--;
+                    j = index(new_e, new_cap, h->e[i]->key->hash);
+                    new_e[j] = h->e[i];
+                    ++new_an;
+                    --old_an;
                     if (!is_null(h->e[i]->val))
-                        ++nn;
+                        ++new_n;
                 }
             }
         }
         free(h->e);
-        h->e   = ne;
-        h->n   = nn;
-        h->an  = ann;
-        h->cap = nc;
+        h->e   = new_e;
+        h->n   = new_n;
+        h->an  = new_an;
+        h->cap = new_cap;
     }
     int i = index(h->e, h->cap, k->hash);
     if (!exists(h, k)) {
