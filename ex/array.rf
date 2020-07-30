@@ -13,8 +13,8 @@ b = {
     ++y
 }
 
-j = #b - 1
-while j >= 0 b[j--] // Print the elements in b (reverse order)
+j = #b
+while j b[--j]      // Print the elements in b (reverse order)
 
 
 // Array holding anonymous functions
