@@ -341,6 +341,8 @@ static void expr_stmt(parser_t *y) {
     //   a = b--     (Do not print)
     //   ++a == 1    (Print)
     //   x++ ? y : z (Print)
+    //
+    // TODO handle ++a[b] (no print) vs a[++b] (print)
     if (!y->ax && (!y->px || y->ox))
         push(OP_PRINT);
     else
