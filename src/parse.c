@@ -5,12 +5,13 @@
 #define adv       x_adv(y->x)
 #define peek      x_peek(y->x)
 #define push(b)   c_push(y->c, b)
-#define set(f)    y->f = 1;
-#define unset(f)  y->f = 0;
-#define unset_all y->ax = 0; \
-                  y->ox = 0; \
-                  y->px = 0; \
-                  y->rx = 0;
+#define set(f)    y->f   = 1;
+#define unset(f)  y->f   = 0;
+#define unset_all y->lhs = 0; \
+                  y->ax  = 0; \
+                  y->ox  = 0; \
+                  y->px  = 0; \
+                  y->rx  = 0;
 
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned
 // up
@@ -157,6 +158,7 @@ static void logical(parser_t *y, int tk) {
 
 // Retrieve index of a set (string/array, but works for numbers as well)
 static void set_index(parser_t *y) {
+    y->idx++;
     int rx = y->rx; // Save flag
     unset(rx);      // Unset
     expr(y, 0);
@@ -166,6 +168,7 @@ static void set_index(parser_t *y) {
     else
         push(OP_IDXV);
     y->rx = rx;     // Restore flag
+    y->idx--;
 }
 
 static int expr_list(parser_t *y, int c) {
@@ -229,7 +232,10 @@ static int nud(parser_t *y) {
         set(rx);
         expr(y, 14);
         c_prefix(y->c, tk);
-        set(px);
+        if (!y->idx && !y->lhs) {
+            set(px);
+            set(lhs);
+        }
         break;
     case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
@@ -253,7 +259,10 @@ static int led(parser_t *y, int p, int tk) {
     case TK_INC: case TK_DEC:
         if (is_const(p) || y->rx)
             return p;
-        set(px);
+        if (!y->idx && !y->lhs) {
+            set(px);
+            set(lhs);
+        }
         c_postfix(y->c, tk);
         adv;
         p = y->x->tk.kind;
@@ -261,33 +270,39 @@ static int led(parser_t *y, int p, int tk) {
         break;
     case '?':
         unset(rx);
-        set(ox);
+        if (!y->ox) set(ox);
         adv;
         p = conditional(y);
         break;
     case TK_AND: case TK_OR:
         unset(rx);
-        set(ox);
+        if (!y->ox) set(ox);
         adv;
         logical(y, tk);
         p = y->x->tk.kind;
         break;
     case '[':
-        set(ox);
         adv;
         set_index(y);
         break;
     case '(':
-        set(ox);
+        if (!y->ox) set(ox);
         adv;
         call(y);
         break;
     default:
         if (lbop(tk) || rbop(tk)) {
-            if (is_asgmt(tk))
-                set(ax);
+            if (!y->ax && !y->ox) {
+                set(lhs);
+                if (is_asgmt(tk)) {
+                    set(ax);
+                } else {
+                    set(ox);
+                }
+            } else if (is_asgmt(tk) && y->ox) {
+                err(y, "Syntax error");
+            }
             unset(rx);
-            set(ox);
             adv;
             p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
@@ -330,9 +345,10 @@ static void expr_stmt(parser_t *y) {
     expr(y, 0);
 
     // Implicit printing conditions
-    // 1. No assignment took place
-    // 2. No prefix/postfix ++/-- UNLESS there was an operation that
-    //    otherwise doesn't mutate state, e.g. normal arithmetic
+    // 1. Leftmost expr is not being assigned to
+    // 2. Leftmost expr is not being incremented/decremented UNLESS
+    //    accompanied by an otherwise typical operation, e.g.
+    //    arithmetic
     //
     // Examples:
     //   a = 1       (Do not print)
@@ -341,8 +357,8 @@ static void expr_stmt(parser_t *y) {
     //   a = b--     (Do not print)
     //   ++a == 1    (Print)
     //   x++ ? y : z (Print)
-    //
-    // TODO handle ++a[b] (no print) vs a[++b] (print)
+    //   ++a[b]      (Do not print)
+    //   a[++b]      (Print)
     if (!y->ax && (!y->px || y->ox))
         push(OP_PRINT);
     else
@@ -354,18 +370,18 @@ static void stmt(parser_t *);
 
 // TODO
 static void break_stmt(parser_t *y) {
-    if (!y->depth)
+    if (!y->ld)
         err(y, "break statement outside of loop");
 }
 
 // TODO
 static void cont_stmt(parser_t *y) {
-    if (!y->depth)
+    if (!y->ld)
         err(y, "continue statement outside of loop");
 }
 
 static void do_stmt(parser_t *y) {
-    y->depth++;
+    y->ld++;
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
         adv;
@@ -379,7 +395,7 @@ static void do_stmt(parser_t *y) {
     expr(y, 0);
     c_jump(y->c, JNZ, l1);
     // TODO break stmts jump here
-    y->depth--;
+    y->ld--;
 }
 
 static void exit_stmt(parser_t *y) {
@@ -444,7 +460,7 @@ static void ret_stmt(parser_t *y) {
 }
 
 static void while_stmt(parser_t *y) {
-    y->depth++;
+    y->ld++;
     int l1, l2;
     l1 = y->c->n;
     expr(y, 0);
@@ -460,7 +476,7 @@ static void while_stmt(parser_t *y) {
     c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
     // TODO break stmts jump here
-    y->depth--;
+    y->ld--;
 }
 
 static void stmt(parser_t *y) {
@@ -489,7 +505,8 @@ static void stmt_list(parser_t *y) {
 
 static void y_init(parser_t *y, const char *src) {
     unset_all;
-    y->depth = 0;
+    y->idx = 0;
+    y->ld  = 0;
     x_init(y->x, src);
 }
 
