@@ -70,7 +70,7 @@ void c_jump(code_t *c, int type, int l) {
         push((int8_t) ((d >> 8) & 0xff));
         push((int8_t) (d & 0xff));
     } else {
-        err(c, "Jump too big");
+        err(c, "Backward jump too large");
     }
 }
 
@@ -78,7 +78,10 @@ void c_jump(code_t *c, int type, int l) {
 // the code object's "current" instruction and `l`. Useful for patching
 // forward jumps.
 void c_patch(code_t *c, int l) {
-    c->code[l] = (int8_t) (c->n - l + 1);
+    int jmp = c->n - l + 1;
+    if (jmp > INT8_MAX)
+        err(c, "Forward jump too large to patch");
+    c->code[l] = (int8_t) jmp;
 }
 
 static void c_pushk(code_t *c, int i) {
