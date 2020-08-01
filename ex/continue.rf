@@ -1,0 +1,17 @@
+i = 0
+while i++ < 1 {
+    continue
+    "This will not print"
+}
+
+i = 0
+while i++ < 1 {
+    "infinite loop ahead"
+
+    // Skip infinite loop
+    continue
+    while 1
+        "Infinite loop"
+}
+
+"infinite loop avoided"

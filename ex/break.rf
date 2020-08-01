@@ -1,0 +1,21 @@
+while 1 {
+    "This will print"
+
+    // Exit infinite loop
+    break
+    "This will not print"
+}
+
+i = 0
+while i++ < 1 {
+    "outer loop (before)"
+
+    // Infinite loop
+    while 1 {
+        "inner loop"
+        break
+    }
+    "outer loop (after)"
+    continue
+    "no print"
+}

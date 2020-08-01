@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "mem.h"
 #include "parse.h"
 
 #define adv       x_adv(y->x)
@@ -368,20 +369,50 @@ static void expr_stmt(parser_t *y) {
 static void stmt_list(parser_t *);
 static void stmt(parser_t *);
 
-// TODO
 static void break_stmt(parser_t *y) {
     if (!y->ld)
         err(y, "break statement outside of loop");
+    // Reserve a forward jump
+    p_list *p = y->brk;
+    eval_resize(p->l, p->n, p->cap);
+    p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
 
-// TODO
 static void cont_stmt(parser_t *y) {
     if (!y->ld)
         err(y, "continue statement outside of loop");
+    // Reserve a forward jump
+    p_list *p = y->cont;
+    eval_resize(p->l, p->n, p->cap);
+    p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
 
-static void do_stmt(parser_t *y) {
+static void p_init(p_list *p) {
+    p->n   = 0;
+    p->cap = 0;
+    p->l   = NULL;
+}
+
+static void enter_loop(parser_t *y, p_list *b, p_list *c) {
     y->ld++;
+    p_init(b);
+    p_init(c);
+    y->brk  = b;
+    y->cont = c;
+}
+
+static void exit_loop(parser_t *y, p_list *ob, p_list *oc, p_list *nb, p_list *nc) {
+    y->ld--;
+    y->brk  = ob;
+    y->cont = oc;
+    if (nb->n) free(nb->l);
+    if (nc->n) free(nc->l);
+}
+static void do_stmt(parser_t *y) {
+    p_list *r_brk  = y->brk;
+    p_list *r_cont = y->cont;
+    p_list b, c;
+    enter_loop(y, &b, &c);
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
         adv;
@@ -390,12 +421,18 @@ static void do_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
-    // TODO continue stmts jump here
+    // Patch continue stmts
+    for (int i = 0; i < c.n; i++) {
+        c_patch(y->c, c.l[i]);
+    }
     consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
     expr(y, 0);
     c_jump(y->c, JNZ, l1);
-    // TODO break stmts jump here
-    y->ld--;
+    // Patch break stmts
+    for (int i = 0; i < b.n; i++) {
+        c_patch(y->c, b.l[i]);
+    }
+    exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
 static void exit_stmt(parser_t *y) {
@@ -460,7 +497,10 @@ static void ret_stmt(parser_t *y) {
 }
 
 static void while_stmt(parser_t *y) {
-    y->ld++;
+    p_list *r_brk  = y->brk;
+    p_list *r_cont = y->cont;
+    p_list b, c;
+    enter_loop(y, &b, &c);
     int l1, l2;
     l1 = y->c->n;
     expr(y, 0);
@@ -472,18 +512,24 @@ static void while_stmt(parser_t *y) {
     } else {
         stmt(y);
     }
-    // TODO continue stmts jump here
+    // Patch continue stmts
+    for (int i = 0; i < c.n; i++) {
+        c_patch(y->c, c.l[i]);
+    }
     c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
-    // TODO break stmts jump here
-    y->ld--;
+    // Patch break stmts
+    for (int i = 0; i < b.n; i++) {
+        c_patch(y->c, b.l[i]);
+    }
+    exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
 static void stmt(parser_t *y) {
     switch (y->x->tk.kind) {
     case ';':       adv;                break;
-    case TK_BREAK:  adv; break_stmt(y); break; // TODO
-    case TK_CONT:   adv; cont_stmt(y);  break; // TODO
+    case TK_BREAK:  adv; break_stmt(y); break;
+    case TK_CONT:   adv; cont_stmt(y);  break;
     case TK_DO:     adv; do_stmt(y);    break;
     case TK_EXIT:   adv; exit_stmt(y);  break;
     case TK_FN:     adv; fn_def(y);     break; // TODO
@@ -505,8 +551,10 @@ static void stmt_list(parser_t *y) {
 
 static void y_init(parser_t *y, const char *src) {
     unset_all;
-    y->idx = 0;
-    y->ld  = 0;
+    y->idx  = 0;
+    y->ld   = 0;
+    y->brk  = NULL;
+    y->cont = NULL;
     x_init(y->x, src);
 }
 
