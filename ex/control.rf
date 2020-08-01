@@ -38,5 +38,5 @@ while h++ < 10 h    // This will print h (1..10); h is 11 afterwards
 
 // Prints "h is" followed by h
 while h-- > 0 {
-    "h is " :: h
+    "h is", h
 }

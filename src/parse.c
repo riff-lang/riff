@@ -343,7 +343,7 @@ static int expr(parser_t *y, int rbp) {
 // Standalone expressions
 static void expr_stmt(parser_t *y) {
     unset_all;
-    expr(y, 0);
+    int e = expr_list(y, 0);
 
     // Implicit printing conditions
     // 1. Leftmost expr is not being assigned to
@@ -360,8 +360,14 @@ static void expr_stmt(parser_t *y) {
     //   x++ ? y : z (Print)
     //   ++a[b]      (Do not print)
     //   a[++b]      (Print)
-    if (!y->ax && (!y->px || y->ox))
-        push(OP_PRINT);
+    if (e > 1 || (!y->ax && (!y->px || y->ox))) {
+        if (e == 1)
+            push(OP_PRINT1);
+        else {
+            push(OP_PRINT);
+            push((uint8_t) e);
+        }
+    }
     else
         push(OP_POP);
 }
@@ -481,10 +487,15 @@ static void local_stmt(parser_t *y) {
 
 static void print_stmt(parser_t *y) {
     const char *p = y->x->p; // Save pointer
-    expr(y, 0);
+    int e = expr_list(y, 0);
     if (p == y->x->p)        // No expression parsed
         err(y, "Expected expression following `print`");
-    push(OP_PRINT);
+    if (e == 1)
+        push(OP_PRINT1);
+    else {
+        push(OP_PRINT);
+        push((uint8_t) e);
+    }
 }
 
 static void ret_stmt(parser_t *y) {

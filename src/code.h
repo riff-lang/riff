@@ -82,7 +82,8 @@ enum opcodes {
     OP_IDXA,    // Index of a set, leaving pointer on stack
     OP_IDXV,    // Index of a set, leaving value on stack
     OP_SET,     // Assignment
-    OP_PRINT,   // Print value at SP[-1], --SP
+    OP_PRINT1,  // Print value at SP[-1]; --SP
+    OP_PRINT,   // Print (IP+1) values from stack; SP -= (IP+1)
     OP_EXIT     // exit(0) (maybe temporary)
 };
 

@@ -185,11 +185,11 @@ void z_idx(val_t *l, val_t *r) {
 // TODO Command-line switches for integer format? (hex, binary, etc)
 static void put(val_t *v) {
     switch (v->type) {
-    case TYPE_NULL: printf("null\n");              break;
-    case TYPE_INT:  printf("%lld\n", v->u.i);      break;
-    case TYPE_FLT:  printf("%g\n", v->u.f);        break;
-    case TYPE_STR:  printf("%s\n", v->u.s->str);   break;
-    case TYPE_ARR:  printf("array: %p\n", v->u.a); break;
+    case TYPE_NULL: printf("null");              break;
+    case TYPE_INT:  printf("%lld", v->u.i);      break;
+    case TYPE_FLT:  printf("%g", v->u.f);        break;
+    case TYPE_STR:  printf("%s", v->u.s->str);   break;
+    case TYPE_ARR:  printf("array: %p", v->u.a); break;
     case TYPE_FN:   // TODO
     default: break;
     }
@@ -484,10 +484,25 @@ int z_exec(code_t *c) {
             --sp;
             ++ip;
             break;
-        case OP_PRINT:
+
+        // Print a single element from the stack
+        case OP_PRINT1:
             put(stk[sp-1]);
+            printf("\n");
             --sp;
             ++ip;
+            break;
+
+        // Print (IP+1) elements from the stack
+        case OP_PRINT:
+            for (int i = ip[1]; i > 0; --i) {
+                put(stk[sp-i]);
+                if (i > 1)
+                    printf(" ");
+            }
+            printf("\n");
+            sp -= ip[1];
+            ip += 2;
             break;
         case OP_EXIT:
             exit(0);
