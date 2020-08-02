@@ -16,6 +16,16 @@ b = {
 j = #b
 while j b[--j]      // Print the elements in b (reverse order)
 
+// 2D array
+m = {
+    { 3, 7, 6, 8 },
+    { 0x.d, 0b1101, 0xdd, 28 }
+}
+
+m[0]                // prints "array: <location in memory>"
+m[1]
+m[0][3]             // prints 8
+m[1][0]             // prints 0.8125
 
 // Array holding anonymous functions
 // Functions not yet implemented
