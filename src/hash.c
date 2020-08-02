@@ -13,6 +13,7 @@ void h_init(hash_t *h) {
     h->e   = NULL;
 }
 
+// TODO is it necessary to create new val_t instances for new entries?
 static entry_t *new_entry(str_t *k, val_t *v) {
     str_t *nk = s_newstr(k->str, k->l, 0);
     nk->hash = k->hash;
@@ -22,7 +23,7 @@ static entry_t *new_entry(str_t *k, val_t *v) {
     case TYPE_INT:  nv = v_newint(v->u.i); break;
     case TYPE_FLT:  nv = v_newflt(v->u.f); break;
     case TYPE_STR:  nv = v_newstr(v->u.s); break;
-    default: break;
+    default:        nv = v;                break;
     }
     entry_t *e = malloc(sizeof(entry_t));
     e->key = nk;
