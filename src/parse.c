@@ -293,7 +293,7 @@ static int led(parser_t *y, int p, int tk) {
         break;
     default:
         if (lbop(tk) || rbop(tk)) {
-            if (!y->ax && !y->ox) {
+            if (!y->idx && !y->ax && !y->ox) {
                 set(lhs);
                 if (is_asgmt(tk)) {
                     set(ax);
