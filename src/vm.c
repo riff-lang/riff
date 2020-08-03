@@ -61,11 +61,24 @@ static flt_t str2flt(str_t *s) {
 void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
 void z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
 void z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
-void z_div(val_t *l, val_t *r) { flt_arith(l,r,/); }
 
-// TODO Make sure this works as intended
-// TODO Error handling, e.g. RHS = 0
+// TODO?
+// Language comparison for division by zero:
+// `inf`: lua, mawk
+// error: pretty much all others
+void z_div(val_t *l, val_t *r) {
+    if (!numval(r))
+        err("division by zero");
+    flt_arith(l,r,/);
+}
+
+// TODO?
+// Language comparison for modulus by zero:
+// `nan`: mawk
+// error: pretty much all others
 void z_mod(val_t *l, val_t *r) {
+    if (!numval(r))
+        err("modulus by zero");
     flt_t res = fmod(numval(l), numval(r));
     assign_flt(l, res < 0 ? res + numval(r) : res);
 }
@@ -80,7 +93,6 @@ void z_xor(val_t *l, val_t *r) { int_arith(l,r,^);  }
 void z_shl(val_t *l, val_t *r) { int_arith(l,r,<<); }
 void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
 
-// TODO
 void z_num(val_t *v) {
     switch (v->type) {
     case TYPE_INT:
@@ -88,6 +100,9 @@ void z_num(val_t *v) {
         break;
     case TYPE_FLT:
         assign_flt(v, fltval(v));
+        break;
+    case TYPE_STR:
+        assign_flt(v, str2flt(v->u.s));
         break;
     default:
         assign_int(v, 0);
@@ -103,8 +118,11 @@ void z_neg(val_t *v) {
     case TYPE_FLT:
         assign_flt(v, -fltval(v));
         break;
+    case TYPE_STR:
+        assign_flt(v, -str2flt(v->u.s));
+        break;
     default:
-        assign_int(v, -1); // TODO type coercion
+        assign_int(v, 0);
         break;
     }
 }
