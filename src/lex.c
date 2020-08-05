@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,10 @@ static int valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
+static int hex_value(char c) {
+    return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
+}
+
 static int read_flt(lexer_t *x, token_t *tk, const char *start, int base) {
     char *end;
     if (base == 16)
@@ -41,7 +46,7 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
         if (base != 2)
             return read_flt(x, tk, start, base);
         else
-            err(x, "Invalid numeral");
+            err(x, "invalid numeral");
     }
 
     // Interpret as float if base-10 int exceeds INT64_MAX, or if
@@ -79,53 +84,76 @@ static int read_num(lexer_t *x, token_t *tk) {
 }
 
 static int hex_esc(lexer_t *x) {
-    char *end;
-    long e = strtoul(x->p, &end, 16);
-    x->p = end;
+    if (!isxdigit(*x->p))
+        err(x, "expected hexadecimal digit");
+    int e = hex_value(*x->p++);
+    if (isxdigit(*x->p)) {
+        e <<= 4;
+        e += hex_value(*x->p++);
+    }
     return e;
 }
 
 static int dec_esc(lexer_t *x) {
     char *end;
     long e = strtoul(x->p, &end, 10);
+    if (e > UCHAR_MAX)
+        err(x, "invalid decimal escape");
     x->p = end;
     return e;
 }
 
-static int read_str(lexer_t *x, token_t *tk) {
-    const char *start = x->p;
-    size_t count = 0;
+// TODO handling of multi-line string literals
+static int read_str(lexer_t *x, token_t *tk, int d) {
     x->buffer.n = 0;
-    int c = 0;
-    while (c != '"') {
-        c = *x->p;
+    int c;
+    while ((c = *x->p) != d) {
         switch(c) {
         case '\\':
             adv;
             switch (*x->p) {
             case 'a': adv; c = '\a'; break;
             case 'b': adv; c = '\b'; break;
+            case 'e': adv; c = 0x1b; break; // Escape char
             case 'f': adv; c = '\f'; break;
             case 'n': adv; c = '\n'; break;
             case 'r': adv; c = '\r'; break;
             case 't': adv; c = '\t'; break;
             case 'v': adv; c = '\v'; break;
             case 'x': adv; c = hex_esc(x); break;
-            default:  c = dec_esc(x); break;
+
+            // Newlines following `\`
+            case '\n': case '\r':
+                ++x->ln;
+                c = '\n';
+                adv;
+                break;
+            case '\\': case '\'': case '"':
+                c = *x->p;
+                adv;
+                break;
+            default:
+                c = dec_esc(x);
+                break;
             }
-            ++count;
             break;
-        case '"': {
+
+        // Newlines inside quoted string literal
+        case '\n': case '\r':
+            ++x->ln;
+            c = '\n';
+            adv;
             break;
-        }
         case '\0':
-            err(x, "Reached end of input; unterminated string");
-        default: adv; ++count; break;
+            err(x, "reached end of input with unterminated string");
+        default:
+            adv;
+            break;
         }
         eval_resize(x->buffer.c, x->buffer.n, x->buffer.cap);
         x->buffer.c[x->buffer.n++] = c;
     }
-    str_t *s = s_newstr(x->buffer.c, x->buffer.n - 1, 1);
+    str_t *s = s_newstr(x->buffer.c, x->buffer.n, 1);
     adv;
     tk->lexeme.s = s;
     return TK_STR;
@@ -271,7 +299,7 @@ static void block_comment(lexer_t *x) {
         if (*x->p == '\n')
             x->ln++;
         if (*x->p == '\0')
-            err(x, "Reached end of input with unterminated block comment");
+            err(x, "reached end of input with unterminated block comment");
         else if (*x->p == '*') {
             adv;
             if (*x->p == '/') {
@@ -288,10 +316,10 @@ static int tokenize(lexer_t *x, token_t *tk) {
     while (1) {
         switch (c = *x->p++) {
         case '\0': return 1;
-        case '\n': case '\r': x->ln++;
+        case '\n': case '\r': ++x->ln;
         case ' ': case '\t': break;
         case '!': return test2(x, '=', TK_NE, '!');
-        case '"': return read_str(x, tk);
+        case '"': case '\'': return read_str(x, tk, c);
         case '%': return test2(x, '=', TK_MODX, '%');
         case '&': return test3(x, '=', TK_ANDX, '&', TK_AND, '&');
         case '*': return test4(x, '=', TK_MULX, '*', 
@@ -330,30 +358,39 @@ static int tokenize(lexer_t *x, token_t *tk) {
             if (valid_alpha(c)) {
                 return read_id(x, tk);
             } else {
-                err(x, "Invalid token");
+                err(x, "invalid token");
             }
         }
     }
 }
 
 int x_init(lexer_t *x, const char *src) {
-    x->ln = 1;
-    x->p  = src;
-    x->tk.kind = 0;
-    x->la.kind = 0;
-    x->buffer.n = 0;
+    x->ln         = 1;
+    x->p          = src;
+    x->tk.kind    = 0;
+    x->la.kind    = 0;
+    x->buffer.n   = 0;
     x->buffer.cap = 0;
-    x->buffer.c = NULL;
+    x->buffer.c   = NULL;
     x_adv(x);
     return 0;
 }
 
+// Lexer itself should be stack-allocated, but the string buffer is
+// heap-allocated
+void x_free(lexer_t *x) {
+    if (x->buffer.c != NULL)
+        free(x->buffer.c);
+}
+
 int x_adv(lexer_t *x) {
+
     // Free previous string object
     if (x->tk.kind == TK_STR || x->tk.kind == TK_ID)
         free(x->tk.lexeme.s);
     else if (x->tk.kind == TK_EOI)
         return 1;
+
     // If a lookahead token already exists, assign it to the current
     // token
     if (x->la.kind != 0) {

@@ -577,6 +577,7 @@ int y_compile(const char *src, code_t *c) {
     y_init(&y, src);
     stmt_list(&y);
     c_push(c, OP_RET);
+    x_free(&x);
     return 0;
 }
 

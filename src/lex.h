@@ -83,8 +83,9 @@ typedef struct {
     } buffer;       // String buffer
 } lexer_t;
 
-int x_init(lexer_t *, const char *);
-int x_adv(lexer_t *);
-int x_peek(lexer_t *);
+int  x_init(lexer_t *, const char *);
+void x_free(lexer_t *);
+int  x_adv(lexer_t *);
+int  x_peek(lexer_t *);
 
 #endif

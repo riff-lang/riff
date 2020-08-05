@@ -7,7 +7,8 @@ dr2 = .2            // Decimal real (no leading integer)
 hi  = 0xE           // Hexadecimal integer
 hr1 = 0xa.f         // Hexadecimal real
 hr2 = 0x.9          // Hexadecimal real (no leading integer)
-str = "hello"       // String
+s1  = "hello"       // Double-quoted string
+s2  = 'world'       // Single-quoted string
 e   = ""            // Empty string
 
-di1, di2, dr1, dr2, hi, hr1, hr2, str, e
+di1, di2, dr1, dr2, hi, hr1, hr2, s1, s2, e
