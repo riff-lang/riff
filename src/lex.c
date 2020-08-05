@@ -5,8 +5,9 @@
 #include <string.h>
 
 #include "lex.h"
+#include "mem.h"
 
-#define adv(x) (x->p++)
+#define adv (++x->p)
 
 static void err(lexer_t *x, const char *msg) {
     fprintf(stderr, "line %d: %s\n", x->ln, msg);
@@ -28,8 +29,6 @@ static int read_flt(lexer_t *x, token_t *tk, const char *start, int base) {
     if (base == 16)
         start -= 2;
     double d = strtod(start, &end);
-    // if (valid_alphanum(*end))
-    //     err(x, "Invalid numeral");
     x->p = end;
     tk->lexeme.f = d;
     return TK_FLT;
@@ -45,11 +44,6 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
             err(x, "Invalid numeral");
     }
 
-    // TODO Monitor any errors as a result of the following 2 lines
-    // being commented out.
-    // else if (valid_alphanum(*end))
-    //     err(x, "Invalid numeral");
-
     // Interpret as float if base-10 int exceeds INT64_MAX, or if
     // there's overflow in general.
     // This is a hacky way of handling the base-10 INT64_MIN with a
@@ -61,7 +55,6 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
     return TK_INT;
 }
 
-// TODO Handle binary float literals? e.g. 0b1101.101
 // TODO Allow underscores in numeric literals e.g. 123_456_789
 static int read_num(lexer_t *x, token_t *tk) {
     const char *start = x->p - 1;
@@ -85,31 +78,61 @@ static int read_num(lexer_t *x, token_t *tk) {
     return read_int(x, tk, start, base);
 }
 
-// Possibly needs to ignore single backslashes
+static int hex_esc(lexer_t *x) {
+    char *end;
+    long e = strtoul(x->p, &end, 16);
+    x->p = end;
+    return e;
+}
+
+static int dec_esc(lexer_t *x) {
+    char *end;
+    long e = strtoul(x->p, &end, 10);
+    x->p = end;
+    return e;
+}
+
 static int read_str(lexer_t *x, token_t *tk) {
     const char *start = x->p;
     size_t count = 0;
+    x->buffer.n = 0;
     int c = 0;
     while (c != '"') {
         c = *x->p;
         switch(c) {
-        case '\\': adv(x); adv(x); count += 2; break;
+        case '\\':
+            adv;
+            switch (*x->p) {
+            case 'a': adv; c = '\a'; break;
+            case 'b': adv; c = '\b'; break;
+            case 'f': adv; c = '\f'; break;
+            case 'n': adv; c = '\n'; break;
+            case 'r': adv; c = '\r'; break;
+            case 't': adv; c = '\t'; break;
+            case 'v': adv; c = '\v'; break;
+            case 'x': adv; c = hex_esc(x); break;
+            default:  c = dec_esc(x); break;
+            }
+            ++count;
+            break;
         case '"': {
-            str_t *s = s_newstr(start, count, 1);
-            adv(x);
-            tk->lexeme.s = s;
-            return TK_STR;
+            break;
         }
         case '\0':
             err(x, "Reached end of input; unterminated string");
-        default: adv(x); count++; break;
+        default: adv; ++count; break;
         }
+        eval_resize(x->buffer.c, x->buffer.n, x->buffer.cap);
+        x->buffer.c[x->buffer.n++] = c;
     }
+    str_t *s = s_newstr(x->buffer.c, x->buffer.n - 1, 1);
+    adv;
+    tk->lexeme.s = s;
     return TK_STR;
 }
 
 static int check_kw(lexer_t *x, const char *s, int size) {
-    int f = *(x->p + size); // Character immediately following
+    int f = x->p[size];     // Character immediately following
     return !memcmp(x->p, s, size) && !valid_alphanum(f);
 }
 
@@ -191,8 +214,8 @@ static int read_id(lexer_t *x, token_t *tk) {
     // Otherwise, token is an identifier
     size_t count = 1;
     while (valid_alphanum(*x->p)) {
-        count++;
-        adv(x);
+        ++count;
+        adv;
     }
     str_t *s = s_newstr(start, count, 1);
     tk->lexeme.s = s;
@@ -201,7 +224,7 @@ static int read_id(lexer_t *x, token_t *tk) {
 
 static int test2(lexer_t *x, int c, int t1, int t2) {
     if (*x->p == c) {
-        adv(x);
+        adv;
         return t1;
     } else
         return t2;
@@ -209,10 +232,10 @@ static int test2(lexer_t *x, int c, int t1, int t2) {
 
 static int test3(lexer_t *x, int c1, int t1, int c2, int t2, int t3) {
     if (*x->p == c1) {
-        adv(x);
+        adv;
         return t1;
     } else if (*x->p == c2) {
-        adv(x);
+        adv;
         return t2;
     } else
         return t3;
@@ -221,12 +244,12 @@ static int test3(lexer_t *x, int c1, int t1, int c2, int t2, int t3) {
 static int
 test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
     if (*x->p == c1) {
-        adv(x);
+        adv;
         return t1;
     } else if (*x->p == c2) {
-        adv(x);
+        adv;
         if (*x->p == c3) {
-            adv(x);
+            adv;
             return t2;
         } else
             return t3;
@@ -239,7 +262,7 @@ static void line_comment(lexer_t *x) {
         if (*x->p == '\n' || *x->p == '\0')
             break;
         else
-            adv(x);
+            adv;
     }
 }
 
@@ -250,13 +273,13 @@ static void block_comment(lexer_t *x) {
         if (*x->p == '\0')
             err(x, "Reached end of input with unterminated block comment");
         else if (*x->p == '*') {
-            adv(x);
+            adv;
             if (*x->p == '/') {
-                adv(x);
+                adv;
                 break;
             }
         }
-        else adv(x);
+        else adv;
     }
 }
 
@@ -278,8 +301,8 @@ static int tokenize(lexer_t *x, token_t *tk) {
         case '.': return isdigit(*x->p) ? read_num(x, tk) : '.';
         case '/':
             switch (*x->p) {
-            case '/': adv(x); line_comment(x);  break;
-            case '*': adv(x); block_comment(x); break;
+            case '/': adv; line_comment(x);  break;
+            case '*': adv; block_comment(x); break;
             default:  return test2(x, '=', TK_DIVX, '/');
             }
             break;
@@ -295,7 +318,7 @@ static int tokenize(lexer_t *x, token_t *tk) {
         case '|': return test3(x, '=', TK_ORX, '|', TK_OR, '|');
         case ':':
             if (*x->p == ':') {
-                adv(x);
+                adv;
                 return test2(x, '=', TK_CATX, TK_CAT);
             } else
                 return ':';
@@ -318,12 +341,14 @@ int x_init(lexer_t *x, const char *src) {
     x->p  = src;
     x->tk.kind = 0;
     x->la.kind = 0;
+    x->buffer.n = 0;
+    x->buffer.cap = 0;
+    x->buffer.c = NULL;
     x_adv(x);
     return 0;
 }
 
 int x_adv(lexer_t *x) {
-    // TODO make sure this works properly
     // Free previous string object
     if (x->tk.kind == TK_STR || x->tk.kind == TK_ID)
         free(x->tk.lexeme.s);

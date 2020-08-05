@@ -76,6 +76,11 @@ typedef struct {
     token_t     tk; // Current token
     token_t     la; // Lookahead token
     const char *p;  // Pointer to the current position in the source
+    struct {
+        int   n;
+        int   cap;
+        char *c;
+    } buffer;       // String buffer
 } lexer_t;
 
 int x_init(lexer_t *, const char *);
