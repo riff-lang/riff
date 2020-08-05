@@ -302,6 +302,9 @@ int z_exec(code_t *c) {
     switch (stk[sp-1]->type) { \
     case TYPE_INT: stk[sp-1]->u.i += x; break; \
     case TYPE_FLT: stk[sp-1]->u.f += x; break; \
+    case TYPE_STR: \
+        assign_flt(stk[sp-1], str2flt(stk[sp-1]->u.s) + x); \
+        break;\
     default: \
         assign_int(stk[sp-1], x); \
         break; \
@@ -325,6 +328,9 @@ int z_exec(code_t *c) {
     switch (stk[sp-1]->type) { \
     case TYPE_INT: stk[sp-1]->u.i += x; break; \
     case TYPE_FLT: stk[sp-1]->u.f += x; break; \
+    case TYPE_STR: \
+        assign_flt(stk[sp-1], str2flt(stk[sp-1]->u.s) + x); \
+        break;\
     default: \
         assign_int(stk[sp-1], x); \
         break; \
