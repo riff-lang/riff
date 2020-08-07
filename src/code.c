@@ -168,25 +168,25 @@ void c_constant(code_t *c, token_t *tk) {
     c_pushk(c, c->k.n - 1);
 }
 
-static void c_pusha(code_t *c, int i) {
+static void push_global_addr(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHA0); break;
-    case 1: push(OP_PUSHA1); break;
-    case 2: push(OP_PUSHA2); break;
+    case 0: push(OP_PUSHGA0); break;
+    case 1: push(OP_PUSHGA1); break;
+    case 2: push(OP_PUSHGA2); break;
     default:
-        push(OP_PUSHA);
+        push(OP_PUSHGA);
         push((uint8_t) i);
         break;
     }
 }
 
-static void c_pushv(code_t *c, int i) {
+static void push_global_val(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHV0); break;
-    case 1: push(OP_PUSHV1); break;
-    case 2: push(OP_PUSHV2); break;
+    case 0: push(OP_PUSHGV0); break;
+    case 1: push(OP_PUSHGV1); break;
+    case 2: push(OP_PUSHGV2); break;
     default:
-        push(OP_PUSHV);
+        push(OP_PUSHGV);
         push((uint8_t) i);
         break;
     }
@@ -194,15 +194,16 @@ static void c_pushv(code_t *c, int i) {
 
 // mode = 1 => VM will push the pointer to the val_t in the global
 //             hash table onto the stack
-// mode = 0 => VM will make a copy of the symbol's val_t and push it
+// mode = 0 => VM will make a copy of the global's val_t and push it
 //             onto the stack
-void c_symbol(code_t *c, token_t *tk, int mode) {
+void c_global(code_t *c, token_t *tk, int mode) {
+
     // Search for existing symbol
     for (int i = 0; i < c->k.n; i++) {
         if (c->k.v[i]->type == TYPE_STR &&
             tk->lexeme.s->hash == c->k.v[i]->u.s->hash) {
-            if (mode) c_pusha(c, i);
-            else      c_pushv(c, i);
+            if (mode) push_global_addr(c, i);
+            else      push_global_val(c, i);
             return;
         }
     }
@@ -212,8 +213,42 @@ void c_symbol(code_t *c, token_t *tk, int mode) {
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
-    if (mode) c_pusha(c, c->k.n - 1);
-    else      c_pushv(c, c->k.n - 1);
+    if (mode) push_global_addr(c, c->k.n - 1);
+    else      push_global_val(c, c->k.n - 1);
+}
+
+static void push_local_addr(code_t *c, int i) {
+    switch (i) {
+    case 0: push(OP_PUSHLA0); break;
+    case 1: push(OP_PUSHLA1); break;
+    case 2: push(OP_PUSHLA2); break;
+    default:
+        push(OP_PUSHLA);
+        push((uint8_t) i);
+        break;
+    }
+}
+
+static void push_local_val(code_t *c, int i) {
+    switch (i) {
+    case 0: push(OP_PUSHLV0); break;
+    case 1: push(OP_PUSHLV1); break;
+    case 2: push(OP_PUSHLV2); break;
+    default:
+        push(OP_PUSHLV);
+        push((uint8_t) i);
+        break;
+    }
+}
+
+// mode = 1 => VM will push the pointer to the val_t at stack[i]
+// mode = 0 => VM will make a copy of the val_t at stack[i] and push
+//             onto the stack
+void c_local(code_t *c, int i, int mode) {
+    if (mode)
+        push_local_addr(c, i);
+    else
+        push_local_val(c, i);
 }
 
 // TODO this function will be used to evaluate infix expression

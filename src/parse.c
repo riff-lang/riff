@@ -102,11 +102,27 @@ static void literal(parser_t *y) {
         err(y, "Attempt to assign to constant value");
 }
 
+static int resolve_local(parser_t *y, str_t *s) {
+    if (!y->locals.n) return -1;
+
+    for (int i = y->locals.n - 1; i >= 0; --i) {
+        if (y->locals.id[i]->hash == s->hash)
+            return i;
+    }
+
+    return -1;
+}
+
 static void identifier(parser_t *y) {
+    int scope = resolve_local(y, y->x->tk.lexeme.s);
+
     // If symbol succeeds a pre/post ++/-- operation, signal codegen
     // to push the address of the symbol
     if (y->rx) {
-        c_symbol(y->c, &y->x->tk, 1);
+        if (scope >= 0)
+            c_local(y->c, scope, 1);
+        else
+            c_global(y->c, &y->x->tk, 1);
         adv;
         return;
     }
@@ -117,10 +133,17 @@ static void identifier(parser_t *y) {
     peek;
     if (is_incdec(y->x->la.kind) ||
         is_asgmt(y->x->la.kind)  ||
-        y->x->la.kind == '[')
-        c_symbol(y->c, &y->x->tk, 1);
-    else
-        c_symbol(y->c, &y->x->tk, 0);
+        y->x->la.kind == '[') {
+        if (scope >= 0)
+            c_local(y->c, scope, 1);
+        else
+            c_global(y->c, &y->x->tk, 1);
+    } else {
+        if (scope >= 0)
+            c_local(y->c, scope, 0);
+        else
+            c_global(y->c, &y->x->tk, 0);
+    }
     adv;
 }
 
@@ -481,8 +504,15 @@ static void if_stmt(parser_t *y) {
     }
 }
 
-// TODO
+// TODO:
+// Figure out stack management re: locals
 static void local_stmt(parser_t *y) {
+    int idx = resolve_local(y, y->x->tk.lexeme.s);
+    if (idx < 0) {
+        eval_resize(y->locals.id, y->locals.n, y->locals.cap);
+        y->locals.id[y->locals.n++] = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
+    }
+    expr(y, 0);
 }
 
 static void print_stmt(parser_t *y) {
@@ -562,11 +592,16 @@ static void stmt_list(parser_t *y) {
 
 static void y_init(parser_t *y, const char *src) {
     unset_all;
+    x_init(y->x, src);
+
+    y->locals.n   = 0;
+    y->locals.cap = 0;
+    y->locals.id  = NULL;
+
     y->idx  = 0;
     y->ld   = 0;
     y->brk  = NULL;
     y->cont = NULL;
-    x_init(y->x, src);
 }
 
 int y_compile(const char *src, code_t *c) {

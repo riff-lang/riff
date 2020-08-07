@@ -399,14 +399,14 @@ int z_exec(code_t *c) {
 // h_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-#define pusha(x) \
+#define pushga(x) \
     stk[sp] = h_lookup(&globals, c->k.v[(x)]->u.s); \
     ++sp;
 
-        case OP_PUSHA:  pusha(ip[1]); ip += 2; break;
-        case OP_PUSHA0: pusha(0);     ++ip;    break;
-        case OP_PUSHA1: pusha(1);     ++ip;    break;
-        case OP_PUSHA2: pusha(2);     ++ip;    break;
+        case OP_PUSHGA:  pushga(ip[1]); ip += 2; break;
+        case OP_PUSHGA0: pushga(0);     ++ip;    break;
+        case OP_PUSHGA1: pushga(1);     ++ip;    break;
+        case OP_PUSHGA2: pushga(2);     ++ip;    break;
 
 // Push value
 // Copy the value of variable x to the top of the stack. h_lookup()
@@ -414,16 +414,16 @@ int z_exec(code_t *c) {
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
-#define pushv(x) \
+#define pushgv(x) \
     tp = h_lookup(&globals, c->k.v[(x)]->u.s); \
     stk[sp]->type = tp->type; \
     stk[sp]->u    = tp->u; \
     ++sp;
 
-        case OP_PUSHV:  pushv(ip[1]); ip += 2; break;
-        case OP_PUSHV0: pushv(0);     ++ip;    break;
-        case OP_PUSHV1: pushv(1);     ++ip;    break;
-        case OP_PUSHV2: pushv(2);     ++ip;    break;
+        case OP_PUSHGV:  pushgv(ip[1]); ip += 2; break;
+        case OP_PUSHGV0: pushgv(0);     ++ip;    break;
+        case OP_PUSHGV1: pushgv(1);     ++ip;    break;
+        case OP_PUSHGV2: pushgv(2);     ++ip;    break;
 
         case OP_RET:  exit(0); // TODO
         case OP_RET1: break;   // TODO
@@ -485,8 +485,8 @@ int z_exec(code_t *c) {
                 ++ip;
                 break;
 
-            // TODO parser should be signaling OP_PUSHV, this handles
-            // OP_PUSHA usage for now
+            // TODO parser should be signaling OP_PUSHGV, this handles
+            // OP_PUSHGA usage for now
             case TYPE_INT: case TYPE_FLT: case TYPE_STR:
                 res[sp-2]->type = stk[sp-2]->type;
                 res[sp-2]->u    = stk[sp-2]->u;
@@ -548,7 +548,7 @@ int z_exec(code_t *c) {
 #undef pre
 #undef post
 #undef cbinop
-#undef pusha
+#undef pushga
 #undef pushi
 #undef pushk
-#undef pushv
+#undef pushgv

@@ -16,6 +16,12 @@ typedef struct {
     lexer_t *x;     // Parser controls lexical analysis
     code_t  *c;     // Current code object
 
+    struct {
+        int     n;
+        int     cap;
+        str_t **id;
+    } locals;
+
     // Flags used when evaluating whether expression statements should
     // be printed
     uint8_t  lhs;   // Set when leftmost expr has been evaluated
@@ -24,7 +30,7 @@ typedef struct {
     uint8_t  px;    // Prefix or postfix increment/decrement flag
 
     uint8_t  idx;   // Depth of index (for exprs inside [])
-    uint8_t  rx;    // Reference flag - OP_XXA vs OP_XXV instructions
+    uint8_t  rx;    // Reference flag - OP_xxA vs OP_xxV instructions
     uint8_t  ld;    // Lexical depth (loops)
 
     p_list  *brk;   // Patch list for break stmts (current loop)

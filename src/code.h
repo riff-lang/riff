@@ -68,14 +68,22 @@ enum opcodes {
     OP_PUSHK0,  // Push K[0] on stack as value
     OP_PUSHK1,  // Push K[1] on stack as value
     OP_PUSHK2,  // Push K[2] on stack as value
-    OP_PUSHA,   // Push pointer to symbol K[IP+1] on stack
-    OP_PUSHA0,  // Push pointer to symbol K[0] on stack
-    OP_PUSHA1,  // Push pointer to symbol K[1] on stack
-    OP_PUSHA2,  // Push pointer to symbol K[2] on stack
-    OP_PUSHV,   // Copy value of symbol K[IP+1] onto stack
-    OP_PUSHV0,  // Copy value of symbol K[0] onto stack
-    OP_PUSHV1,  // Copy value of symbol K[1] onto stack
-    OP_PUSHV2,  // Copy value of symbol K[2] onto stack
+    OP_PUSHGA,  // Push pointer to global K[IP+1] on stack
+    OP_PUSHGA0, // Push pointer to global K[0] on stack
+    OP_PUSHGA1, // Push pointer to global K[1] on stack
+    OP_PUSHGA2, // Push pointer to global K[2] on stack
+    OP_PUSHGV,  // Copy value of global K[IP+1] onto stack
+    OP_PUSHGV0, // Copy value of global K[0] onto stack
+    OP_PUSHGV1, // Copy value of global K[1] onto stack
+    OP_PUSHGV2, // Copy value of global K[2] onto stack
+    OP_PUSHLA,  // Push pointer to local K[IP+1] on stack
+    OP_PUSHLA0, // Push pointer to local K[0] on stack
+    OP_PUSHLA1, // Push pointer to local K[1] on stack
+    OP_PUSHLA2, // Push pointer to local K[2] on stack
+    OP_PUSHLV,  // Copy value of local K[IP+1] onto stack
+    OP_PUSHLV0, // Copy value of local K[0] onto stack
+    OP_PUSHLV1, // Copy value of local K[1] onto stack
+    OP_PUSHLV2, // Copy value of local K[2] onto stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
     OP_ARRAY,   // Create array of the top (IP+1) stack elements
@@ -110,7 +118,8 @@ void c_init(code_t *);
 void c_push(code_t *, uint8_t);
 void c_free(code_t *);
 void c_constant(code_t *, token_t *);
-void c_symbol(code_t *, token_t *, int);
+void c_global(code_t *, token_t *, int);
+void c_local(code_t *, int, int);
 void c_prefix(code_t *, int);
 void c_infix(code_t *, int);
 void c_postfix(code_t *, int);
