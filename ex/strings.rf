@@ -12,9 +12,9 @@
 "Raw newline
 inside string"
 
-"\e[31mred\e[0m"
-"\e[32mgreen\e[0m"
-"\e[33myellow\e[0m"
-"\e[34mblue\e[0m"
-"\e[35mmagenta\e[0m"
+"\e[31mred\e[0m",
+"\e[32mgreen\e[0m",
+"\e[33myellow\e[0m",
+"\e[34mblue\e[0m",
+"\e[35mmagenta\e[0m",
 "\e[36mcyan\e[0m"
