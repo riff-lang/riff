@@ -1,0 +1,29 @@
+// Local variables
+
+a = 2               // Global
+
+if 1 {
+    local a = 4     // Local declaration w/ assignment
+    a               // Prints 4
+}
+
+a                   // Prints 2
+
+b = 3
+
+if 1 {
+    local b         // Local declaration
+    /* b = 2           // Local assignment */
+    b               // Prints 2
+}
+
+b                   // Prints 3
+
+
+/* local a, b = 2 */
+/* local a = 2, b */
+local ++a
+local a++
+local a += 1
+local a[1] = 2
+local a = {}

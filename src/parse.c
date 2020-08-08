@@ -103,14 +103,13 @@ static void literal(parser_t *y) {
 }
 
 static int resolve_local(parser_t *y, str_t *s) {
-    if (!y->loc.n) return -1;
-
+    if (!y->loc.n)
+        return -1;
     for (int i = y->loc.n - 1; i >= 0; --i) {
         if (y->loc.l[i].id->hash == s->hash &&
             y->loc.l[i].d <= y->ld)
             return i;
     }
-
     return -1;
 }
 
@@ -423,6 +422,17 @@ static void p_init(p_list *p) {
     p->l   = NULL;
 }
 
+// After exiting scope, "pop" local variables no longer in scope by
+// decrementing y->loc.n
+static void pop_locals(parser_t *y) {
+    if (!y->loc.n) return;
+
+    for (int i = y->loc.n - 1; i >= 0 && y->loc.l[i].d > y->ld; --i) {
+        y->loc.n--;
+        free(y->loc.l[i].id);
+    }
+}
+
 static void enter_loop(parser_t *y, p_list *b, p_list *c) {
     y->ld++;
     p_init(b);
@@ -433,6 +443,7 @@ static void enter_loop(parser_t *y, p_list *b, p_list *c) {
 
 static void exit_loop(parser_t *y, p_list *ob, p_list *oc, p_list *nb, p_list *nc) {
     y->ld--;
+    pop_locals(y);
     y->brk  = ob;
     y->cont = oc;
     if (nb->n) free(nb->l);
@@ -505,14 +516,15 @@ static void if_stmt(parser_t *y) {
         c_patch(y->c, l1);
     }
     y->ld--;
+    pop_locals(y);
 }
 
 // TODO:
 // Figure out stack management re: locals
 static void local_stmt(parser_t *y) {
+    unset_all;
     int idx = resolve_local(y, y->x->tk.lexeme.s);
 
-    // TODO
     // If the identifier doesn't already exist as a local at the
     // current scope, add a new local
     if (idx < 0 || y->loc.l[idx].d != y->ld) {
