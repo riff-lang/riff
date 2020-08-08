@@ -53,19 +53,19 @@ static int exists(hash_t *h, str_t *k) {
     return h->e[i] && h->e[i]->key->hash == k->hash;
 }
 
-val_t *h_lookup(hash_t *h, str_t *k) {
+val_t *h_lookup(hash_t *h, str_t *k, int set) {
     // If the table is empty, call h_insert, which allocates memory
     if (!h->e)
-        return h_insert(h, k, v_newnull());
+        return h_insert(h, k, v_newnull(), set);
     if (!k->hash)
         k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
     if (!h->e[i])
-        return h_insert(h, k, v_newnull());
+        return h_insert(h, k, v_newnull(), set);
     return h->e[i]->val;
 }
 
-val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
+val_t *h_insert(hash_t *h, str_t *k, val_t *v, int set) {
     if (!k->hash)
         k->hash = s_hash(k->str);
     // Evaluate hash table size
@@ -103,7 +103,7 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v) {
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
         h->an++;
-        if (!is_null(v))
+        if (set || !is_null(v))
             h->n++;
     } else {
         h->e[i]->val->type = v->type;

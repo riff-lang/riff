@@ -60,6 +60,7 @@ enum opcodes {
     OP_SHRX,    // Bitwise shift right assign
     OP_XORX,    // Bitwise XOR assign
     OP_POP,     // Pop (--SP)
+    OP_POPI,    // Pop IP+1 values from stack (SP -= (IP+1))
     OP_PUSHI,   // Push (IP+1) as literal value on stack
     OP_PUSH0,   // Push literal `0` on stack
     OP_PUSH1,   // Push literal `1` on stack
@@ -76,6 +77,10 @@ enum opcodes {
     OP_GBLV0,   // Copy value of global var K[0] onto stack
     OP_GBLV1,   // Copy value of global var K[1] onto stack
     OP_GBLV2,   // Copy value of global var K[2] onto stack
+    OP_LCL,     // Reserve stack[IP+1] as a local var
+    OP_LCL0,    // Reserve stack[0] as a local var
+    OP_LCL1,    // Reserve stack[1] as a local var
+    OP_LCL2,    // Reserve stack[2] as a local var
     OP_LCLA,    // Push pointer to stack[IP+1] on stack
     OP_LCLA0,   // Push pointer to stack[0] on stack
     OP_LCLA1,   // Push pointer to stack[1] on stack

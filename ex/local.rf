@@ -13,17 +13,24 @@ b = 3
 
 if 1 {
     local b         // Local declaration
-    /* b = 2           // Local assignment */
-    b               // Prints 2
+    b               // Prints "null"
 }
 
 b                   // Prints 3
 
 
-/* local a, b = 2 */
-/* local a = 2, b */
-local ++a
-local a++
-local a += 1
-local a[1] = 2
-local a = {}
+local a, b = 2
+a, b
+local a = 2, b
+a, b
+local ++c
+local d++
+c,d
+local e += 1
+e
+local f[1] = "arr"
+f
+local g = {}
+g
+local h[3] = "next line should print 1"
+#h

@@ -116,7 +116,7 @@ static int resolve_local(parser_t *y, str_t *s) {
 static void identifier(parser_t *y) {
     int scope = resolve_local(y, y->x->tk.lexeme.s);
 
-    // If symbol succeeds a pre/post ++/-- operation, signal codegen
+    // If symbol succeeds a prefix ++/-- operation, signal codegen
     // to push the address of the symbol
     if (y->rx) {
         if (scope >= 0)
@@ -427,9 +427,21 @@ static void p_init(p_list *p) {
 static void pop_locals(parser_t *y) {
     if (!y->loc.n) return;
 
-    for (int i = y->loc.n - 1; i >= 0 && y->loc.l[i].d > y->ld; --i) {
+    int count = 0;
+    // Remove !y->ld in terminating condition if top-level locals
+    // aren't meant to be popped
+    for (int i = y->loc.n - 1; i >= 0 && (!y->ld || y->loc.l[i].d > y->ld); --i) {
         y->loc.n--;
         free(y->loc.l[i].id);
+        ++count;
+    }
+    if (!count)
+        return;
+    else if (count == 1)
+        push(OP_POP);
+    else {
+        push(OP_POPI);
+        push((uint8_t) count);
     }
 }
 
@@ -519,25 +531,45 @@ static void if_stmt(parser_t *y) {
     pop_locals(y);
 }
 
-// TODO:
-// Figure out stack management re: locals
 static void local_stmt(parser_t *y) {
-    unset_all;
-    int idx = resolve_local(y, y->x->tk.lexeme.s);
+    while (1) {
+        unset_all;
+        str_t *id;
+        if (y->x->tk.kind != TK_ID) {
+            peek;
+            if (y->x->la.kind != TK_ID)
+                err(y, "local declaration requires valid identifier");
+            id = y->x->la.lexeme.s;
+        } else {
+            id = y->x->tk.lexeme.s;
+        }
 
-    // If the identifier doesn't already exist as a local at the
-    // current scope, add a new local
-    if (idx < 0 || y->loc.l[idx].d != y->ld) {
-        eval_resize(y->loc.l, y->loc.n, y->loc.cap);
-        y->loc.l[y->loc.n].id = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
-        y->loc.l[y->loc.n++].d = y->ld;
-        expr(y, 0);
-    }
+        int idx = resolve_local(y, id);
 
-    // Otherwise, ignore the `local` declaration and pop expr result
-    else {
+        // If the identifier doesn't already exist as a local at the
+        // current scope, add a new local
+        if (idx < 0 || y->loc.l[idx].d != y->ld) {
+            eval_resize(y->loc.l, y->loc.n, y->loc.cap);
+            y->loc.l[y->loc.n].id = s_newstr(id->str, id->l, 1);
+            y->loc.l[y->loc.n].d = y->ld;
+            switch (y->loc.n) {
+            case 0: push(OP_LCL0); break;
+            case 1: push(OP_LCL1); break;
+            case 2: push(OP_LCL2); break;
+            default:
+                push(OP_LCL);
+                push((uint8_t) y->loc.n);
+                break;
+            }
+            y->loc.n++;
+        }
         expr(y, 0);
         push(OP_POP);
+
+        if (y->x->tk.kind == ',')
+            adv;
+        else
+            break;
     }
 }
 
@@ -610,6 +642,7 @@ static void stmt(parser_t *y) {
     }
 }
 
+// TODO instruct VM to clean up top-level locals
 static void stmt_list(parser_t *y) {
     while (!(y->x->tk.kind == TK_EOI ||
              y->x->tk.kind == '}'))
@@ -637,6 +670,7 @@ int y_compile(const char *src, code_t *c) {
     y.c = c;
     y_init(&y, src);
     stmt_list(&y);
+    pop_locals(&y);     // TODO?
     c_push(c, OP_RET);
     x_free(&x);
     return 0;

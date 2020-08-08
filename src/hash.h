@@ -16,8 +16,8 @@ typedef struct {
 } hash_t;
 
 void   h_init(hash_t *);
-val_t *h_lookup(hash_t *, str_t *);
-val_t *h_insert(hash_t *, str_t *, val_t *);
+val_t *h_lookup(hash_t *, str_t *, int);
+val_t *h_insert(hash_t *, str_t *, val_t *, int);
 void   h_delete(hash_t *, str_t *);
 
 #endif

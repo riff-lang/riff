@@ -370,6 +370,9 @@ int z_exec(code_t *c) {
         // Simple pop operation
         case OP_POP: --sp; ++ip; break;
 
+        // Pop IP+1 values from stack
+        case OP_POPI: sp -= ip[1]; ip += 2; break;
+
 // Push immediate
 // Assign integer value x to the top of the stack.
 #define pushi(x) \
@@ -400,7 +403,7 @@ int z_exec(code_t *c) {
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
 #define gbla(x) \
-    stk[sp] = h_lookup(&globals, c->k.v[(x)]->u.s); \
+    stk[sp] = h_lookup(&globals, c->k.v[(x)]->u.s, 1); \
     ++sp;
 
         case OP_GBLA:  gbla(ip[1]); ip += 2; break;
@@ -415,7 +418,7 @@ int z_exec(code_t *c) {
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
 #define gblv(x) \
-    tp = h_lookup(&globals, c->k.v[(x)]->u.s); \
+    tp = h_lookup(&globals, c->k.v[(x)]->u.s, 0); \
     stk[sp]->type = tp->type; \
     stk[sp]->u    = tp->u; \
     ++sp;
@@ -425,12 +428,21 @@ int z_exec(code_t *c) {
         case OP_GBLV1: gblv(1);     ++ip;    break;
         case OP_GBLV2: gblv(2);     ++ip;    break;
 
+// Nullify slot at stack[x] for use as a local var
+// Increment SP to reserve slot
+#define lcl(x) \
+    stk[x]->type = TYPE_NULL; \
+    ++sp;
+
+        case OP_LCL:  lcl(ip[1]); ip += 2; break;
+        case OP_LCL0: lcl(0);     ++ip;    break;
+        case OP_LCL1: lcl(1);     ++ip;    break;
+        case OP_LCL2: lcl(2);     ++ip;    break;
+
 // Push local address
 // Push the address of stk[x] to the top of the stack.
 // If SP == x, increment SP to effectively reserve local slot
-#define lcla(x) \
-    if (x == sp) ++sp; \
-    else stk[sp++] = stk[x];
+#define lcla(x) stk[sp++] = stk[x];
 
         case OP_LCLA:  lcla(ip[1]) ip += 2; break;
         case OP_LCLA0: lcla(0);    ++ip;    break;
@@ -441,12 +453,9 @@ int z_exec(code_t *c) {
 // Copy the value of stk[x] to the top of the stack.
 // If SP == x, increment SP to effectively reserve local slot
 #define lclv(x) \
-    if (sp == x) ++sp; \
-    else { \
-        stk[sp]->type = stk[x]->type; \
-        stk[sp]->u    = stk[x]->u; \
-        ++sp; \
-    }
+    stk[sp]->type = stk[x]->type; \
+    stk[sp]->u    = stk[x]->u; \
+    ++sp;
 
         case OP_LCLV:  lclv(ip[1]) ip += 2; break;
         case OP_LCLV0: lclv(0);    ++ip;    break;
@@ -481,7 +490,7 @@ int z_exec(code_t *c) {
                 stk[sp-2]->u    = tp->u;
                 // Fall-through
             case TYPE_ARR:
-                stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1]);
+                stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1], 1);
                 break;
 
             // IDXA is invalid for all other types
@@ -505,7 +514,7 @@ int z_exec(code_t *c) {
                 stk[sp-2] = v_newarr();
                 // Fall-through
             case TYPE_ARR:
-                tp = a_lookup(stk[sp-2]->u.a, stk[sp-1]);
+                tp = a_lookup(stk[sp-2]->u.a, stk[sp-1], 0);
                 res[sp-2]->type = tp->type;
                 res[sp-2]->u    = tp->u;
                 stk[sp-2]       = res[sp-2];

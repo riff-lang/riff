@@ -24,8 +24,8 @@ void a_init(arr_t *a) {
 // space with sparse arrays) and there is at least one used slot
 // between n/2 + 1 and n (to avoid a size n when n/2 would do)
 
-static val_t *a_lookup_str(arr_t *a, str_t *k) {
-    return h_lookup(a->h, k);
+static val_t *a_lookup_str(arr_t *a, str_t *k, int set) {
+    return h_lookup(a->h, k, set);
 }
 
 // If int k is within the capacity of the "array" part, perform the
@@ -33,12 +33,12 @@ static val_t *a_lookup_str(arr_t *a, str_t *k) {
 // static val_t *a_lookup_int(arr_t *a, int_t k) {
 // }
 
-val_t *a_lookup(arr_t *a, val_t *k) {
+val_t *a_lookup(arr_t *a, val_t *k, int set) {
     switch (k->type) {
-    case TYPE_NULL: return a_lookup_str(a, s_int2str(0)); // TODO
-    case TYPE_INT:  return a_lookup_str(a, s_int2str(k->u.i));
-    case TYPE_FLT:  return a_lookup_str(a, s_flt2str(k->u.f)); // TODO
-    case TYPE_STR:  return a_lookup_str(a, k->u.s);
+    case TYPE_NULL: return a_lookup_str(a, s_int2str(0), set); // TODO
+    case TYPE_INT:  return a_lookup_str(a, s_int2str(k->u.i), set);
+    case TYPE_FLT:  return a_lookup_str(a, s_flt2str(k->u.f), set); // TODO
+    case TYPE_STR:  return a_lookup_str(a, k->u.s, set);
     case TYPE_ARR:
     case TYPE_FN: // TODO Error?
     default: break;
@@ -47,11 +47,11 @@ val_t *a_lookup(arr_t *a, val_t *k) {
 }
 
 static val_t *a_insert_str(arr_t *a, str_t *k, val_t *v) {
-    return h_insert(a->h, k, v);
+    return h_insert(a->h, k, v, 1);
 }
 
 val_t *a_insert_int(arr_t *a, int_t k, val_t *v) {
-    return h_insert(a->h, s_int2str(k), v);
+    return h_insert(a->h, s_int2str(k), v, 1);
 }
 
 val_t *a_insert(arr_t *a, val_t *k, val_t *v) {
