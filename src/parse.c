@@ -103,10 +103,11 @@ static void literal(parser_t *y) {
 }
 
 static int resolve_local(parser_t *y, str_t *s) {
-    if (!y->locals.n) return -1;
+    if (!y->loc.n) return -1;
 
-    for (int i = y->locals.n - 1; i >= 0; --i) {
-        if (y->locals.id[i]->hash == s->hash)
+    for (int i = y->loc.n - 1; i >= 0; --i) {
+        if (y->loc.l[i].id->hash == s->hash &&
+            y->loc.l[i].d <= y->ld)
             return i;
     }
 
@@ -479,6 +480,7 @@ static void for_stmt(parser_t *y) {
 static void if_stmt(parser_t *y) {
     expr(y, 0);
     int l1, l2;
+    y->ld++;
     l1 = c_prep_jump(y->c, JZ);
     if (y->x->tk.kind == '{') {
         adv;
@@ -502,17 +504,29 @@ static void if_stmt(parser_t *y) {
     } else {
         c_patch(y->c, l1);
     }
+    y->ld--;
 }
 
 // TODO:
 // Figure out stack management re: locals
 static void local_stmt(parser_t *y) {
     int idx = resolve_local(y, y->x->tk.lexeme.s);
-    if (idx < 0) {
-        eval_resize(y->locals.id, y->locals.n, y->locals.cap);
-        y->locals.id[y->locals.n++] = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
+
+    // TODO
+    // If the identifier doesn't already exist as a local at the
+    // current scope, add a new local
+    if (idx < 0 || y->loc.l[idx].d != y->ld) {
+        eval_resize(y->loc.l, y->loc.n, y->loc.cap);
+        y->loc.l[y->loc.n].id = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
+        y->loc.l[y->loc.n++].d = y->ld;
+        expr(y, 0);
     }
-    expr(y, 0);
+
+    // Otherwise, ignore the `local` declaration and pop expr result
+    else {
+        expr(y, 0);
+        push(OP_POP);
+    }
 }
 
 static void print_stmt(parser_t *y) {
@@ -594,9 +608,9 @@ static void y_init(parser_t *y, const char *src) {
     unset_all;
     x_init(y->x, src);
 
-    y->locals.n   = 0;
-    y->locals.cap = 0;
-    y->locals.id  = NULL;
+    y->loc.n   = 0;
+    y->loc.cap = 0;
+    y->loc.l   = NULL;
 
     y->idx  = 0;
     y->ld   = 0;

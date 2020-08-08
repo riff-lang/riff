@@ -170,11 +170,11 @@ void c_constant(code_t *c, token_t *tk) {
 
 static void push_global_addr(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHGA0); break;
-    case 1: push(OP_PUSHGA1); break;
-    case 2: push(OP_PUSHGA2); break;
+    case 0: push(OP_GBLA0); break;
+    case 1: push(OP_GBLA1); break;
+    case 2: push(OP_GBLA2); break;
     default:
-        push(OP_PUSHGA);
+        push(OP_GBLA);
         push((uint8_t) i);
         break;
     }
@@ -182,11 +182,11 @@ static void push_global_addr(code_t *c, int i) {
 
 static void push_global_val(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHGV0); break;
-    case 1: push(OP_PUSHGV1); break;
-    case 2: push(OP_PUSHGV2); break;
+    case 0: push(OP_GBLV0); break;
+    case 1: push(OP_GBLV1); break;
+    case 2: push(OP_GBLV2); break;
     default:
-        push(OP_PUSHGV);
+        push(OP_GBLV);
         push((uint8_t) i);
         break;
     }
@@ -219,11 +219,11 @@ void c_global(code_t *c, token_t *tk, int mode) {
 
 static void push_local_addr(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHLA0); break;
-    case 1: push(OP_PUSHLA1); break;
-    case 2: push(OP_PUSHLA2); break;
+    case 0: push(OP_LCLA0); break;
+    case 1: push(OP_LCLA1); break;
+    case 2: push(OP_LCLA2); break;
     default:
-        push(OP_PUSHLA);
+        push(OP_LCLA);
         push((uint8_t) i);
         break;
     }
@@ -231,11 +231,11 @@ static void push_local_addr(code_t *c, int i) {
 
 static void push_local_val(code_t *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHLV0); break;
-    case 1: push(OP_PUSHLV1); break;
-    case 2: push(OP_PUSHLV2); break;
+    case 0: push(OP_LCLV0); break;
+    case 1: push(OP_LCLV1); break;
+    case 2: push(OP_LCLV2); break;
     default:
-        push(OP_PUSHLV);
+        push(OP_LCLV);
         push((uint8_t) i);
         break;
     }

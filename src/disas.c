@@ -18,6 +18,14 @@ static struct {
     [OP_DIV]     = { "div",      0 },
     [OP_EQ]      = { "eq",       0 },
     [OP_EXIT]    = { "exit",     0 },
+    [OP_GBLA0]   = { "gbla   0", 0 },
+    [OP_GBLA1]   = { "gbla   1", 0 },
+    [OP_GBLA2]   = { "gbla   2", 0 },
+    [OP_GBLA]    = { "gbla",     1 },
+    [OP_GBLV0]   = { "gblv   0", 0 },
+    [OP_GBLV1]   = { "gblv   1", 0 },
+    [OP_GBLV2]   = { "gblv   2", 0 },
+    [OP_GBLV]    = { "gblv",     1 },
     [OP_GE]      = { "ge",       0 },
     [OP_GT]      = { "gt",       0 },
     [OP_IDXA]    = { "idxa",     0 },
@@ -31,6 +39,14 @@ static struct {
     [OP_LEN]     = { "len",      0 },
     [OP_LE]      = { "le",       0 },
     [OP_LNOT]    = { "lnot",     0 },
+    [OP_LCLA0]   = { "lcla   0", 0 },
+    [OP_LCLA1]   = { "lcla   1", 0 },
+    [OP_LCLA2]   = { "lcla   2", 0 },
+    [OP_LCLA]    = { "lcla",     1 },
+    [OP_LCLV0]   = { "lclv   0", 0 },
+    [OP_LCLV1]   = { "lclv   1", 0 },
+    [OP_LCLV2]   = { "lclv   2", 0 },
+    [OP_LCLV]    = { "lclv",     1 },
     [OP_LT]      = { "lt",       0 },
     [OP_MODX]    = { "modx",     0 },
     [OP_MOD]     = { "mod",      0 },
@@ -54,27 +70,11 @@ static struct {
     [OP_PUSH0]   = { "pushi  0", 0 },
     [OP_PUSH1]   = { "pushi  1", 0 },
     [OP_PUSH2]   = { "pushi  2", 0 },
-    [OP_PUSHGA0] = { "pushga 0", 0 },
-    [OP_PUSHGA1] = { "pushga 1", 0 },
-    [OP_PUSHGA2] = { "pushga 2", 0 },
-    [OP_PUSHGA]  = { "pushga",   1 },
-    [OP_PUSHGV0] = { "pushgv 0", 0 },
-    [OP_PUSHGV1] = { "pushgv 1", 0 },
-    [OP_PUSHGV2] = { "pushgv 2", 0 },
-    [OP_PUSHGV]  = { "pushgv",   1 },
     [OP_PUSHI]   = { "pushi",    1 },
     [OP_PUSHK0]  = { "pushk  0", 0 },
     [OP_PUSHK1]  = { "pushk  1", 0 },
     [OP_PUSHK2]  = { "pushk  2", 0 },
     [OP_PUSHK]   = { "pushk",    1 },
-    [OP_PUSHLA0] = { "pushla 0", 0 },
-    [OP_PUSHLA1] = { "pushla 1", 0 },
-    [OP_PUSHLA2] = { "pushla 2", 0 },
-    [OP_PUSHLA]  = { "pushla",   1 },
-    [OP_PUSHLV0] = { "pushlv 0", 0 },
-    [OP_PUSHLV1] = { "pushlv 1", 0 },
-    [OP_PUSHLV2] = { "pushlv 2", 0 },
-    [OP_PUSHLV]  = { "pushlv",   1 },
     [OP_RET1]    = { "ret    1", 0 },
     [OP_RET]     = { "ret",      0 },
     [OP_SET]     = { "set",      0 },
@@ -151,8 +151,7 @@ void d_code_chunk(code_t *c) {
                 }
                 printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
                 break;
-            case OP_PUSHGA: case OP_PUSHGV:
-            // case OP_PUSHLA: case OP_PUSHLV:
+            case OP_GBLA: case OP_GBLV:
                 sprintf(s, "%s", OPND(s->str));
                 printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
                 break;
@@ -171,7 +170,7 @@ void d_code_chunk(code_t *c) {
                 break;
             }
             ip += 2;
-        } else if (b0 >= OP_PUSHK0 && b0 <= OP_PUSHGV2) {
+        } else if (b0 >= OP_PUSHK0 && b0 <= OP_GBLV2) {
             switch (b0) {
             case OP_PUSHK0:
                 switch (c->k.v[0]->type) {
@@ -221,18 +220,15 @@ void d_code_chunk(code_t *c) {
                 }
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
-            case OP_PUSHGA0: case OP_PUSHGV0:
-            // case OP_PUSHLA0: case OP_PUSHLV0:
+            case OP_GBLA0: case OP_GBLV0:
                 sprintf(s, "%s", OPND0(s->str));
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
-            case OP_PUSHGA1: case OP_PUSHGV1:
-            // case OP_PUSHLA1: case OP_PUSHLV1:
+            case OP_GBLA1: case OP_GBLV1:
                 sprintf(s, "%s", OPND1(s->str));
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
-            case OP_PUSHGA2: case OP_PUSHGV2:
-            // case OP_PUSHLA2: case OP_PUSHLV2:
+            case OP_GBLA2: case OP_GBLV2:
                 sprintf(s, "%s", OPND2(s->str));
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;

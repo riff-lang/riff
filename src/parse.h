@@ -5,6 +5,12 @@
 #include "lex.h"
 #include "types.h"
 
+// Local vars
+typedef struct {
+    str_t *id;
+    int    d;
+} local;
+
 // Patch lists used for break/continue statements in loops
 typedef struct {
     int  n;
@@ -17,10 +23,10 @@ typedef struct {
     code_t  *c;     // Current code object
 
     struct {
-        int     n;
-        int     cap;
-        str_t **id;
-    } locals;
+        int    n;
+        int    cap;
+        local *l;
+    } loc;
 
     // Flags used when evaluating whether expression statements should
     // be printed
@@ -31,7 +37,7 @@ typedef struct {
 
     uint8_t  idx;   // Depth of index (for exprs inside [])
     uint8_t  rx;    // Reference flag - OP_xxA vs OP_xxV instructions
-    uint8_t  ld;    // Lexical depth (loops)
+    uint8_t  ld;    // Lexical depth/scope
 
     p_list  *brk;   // Patch list for break stmts (current loop)
     p_list  *cont;  // Patch list for continue stmts (current loop)

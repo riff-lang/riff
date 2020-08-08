@@ -68,22 +68,22 @@ enum opcodes {
     OP_PUSHK0,  // Push K[0] on stack as value
     OP_PUSHK1,  // Push K[1] on stack as value
     OP_PUSHK2,  // Push K[2] on stack as value
-    OP_PUSHGA,  // Push pointer to global K[IP+1] on stack
-    OP_PUSHGA0, // Push pointer to global K[0] on stack
-    OP_PUSHGA1, // Push pointer to global K[1] on stack
-    OP_PUSHGA2, // Push pointer to global K[2] on stack
-    OP_PUSHGV,  // Copy value of global K[IP+1] onto stack
-    OP_PUSHGV0, // Copy value of global K[0] onto stack
-    OP_PUSHGV1, // Copy value of global K[1] onto stack
-    OP_PUSHGV2, // Copy value of global K[2] onto stack
-    OP_PUSHLA,  // Push pointer to local K[IP+1] on stack
-    OP_PUSHLA0, // Push pointer to local K[0] on stack
-    OP_PUSHLA1, // Push pointer to local K[1] on stack
-    OP_PUSHLA2, // Push pointer to local K[2] on stack
-    OP_PUSHLV,  // Copy value of local K[IP+1] onto stack
-    OP_PUSHLV0, // Copy value of local K[0] onto stack
-    OP_PUSHLV1, // Copy value of local K[1] onto stack
-    OP_PUSHLV2, // Copy value of local K[2] onto stack
+    OP_GBLA,    // Push pointer to global var K[IP+1] on stack
+    OP_GBLA0,   // Push pointer to global var K[0] on stack
+    OP_GBLA1,   // Push pointer to global var K[1] on stack
+    OP_GBLA2,   // Push pointer to global var K[2] on stack
+    OP_GBLV,    // Copy value of global var K[IP+1] onto stack
+    OP_GBLV0,   // Copy value of global var K[0] onto stack
+    OP_GBLV1,   // Copy value of global var K[1] onto stack
+    OP_GBLV2,   // Copy value of global var K[2] onto stack
+    OP_LCLA,    // Push pointer to stack[IP+1] on stack
+    OP_LCLA0,   // Push pointer to stack[0] on stack
+    OP_LCLA1,   // Push pointer to stack[1] on stack
+    OP_LCLA2,   // Push pointer to stack[2] on stack
+    OP_LCLV,    // Copy value of stack[IP+1] onto stack
+    OP_LCLV0,   // Copy value of stack[0] onto stack
+    OP_LCLV1,   // Copy value of stack[1] onto stack
+    OP_LCLV2,   // Copy value of stack[2] onto stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
     OP_ARRAY,   // Create array of the top (IP+1) stack elements
