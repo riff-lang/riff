@@ -21,13 +21,11 @@ b                   // Should print 3
 
 local a, b = 2
 a, b                // Should print "null 2"
-local a = 2, b      // Locals already declared; keyword ignored
-a, b                // Should print "2 2"
-local ++c           // Local declaration w/ prefix increment
-local d++           // Local declaration w/ postfix increment
-c, d                // Should print "1 1"
-local e += 23       // Local declaration w/ compound assignment
-e                   // Should print 23
+local b, c = 2      // Keyword ignored for b, not for c
+b, c                // Should print "2 2"
+local ++d           // Local declaration w/ prefix increment
+local e++           // Local declaration w/ postfix increment
+d, e                // Should print "1 1"
 local f[1] = "arr"  // Local declaration of array f
 f                   // Should print "array: <addr>"
 local g = {}        // Local declaration w/ assignment of empty array
