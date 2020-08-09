@@ -103,11 +103,11 @@ static void literal(parser_t *y) {
 }
 
 static int resolve_local(parser_t *y, str_t *s) {
-    if (!y->loc.n)
+    if (!y->nlcl)
         return -1;
-    for (int i = y->loc.n - 1; i >= 0; --i) {
-        if (y->loc.l[i].id->hash == s->hash &&
-            y->loc.l[i].d <= y->ld)
+    for (int i = y->nlcl - 1; i >= 0; --i) {
+        if (y->lcl[i].id->hash == s->hash &&
+            y->lcl[i].d <= y->ld)
             return i;
     }
     return -1;
@@ -421,16 +421,16 @@ static void p_init(p_list *p) {
 }
 
 // After exiting scope, "pop" local variables no longer in scope by
-// decrementing y->loc.n
+// decrementing y->nlcl
 static void pop_locals(parser_t *y) {
-    if (!y->loc.n) return;
+    if (!y->nlcl) return;
 
     int count = 0;
     // Remove !y->ld in terminating condition if top-level locals
     // aren't meant to be popped
-    for (int i = y->loc.n - 1; i >= 0 && (!y->ld || y->loc.l[i].d > y->ld); --i) {
-        y->loc.n--;
-        free(y->loc.l[i].id);
+    for (int i = y->nlcl - 1; i >= 0 && (!y->ld || y->lcl[i].d > y->ld); --i) {
+        y->nlcl--;
+        free(y->lcl[i].id);
         ++count;
     }
     if (!count)
@@ -547,23 +547,23 @@ static void local_stmt(parser_t *y) {
 
         // If the identifier doesn't already exist as a local at the
         // current scope, add a new local
-        if (idx < 0 || y->loc.l[idx].d != y->ld) {
-            if (y->loc.cap <= y->loc.n) {
-                y->loc.cap = y->loc.cap < 8 ? 8 : y->loc.cap * 2;
-                y->loc.l = realloc(y->loc.l, sizeof(local) * y->loc.cap);
+        if (idx < 0 || y->lcl[idx].d != y->ld) {
+            if (y->lcap <= y->nlcl) {
+                y->lcap = y->lcap < 8 ? 8 : y->lcap * 2;
+                y->lcl = realloc(y->lcl, sizeof(local) * y->lcap);
             }
-            y->loc.l[y->loc.n].id = s_newstr(id->str, id->l, 1);
-            y->loc.l[y->loc.n].d  = y->ld;
-            switch (y->loc.n) {
+            y->lcl[y->nlcl].id = s_newstr(id->str, id->l, 1);
+            y->lcl[y->nlcl].d  = y->ld;
+            switch (y->nlcl) {
             case 0: push(OP_LCL0); break;
             case 1: push(OP_LCL1); break;
             case 2: push(OP_LCL2); break;
             default:
                 push(OP_LCL);
-                push((uint8_t) y->loc.n);
+                push((uint8_t) y->nlcl);
                 break;
             }
-            y->loc.n++;
+            y->nlcl++;
         }
         expr(y, 0);
         push(OP_POP);
@@ -654,9 +654,9 @@ static void y_init(parser_t *y, const char *src) {
     unset_all;
     x_init(y->x, src);
 
-    y->loc.n   = 0;
-    y->loc.cap = 0;
-    y->loc.l   = NULL;
+    y->nlcl = 0;
+    y->lcap = 0;
+    y->lcl  = NULL;
 
     y->idx  = 0;
     y->ld   = 0;

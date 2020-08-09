@@ -22,12 +22,9 @@ typedef struct {
     lexer_t *x;     // Parser controls lexical analysis
     code_t  *c;     // Current code object
 
-    // TODO un-structify this
-    struct {
-        int    n;
-        int    cap;
-        local *l;
-    } loc;
+    int      nlcl;  // Number of locals in scope
+    int      lcap;
+    local   *lcl;   // Array of local vars
 
     // Flags used when evaluating whether expression statements should
     // be printed
