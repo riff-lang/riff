@@ -452,8 +452,8 @@ static void enter_loop(parser_t *y, p_list *b, p_list *c) {
 }
 
 static void exit_loop(parser_t *y, p_list *ob, p_list *oc, p_list *nb, p_list *nc) {
-    y->ld--;
     pop_locals(y);
+    y->ld--;
     y->brk  = ob;
     y->cont = oc;
     if (nb->n) free(nb->l);
@@ -600,11 +600,11 @@ static void while_stmt(parser_t *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
     p_list b, c;
-    enter_loop(y, &b, &c);
     int l1, l2;
     l1 = y->c->n;
     expr(y, 0);
     l2 = c_prep_jump(y->c, JZ);
+    enter_loop(y, &b, &c);
     if (y->x->tk.kind == '{') {
         adv;
         stmt_list(y);
