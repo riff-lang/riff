@@ -251,6 +251,32 @@ void c_local(code_t *c, int i, int mode) {
         push_local_val(c, i);
 }
 
+void c_array(code_t *c, int n) {
+    if (!n)
+        push(OP_ARRAY0);
+    else if (n <= 0xff) {
+        push(OP_ARRAY);
+        push((uint8_t) n);
+    } else {
+        push(OP_ARRAYK);
+
+        // Search for exisitng `n` in the constants pool
+        for (int i = 0; i < c->k.n; ++i) {
+            if (c->k.v[i]->type != TYPE_INT)
+                continue;
+            if (c->k.v[i]->u.i == n) {
+                push((uint8_t) i);
+                return;
+            }
+        }
+
+        // Otherwise, add `n` to constants pool
+        eval_resize(c->k.v, c->k.n, c->k.cap);
+        c->k.v[c->k.n++] = v_newint(n);
+        push((uint8_t) c->k.n - 1);
+    }
+}
+
 // TODO this function will be used to evaluate infix expression
 // "nodes" and fold constants if possible.
 void c_infix(code_t *c, int op) {

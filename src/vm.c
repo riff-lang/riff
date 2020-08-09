@@ -465,15 +465,20 @@ int z_exec(code_t *c) {
         case OP_RET:  exit(0); // TODO
         case OP_RET1: break;   // TODO
 
-        // Create a sequential array of (IP+1) elements from the top
-        // of the stack. Leave the array val_t on the stack.
-        // Arrays index at 0 by default.
-        case OP_ARRAY:
-            tp = v_newarr();
-            for (int i = ip[1] - 1; i >= 0; --i) {
-                a_insert_int(tp->u.a, i, stk[--sp]);
-            }
-            stk[sp++] = tp;
+// Create a sequential array of x elements from the top
+// of the stack. Leave the array val_t on the stack.
+// Arrays index at 0 by default.
+#define new_array(x) \
+    tp = v_newarr(); \
+    for (int i = (x) - 1; i >= 0; --i) { \
+        a_insert_int(tp->u.a, i, stk[--sp]); \
+    } \
+    stk[sp++] = tp;
+
+        case OP_ARRAY0: new_array(0);    ++ip;    break;
+        case OP_ARRAY:  new_array(ip[1]) ip += 2; break;
+        case OP_ARRAYK:
+            new_array(c->k.v[ip[1]]->u.i);
             ip += 2;
             break;
 

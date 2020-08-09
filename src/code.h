@@ -91,7 +91,9 @@ enum opcodes {
     OP_LCLV2,   // Copy value of stack[2] onto stack
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
+    OP_ARRAY0,  // Create empty array
     OP_ARRAY,   // Create array of the top (IP+1) stack elements
+    OP_ARRAYK,  // Create array of the top K[IP+1] stack elements
     OP_IDXA,    // Index of a set, leaving pointer on stack
     OP_IDXV,    // Index of a set, leaving value on stack
     OP_SET,     // Assignment
@@ -125,6 +127,7 @@ void c_free(code_t *);
 void c_constant(code_t *, token_t *);
 void c_global(code_t *, token_t *, int);
 void c_local(code_t *, int, int);
+void c_array(code_t *, int);
 void c_prefix(code_t *, int);
 void c_infix(code_t *, int);
 void c_postfix(code_t *, int);

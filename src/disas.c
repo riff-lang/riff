@@ -10,6 +10,8 @@ static struct {
     [OP_ADD]     = { "add",      0 },
     [OP_ANDX]    = { "andx",     0 },
     [OP_AND]     = { "and",      0 },
+    [OP_ARRAY0]  = { "array  0", 0 },
+    [OP_ARRAYK]  = { "array",    1 },
     [OP_ARRAY]   = { "array",    1 },
     [OP_CALL]    = { "call",     1 },
     [OP_CATX]    = { "catx",     0 },
@@ -36,9 +38,9 @@ static struct {
     [OP_JNZ8]    = { "jnz",      1 },
     [OP_JZ16]    = { "jz",       2 },
     [OP_JZ8]     = { "jz",       1 },
-    [OP_LEN]     = { "len",      0 },
-    [OP_LE]      = { "le",       0 },
-    [OP_LNOT]    = { "lnot",     0 },
+    [OP_LCL0]    = { "lcl    0", 0 },
+    [OP_LCL1]    = { "lcl    1", 0 },
+    [OP_LCL2]    = { "lcl    2", 0 },
     [OP_LCLA0]   = { "lcla   0", 0 },
     [OP_LCLA1]   = { "lcla   1", 0 },
     [OP_LCLA2]   = { "lcla   2", 0 },
@@ -47,10 +49,10 @@ static struct {
     [OP_LCLV1]   = { "lclv   1", 0 },
     [OP_LCLV2]   = { "lclv   2", 0 },
     [OP_LCLV]    = { "lclv",     1 },
-    [OP_LCL0]    = { "lcl    0", 0 },
-    [OP_LCL1]    = { "lcl    1", 0 },
-    [OP_LCL2]    = { "lcl    2", 0 },
     [OP_LCL]     = { "lcl",      1 },
+    [OP_LEN]     = { "len",      0 },
+    [OP_LE]      = { "le",       0 },
+    [OP_LNOT]    = { "lnot",     0 },
     [OP_LT]      = { "lt",       0 },
     [OP_MODX]    = { "modx",     0 },
     [OP_MOD]     = { "mod",      0 },
@@ -141,6 +143,7 @@ void d_code_chunk(code_t *c) {
             b1 = c->code[ip+1];
             switch (b0) {
             case OP_PUSHK:
+            case OP_ARRAYK:
                 switch (c->k.v[b1]->type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND(f));

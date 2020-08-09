@@ -218,13 +218,11 @@ static void call(parser_t *y) {
     push((uint8_t) n);
 }
 
-// TODO Currently limited to 255 elements
 // TODO Support arbitrary indexing a la C99 designators
 static void array(parser_t *y) {
     int n = expr_list(y, '}');
     consume(y, '}', "Expected '}'");
-    push(OP_ARRAY);
-    push((uint8_t) n);
+    c_array(y->c, n);
 }
 
 static int nud(parser_t *y) {
