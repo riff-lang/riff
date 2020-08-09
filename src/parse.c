@@ -529,6 +529,7 @@ static void if_stmt(parser_t *y) {
     pop_locals(y);
 }
 
+// TODO scoping issue: `local a = a`
 static void local_stmt(parser_t *y) {
     while (1) {
         unset_all;
@@ -552,7 +553,7 @@ static void local_stmt(parser_t *y) {
                 y->loc.l = realloc(y->loc.l, sizeof(local) * y->loc.cap);
             }
             y->loc.l[y->loc.n].id = s_newstr(id->str, id->l, 1);
-            y->loc.l[y->loc.n].d = y->ld;
+            y->loc.l[y->loc.n].d  = y->ld;
             switch (y->loc.n) {
             case 0: push(OP_LCL0); break;
             case 1: push(OP_LCL1); break;
@@ -635,7 +636,7 @@ static void stmt(parser_t *y) {
     case TK_FN:     adv; fn_def(y);     break; // TODO
     case TK_FOR:    adv; for_stmt(y);   break; // TODO
     case TK_IF:     adv; if_stmt(y);    break;
-    case TK_LOCAL:  adv; local_stmt(y); break; // TODO
+    case TK_LOCAL:  adv; local_stmt(y); break;
     case TK_PRINT:  adv; print_stmt(y); break;
     case TK_RETURN: adv; ret_stmt(y);   break;
     case TK_WHILE:  adv; while_stmt(y); break;
@@ -643,7 +644,6 @@ static void stmt(parser_t *y) {
     }
 }
 
-// TODO instruct VM to clean up top-level locals
 static void stmt_list(parser_t *y) {
     while (!(y->x->tk.kind == TK_EOI ||
              y->x->tk.kind == '}'))
