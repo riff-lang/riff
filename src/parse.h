@@ -22,6 +22,7 @@ typedef struct {
     lexer_t *x;     // Parser controls lexical analysis
     code_t  *c;     // Current code object
 
+    // TODO un-structify this
     struct {
         int    n;
         int    cap;

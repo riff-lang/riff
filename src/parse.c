@@ -549,7 +549,10 @@ static void local_stmt(parser_t *y) {
         // If the identifier doesn't already exist as a local at the
         // current scope, add a new local
         if (idx < 0 || y->loc.l[idx].d != y->ld) {
-            eval_resize(y->loc.l, y->loc.n, y->loc.cap);
+            if (y->loc.cap <= y->loc.n) {
+                y->loc.cap = y->loc.cap < 8 ? 8 : y->loc.cap * 2;
+                y->loc.l = realloc(y->loc.l, sizeof(local) * y->loc.cap);
+            }
             y->loc.l[y->loc.n].id = s_newstr(id->str, id->l, 1);
             y->loc.l[y->loc.n].d = y->ld;
             switch (y->loc.n) {
