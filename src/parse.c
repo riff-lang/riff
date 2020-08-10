@@ -345,7 +345,6 @@ static int led(parser_t *y, int p, int tk) {
     return p;
 }
 
-// TODO have nud() and led() return the last (rightmost) token parsed
 static int expr(parser_t *y, int rbp) {
     int p  = nud(y);
     int tk = y->x->tk.kind;
@@ -680,7 +679,7 @@ int y_compile(const char *src, code_t *c) {
     y.c = c;
     y_init(&y, src);
     stmt_list(&y);
-    pop_locals(&y);     // TODO?
+    pop_locals(&y);
     c_push(c, OP_RET);
     x_free(&x);
     return 0;
