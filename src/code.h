@@ -134,5 +134,6 @@ void c_postfix(code_t *, int);
 void c_jump(code_t *, int, int);
 void c_patch(code_t *, int);
 int  c_prep_jump(code_t *, int);
+void c_print(code_t *, int);
 
 #endif

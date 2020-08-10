@@ -207,19 +207,19 @@ static void set_index(parser_t *y) {
 }
 
 static int expr_list(parser_t *y, int c) {
-    int e = 0;
+    int n = 0;
     while (y->x->tk.kind != c) {
         int rx = y->rx; // Save flag
         unset(rx);      // Unset
         expr(y, 0);
         y->rx = rx;     // Restore flag
-        ++e;
+        ++n;
         if (y->x->tk.kind == ',')
             adv;
         else
             break;
     }
-    return e;
+    return n;
 }
 
 static void call(parser_t *y) {
@@ -375,7 +375,7 @@ static int expr(parser_t *y, int rbp) {
 // Standalone expressions
 static void expr_stmt(parser_t *y) {
     unset_all;
-    int e = expr_list(y, 0);
+    int n = expr_list(y, 0);
 
     // Implicit printing conditions
     // 1. Leftmost expr is not being assigned to
@@ -392,14 +392,8 @@ static void expr_stmt(parser_t *y) {
     //   x++ ? y : z (Print)
     //   ++a[b]      (Do not print)
     //   a[++b]      (Print)
-    if (e > 1 || (!y->ax && (!y->px || y->ox))) {
-        if (e == 1)
-            push(OP_PRINT1);
-        else {
-            push(OP_PRINT);
-            push((uint8_t) e);
-        }
-    }
+    if (n > 1 || (!y->ax && (!y->px || y->ox)))
+        c_print(y->c, n);
     else
         push(OP_POP);
 }
@@ -594,15 +588,10 @@ static void print_stmt(parser_t *y) {
         paren = ')';
     }
     const char *p = y->x->p;    // Save pointer
-    int e = expr_list(y, paren);
+    int n = expr_list(y, paren);
     if (p == y->x->p)           // No expression parsed
         err(y, "Expected expression following `print`");
-    if (e == 1)
-        push(OP_PRINT1);
-    else {
-        push(OP_PRINT);
-        push((uint8_t) e);
-    }
+    c_print(y->c, n);
     if (paren)
         consume(y, ')', "Expected ')'");
 }

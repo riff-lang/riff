@@ -337,4 +337,13 @@ void c_postfix(code_t *c, int op) {
     }
 }
 
+void c_print(code_t *c, int n) {
+    if (n == 1)
+        push(OP_PRINT1);
+    else {
+        push(OP_PRINT);
+        push((uint8_t) n);
+    }
+}
+
 #undef push
