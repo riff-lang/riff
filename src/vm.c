@@ -62,23 +62,17 @@ void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
 void z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
 void z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
 
-// TODO?
 // Language comparison for division by zero:
 // `inf`: lua, mawk
 // error: pretty much all others
 void z_div(val_t *l, val_t *r) {
-    if (!numval(r))
-        err("division by zero");
     flt_arith(l,r,/);
 }
 
-// TODO?
 // Language comparison for modulus by zero:
 // `nan`: mawk
 // error: pretty much all others
 void z_mod(val_t *l, val_t *r) {
-    if (!numval(r))
-        err("modulus by zero");
     flt_t res = fmod(numval(l), numval(r));
     assign_flt(l, res < 0 ? res + numval(r) : res);
 }
