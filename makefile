@@ -20,6 +20,8 @@ SRC    += src/str.c
 SRC    += src/val.c
 SRC    += src/vm.c
 
+.PHONY: all compile mem warn
+
 all: compile
 
 compile:
