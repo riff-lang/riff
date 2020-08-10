@@ -33,8 +33,10 @@ typedef struct {
     uint8_t  ox;    // Typical (i.e. not ++/--) operation flag
     uint8_t  px;    // Prefix or postfix increment/decrement flag
 
-    uint8_t  idx;   // Depth of index (for exprs inside [])
+    uint8_t  lx;    // Local flag (newly-declared)
     uint8_t  rx;    // Reference flag - OP_xxA vs OP_xxV instructions
+
+    uint8_t  idx;   // Depth of index (for exprs inside [])
     uint8_t  ld;    // Lexical depth/scope
 
     p_list  *brk;   // Patch list for break stmts (current loop)

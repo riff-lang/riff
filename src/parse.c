@@ -105,7 +105,18 @@ static void literal(parser_t *y) {
 static int resolve_local(parser_t *y, str_t *s) {
     if (!y->nlcl)
         return -1;
-    for (int i = y->nlcl - 1; i >= 0; --i) {
+
+    // If LHS hasn't been evaluated or we're not inside a local
+    // statement, search through all active locals. Otherwise, we're
+    // evaluating the RHS of a newly declared local and should exclude
+    // it from its own initialization.
+    //
+    // This allows for statements like `local x = x` where the LHS `x`
+    // refers to a newly-declared local and the RHS refers to any `x`
+    // previously in scope.
+    int i = (!y->lhs || !y->lx) ? y->nlcl - 1 : y->nlcl - 2;
+
+    for (; i >= 0; --i) {
         if (y->lcl[i].id->hash == s->hash &&
             y->lcl[i].d <= y->ld)
             return i;
@@ -529,7 +540,6 @@ static void if_stmt(parser_t *y) {
     pop_locals(y);
 }
 
-// TODO scoping issue: `local a = a`
 static void local_stmt(parser_t *y) {
     while (1) {
         unset_all;
@@ -548,6 +558,7 @@ static void local_stmt(parser_t *y) {
         // If the identifier doesn't already exist as a local at the
         // current scope, add a new local
         if (idx < 0 || y->lcl[idx].d != y->ld) {
+            set(lx);    // Only set for newly-declared locals
             if (y->lcap <= y->nlcl) {
                 y->lcap = y->lcap < 8 ? 8 : y->lcap * 2;
                 y->lcl = realloc(y->lcl, sizeof(local) * y->lcap);
@@ -568,6 +579,7 @@ static void local_stmt(parser_t *y) {
         expr(y, 0);
         push(OP_POP);
 
+        unset(lx);
         if (y->x->tk.kind == ',')
             adv;
         else
@@ -652,6 +664,7 @@ static void stmt_list(parser_t *y) {
 
 static void y_init(parser_t *y, const char *src) {
     unset_all;
+    unset(lx);
     x_init(y->x, src);
 
     y->nlcl = 0;
