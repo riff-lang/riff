@@ -573,6 +573,12 @@ int z_exec(code_t *c) {
     return 0;
 }
 
+#undef numval
+#undef intval
+#undef fltval
+#undef int_arith
+#undef flt_arith
+#undef num_arith
 #undef j8
 #undef j16
 #undef jc8
@@ -588,5 +594,7 @@ int z_exec(code_t *c) {
 #undef pushk
 #undef gbla
 #undef gblv
+#undef lcl
 #undef lcla
 #undef lclv
+#undef new_array
