@@ -1,23 +1,36 @@
 // Local variables
 
 a = 2
-
 if 1 {
     local a = 4     // Local declaration w/ assignment
     a               // Should print 4
 }
-
 a                   // Should print 2
 
 b = 3
-
 if 1 {
     local b         // Local declaration; no assignment
     b               // Should print "null"
 }
-
 b                   // Should print 3
 
+c = 12
+if 1 {
+    // Should declare new local, initialized with access to global
+    // value of same name
+    local c = c + 1
+    c               // Should print 13
+}
+c                   // Should print 12
+
+d = 3
+if 1 {
+    // New local declaration, with access to homonymous global,
+    // including modification (e.g. prefix increment)
+    local d = ++d + 1
+    d               // Should print 5
+}
+d                   // Should print 4
 
 local a, b = 2
 a, b                // Should print "null 2"
