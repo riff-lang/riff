@@ -588,9 +588,14 @@ static void local_stmt(parser_t *y) {
 }
 
 static void print_stmt(parser_t *y) {
-    const char *p = y->x->p; // Save pointer
-    int e = expr_list(y, 0);
-    if (p == y->x->p)        // No expression parsed
+    int paren = 0;
+    if (y->x->tk.kind == '(') { // Parenthesized expr list?
+        adv;
+        paren = ')';
+    }
+    const char *p = y->x->p;    // Save pointer
+    int e = expr_list(y, paren);
+    if (p == y->x->p)           // No expression parsed
         err(y, "Expected expression following `print`");
     if (e == 1)
         push(OP_PRINT1);
@@ -598,6 +603,8 @@ static void print_stmt(parser_t *y) {
         push(OP_PRINT);
         push((uint8_t) e);
     }
+    if (paren)
+        consume(y, ')', "Expected ')'");
 }
 
 static void ret_stmt(parser_t *y) {
