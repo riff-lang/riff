@@ -248,7 +248,11 @@ static int nud(rf_parser *y) {
         return 0;
     }
     switch (tk) {
-    case '$':
+
+    // TODO
+    case '$': {
+        int ox = y->ox;
+        unset(ox);
         adv;
         set(argx);
         expr(y, 16);
@@ -259,9 +263,11 @@ static int nud(rf_parser *y) {
             push(OP_ARGA);
         } else
             push(OP_ARGV);
-        unset(argx);
         if (!y->lhs) set(lhs);
+        unset(argx);
+        y->ox = ox;
         break;
+    }
     case '(':
         adv;
         expr(y, 0);
@@ -349,7 +355,7 @@ static int led(rf_parser *y, int p, int tk) {
                 } else {
                     set(ox);
                 }
-            } else if (y->argx && (is_asgmt(tk) && y->ox)) {
+            } else if (!y->argx && (is_asgmt(tk) && y->ox)) {
                 err(y, "Syntax error");
             }
             unset(rx);
