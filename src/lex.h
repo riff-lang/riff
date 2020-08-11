@@ -11,11 +11,11 @@
 typedef struct {
     int kind;
     union {
-        flt_t  f;
-        int_t  i;
-        str_t *s;
+        rf_flt  f;
+        rf_int  i;
+        rf_str *s;
     } lexeme;
-} token_t;
+} rf_token;
 
 enum tokens {
     // NOTE: Single character tokens are implicitly enumerated
@@ -73,19 +73,19 @@ enum tokens {
 
 typedef struct {
     int         ln; // Current line of the source
-    token_t     tk; // Current token
-    token_t     la; // Lookahead token
+    rf_token    tk; // Current token
+    rf_token    la; // Lookahead token
     const char *p;  // Pointer to the current position in the source
     struct {
         int   n;
         int   cap;
         char *c;
-    } buffer;       // String buffer
-} lexer_t;
+    } buf;          // String buffer
+} rf_lexer;
 
-int  x_init(lexer_t *, const char *);
-void x_free(lexer_t *);
-int  x_adv(lexer_t *);
-int  x_peek(lexer_t *);
+int  x_init(rf_lexer *, const char *);
+void x_free(rf_lexer *);
+int  x_adv(rf_lexer *);
+int  x_peek(rf_lexer *);
 
 #endif

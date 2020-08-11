@@ -5,12 +5,12 @@
 
 #define push(x) c_push(c, x)
 
-static void err(code_t *c, const char *msg) {
+static void err(rf_code *c, const char *msg) {
     fprintf(stderr, "%s\n", msg);
     exit(1);
 }
 
-void c_init(code_t *c) {
+void c_init(rf_code *c) {
     c->n     = 0;
     c->cap   = 0;
     c->code  = NULL;
@@ -19,19 +19,19 @@ void c_init(code_t *c) {
     c->k.v   = NULL;
 }
 
-void c_push(code_t *c, uint8_t b) {
+void c_push(rf_code *c, uint8_t b) {
     eval_resize(c->code, c->n, c->cap);
     c->code[c->n++] = b;
 }
 
-void c_free(code_t *c) {
+void c_free(rf_code *c) {
     free(c);
     c_init(c);
 }
 
 // Push a jump instruction and return the location of the byte to be
 // patched
-int c_prep_jump(code_t *c, int type) {
+int c_prep_jump(rf_code *c, int type) {
     switch (type) {
     case JMP:  push(OP_JMP8);  break;
     case JZ:   push(OP_JZ8);   break; 
@@ -45,7 +45,7 @@ int c_prep_jump(code_t *c, int type) {
 }
 
 // Simple backward jumps. Encode a 2-byte offset if necessary.
-void c_jump(code_t *c, int type, int l) {
+void c_jump(rf_code *c, int type, int l) {
     int d = l - c->n;
     uint8_t jmp;
     if (d <= INT8_MAX && d >= INT8_MIN) {
@@ -77,14 +77,14 @@ void c_jump(code_t *c, int type, int l) {
 // Overwrite the byte at location `l` with the distance between
 // the code object's "current" instruction and `l`. Useful for patching
 // forward jumps.
-void c_patch(code_t *c, int l) {
+void c_patch(rf_code *c, int l) {
     int jmp = c->n - l + 1;
     if (jmp > INT8_MAX)
         err(c, "Forward jump too large to patch");
     c->code[l] = (int8_t) jmp;
 }
 
-static void c_pushk(code_t *c, int i) {
+static void c_pushk(rf_code *c, int i) {
     switch (i) {
     case 0: push(OP_PUSHK0); break;
     case 1: push(OP_PUSHK1); break;
@@ -96,9 +96,9 @@ static void c_pushk(code_t *c, int i) {
     }
 }
 
-// Add a val_t literal to a code object's constant table, if
+// Add a rf_val literal to a code object's constant table, if
 // necessary
-void c_constant(code_t *c, token_t *tk) {
+void c_constant(rf_code *c, rf_token *tk) {
 
     // Search for existing duplicate literal
     for (int i = 0; i < c->k.n; i++) {
@@ -132,13 +132,13 @@ void c_constant(code_t *c, token_t *tk) {
     }
 
     // Provided literal does not already exist in constant table
-    val_t *v;
+    rf_val *v;
     switch (tk->kind) {
     case TK_FLT:
         v = v_newflt(tk->lexeme.f);
         break;
     case TK_INT: {
-        int_t i = tk->lexeme.i;
+        rf_int i = tk->lexeme.i;
         switch (i) {
         case 0: push(OP_PUSH0); return;
         case 1: push(OP_PUSH1); return;
@@ -168,7 +168,7 @@ void c_constant(code_t *c, token_t *tk) {
     c_pushk(c, c->k.n - 1);
 }
 
-static void push_global_addr(code_t *c, int i) {
+static void push_global_addr(rf_code *c, int i) {
     switch (i) {
     case 0: push(OP_GBLA0); break;
     case 1: push(OP_GBLA1); break;
@@ -180,7 +180,7 @@ static void push_global_addr(code_t *c, int i) {
     }
 }
 
-static void push_global_val(code_t *c, int i) {
+static void push_global_val(rf_code *c, int i) {
     switch (i) {
     case 0: push(OP_GBLV0); break;
     case 1: push(OP_GBLV1); break;
@@ -192,11 +192,11 @@ static void push_global_val(code_t *c, int i) {
     }
 }
 
-// mode = 1 => VM will push the pointer to the val_t in the global
+// mode = 1 => VM will push the pointer to the rf_val in the global
 //             hash table onto the stack
-// mode = 0 => VM will make a copy of the global's val_t and push it
+// mode = 0 => VM will make a copy of the global's rf_val and push it
 //             onto the stack
-void c_global(code_t *c, token_t *tk, int mode) {
+void c_global(rf_code *c, rf_token *tk, int mode) {
 
     // Search for existing symbol
     for (int i = 0; i < c->k.n; i++) {
@@ -207,7 +207,7 @@ void c_global(code_t *c, token_t *tk, int mode) {
             return;
         }
     }
-    val_t *v;
+    rf_val *v;
     v = v_newstr(tk->lexeme.s);
     eval_resize(c->k.v, c->k.n, c->k.cap);
     c->k.v[c->k.n++] = v;
@@ -217,7 +217,7 @@ void c_global(code_t *c, token_t *tk, int mode) {
     else      push_global_val(c, c->k.n - 1);
 }
 
-static void push_local_addr(code_t *c, int i) {
+static void push_local_addr(rf_code *c, int i) {
     switch (i) {
     case 0: push(OP_LCLA0); break;
     case 1: push(OP_LCLA1); break;
@@ -229,7 +229,7 @@ static void push_local_addr(code_t *c, int i) {
     }
 }
 
-static void push_local_val(code_t *c, int i) {
+static void push_local_val(rf_code *c, int i) {
     switch (i) {
     case 0: push(OP_LCLV0); break;
     case 1: push(OP_LCLV1); break;
@@ -241,17 +241,17 @@ static void push_local_val(code_t *c, int i) {
     }
 }
 
-// mode = 1 => VM will push the pointer to the val_t at stack[i]
-// mode = 0 => VM will make a copy of the val_t at stack[i] and push
-//             onto the stack
-void c_local(code_t *c, int i, int mode) {
+// mode = 1 => VM will push the pointer to the rf_val at stack[i]
+// mode = 0 => VM will make a copy of the rf_val at stack[i] and
+//             push onto the stack
+void c_local(rf_code *c, int i, int mode) {
     if (mode)
         push_local_addr(c, i);
     else
         push_local_val(c, i);
 }
 
-void c_array(code_t *c, int n) {
+void c_array(rf_code *c, int n) {
     if (!n)
         push(OP_ARRAY0);
     else if (n <= 0xff) {
@@ -279,7 +279,7 @@ void c_array(code_t *c, int n) {
 
 // TODO this function will be used to evaluate infix expression
 // "nodes" and fold constants if possible.
-void c_infix(code_t *c, int op) {
+void c_infix(rf_code *c, int op) {
     switch (op) {
     case '+':     push(OP_ADD);  break;
     case '-':     push(OP_SUB);  break;
@@ -316,7 +316,7 @@ void c_infix(code_t *c, int op) {
     }
 }
 
-void c_prefix(code_t *c, int op) {
+void c_prefix(rf_code *c, int op) {
     switch (op) {
     case '!':    push(OP_LNOT);   break;
     case '#':    push(OP_LEN);    break;
@@ -329,7 +329,7 @@ void c_prefix(code_t *c, int op) {
     }
 }
 
-void c_postfix(code_t *c, int op) {
+void c_postfix(rf_code *c, int op) {
     switch (op) {
     case TK_INC: push(OP_POSTINC); break;
     case TK_DEC: push(OP_POSTDEC); break;
@@ -337,7 +337,7 @@ void c_postfix(code_t *c, int op) {
     }
 }
 
-void c_print(code_t *c, int n) {
+void c_print(rf_code *c, int n) {
     if (n == 1)
         push(OP_PRINT1);
     else {

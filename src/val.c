@@ -1,39 +1,39 @@
 #include "array.h"
 #include "types.h"
 
-val_t *v_newnull(void) {
-    val_t *v = malloc(sizeof(val_t));
-    v->type = TYPE_NULL;
-    v->u.s  = NULL;
+rf_val *v_newnull(void) {
+    rf_val *v = malloc(sizeof(rf_val));
+    v->type   = TYPE_NULL;
+    v->u.s    = NULL;
     return v;
 }
 
-val_t *v_newint(int_t i) {
-    val_t *v = malloc(sizeof(val_t));
-    v->type = TYPE_INT;
-    v->u.i  = i;
+rf_val *v_newint(rf_int i) {
+    rf_val *v = malloc(sizeof(rf_val));
+    v->type   = TYPE_INT;
+    v->u.i    = i;
     return v;
 }
 
-val_t *v_newflt(flt_t f) {
-    val_t *v = malloc(sizeof(val_t));
-    v->type = TYPE_FLT;
-    v->u.f  = f;
+rf_val *v_newflt(rf_flt f) {
+    rf_val *v = malloc(sizeof(rf_val));
+    v->type   = TYPE_FLT;
+    v->u.f    = f;
     return v;
 }
 
-val_t *v_newstr(str_t *s) {
-    str_t *ns = s_newstr(s->str, s->l, 0);
-    val_t *v = malloc(sizeof(val_t));
-    v->type = TYPE_STR;
-    v->u.s  = ns;
+rf_val *v_newstr(rf_str *s) {
+    rf_str *ns   = s_newstr(s->str, s->l, 0);
+    rf_val *v    = malloc(sizeof(rf_val));
+    v->type      = TYPE_STR;
+    v->u.s       = ns;
     v->u.s->hash = s->hash;
     return v;
 }
 
-val_t *v_newarr(void) {
-    val_t *v = malloc(sizeof(val_t));
-    arr_t *a = malloc(sizeof(arr_t));
+rf_val *v_newarr(void) {
+    rf_val *v = malloc(sizeof(rf_val));
+    rf_arr *a = malloc(sizeof(rf_arr));
     a_init(a);
     v->type = TYPE_ARR;
     v->u.a  = a;

@@ -19,7 +19,7 @@
 // TODO Syntax error handling; parser should do as much heavy lifting
 // as possible
 
-static void err(parser_t *y, const char *msg) {
+static void err(rf_parser *y, const char *msg) {
     fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
     exit(1);
 }
@@ -40,12 +40,12 @@ static int const_follow_ok(int tk) {
     return !(is_incdec(tk) || tk == '(');
 }
 
-static void check(parser_t *y, int tk, const char *msg) {
+static void check(rf_parser *y, int tk, const char *msg) {
     if (y->x->tk.kind != tk)
         err(y, msg);
 }
 
-static void consume(parser_t *y, int tk, const char *msg) {
+static void consume(rf_parser *y, int tk, const char *msg) {
     check(y, tk, msg);
     adv;
 }
@@ -92,9 +92,9 @@ static int rbop(int tk) {
     return is_asgmt(tk) || tk == TK_POW;
 }
 
-static int expr(parser_t *y, int rbp);
+static int expr(rf_parser *y, int rbp);
 
-static void literal(parser_t *y) {
+static void literal(rf_parser *y) {
     c_constant(y->c, &y->x->tk);
     adv;
     // Assert no assignment appears following a constant literal
@@ -102,7 +102,7 @@ static void literal(parser_t *y) {
         err(y, "Attempt to assign to constant value");
 }
 
-static int resolve_local(parser_t *y, str_t *s) {
+static int resolve_local(rf_parser *y, rf_str *s) {
     if (!y->nlcl)
         return -1;
 
@@ -124,7 +124,7 @@ static int resolve_local(parser_t *y, str_t *s) {
     return -1;
 }
 
-static void identifier(parser_t *y) {
+static void identifier(rf_parser *y) {
     int scope = resolve_local(y, y->x->tk.lexeme.s);
 
     // If symbol succeeds a prefix ++/-- operation, signal codegen
@@ -158,7 +158,7 @@ static void identifier(parser_t *y) {
     adv;
 }
 
-static int conditional(parser_t *y) {
+static int conditional(rf_parser *y) {
     int e, l1, l2;
 
     // x ?: y
@@ -183,7 +183,7 @@ static int conditional(parser_t *y) {
 }
 
 // Short-circuiting logical operations (&&, ||)
-static void logical(parser_t *y, int tk) {
+static void logical(rf_parser *y, int tk) {
     push(OP_TEST);
     int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
     expr(y, lbp(tk));
@@ -192,7 +192,7 @@ static void logical(parser_t *y, int tk) {
 }
 
 // Retrieve index of a set (string/array, but works for numbers as well)
-static void set_index(parser_t *y) {
+static void set_index(rf_parser *y) {
     y->idx++;
     int rx = y->rx; // Save flag
     unset(rx);      // Unset
@@ -206,7 +206,7 @@ static void set_index(parser_t *y) {
     y->idx--;
 }
 
-static int expr_list(parser_t *y, int c) {
+static int expr_list(rf_parser *y, int c) {
     int n = 0;
     while (y->x->tk.kind != c) {
         int rx = y->rx; // Save flag
@@ -222,7 +222,7 @@ static int expr_list(parser_t *y, int c) {
     return n;
 }
 
-static void call(parser_t *y) {
+static void call(rf_parser *y) {
     int n = expr_list(y, ')');
     consume(y, ')', "Expected ')'");
     push(OP_CALL);
@@ -230,13 +230,13 @@ static void call(parser_t *y) {
 }
 
 // TODO Support arbitrary indexing a la C99 designators
-static void array(parser_t *y) {
+static void array(rf_parser *y) {
     int n = expr_list(y, '}');
     consume(y, '}', "Expected '}'");
     c_array(y->c, n);
 }
 
-static int nud(parser_t *y) {
+static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
     if (uop(tk)) {
         set(ox);
@@ -287,7 +287,7 @@ static int nud(parser_t *y) {
     return tk;
 }
 
-static int led(parser_t *y, int p, int tk) {
+static int led(rf_parser *y, int p, int tk) {
     switch (tk) {
     case TK_INC: case TK_DEC:
         if (is_const(p) || y->rx)
@@ -345,7 +345,7 @@ static int led(parser_t *y, int p, int tk) {
     return p;
 }
 
-static int expr(parser_t *y, int rbp) {
+static int expr(rf_parser *y, int rbp) {
     int p  = nud(y);
     int tk = y->x->tk.kind;
 
@@ -372,7 +372,7 @@ static int expr(parser_t *y, int rbp) {
 }
 
 // Standalone expressions
-static void expr_stmt(parser_t *y) {
+static void expr_stmt(rf_parser *y) {
     unset_all;
     int n = expr_list(y, 0);
 
@@ -397,10 +397,10 @@ static void expr_stmt(parser_t *y) {
         push(OP_POP);
 }
 
-static void stmt_list(parser_t *);
-static void stmt(parser_t *);
+static void stmt_list(rf_parser *);
+static void stmt(rf_parser *);
 
-static void break_stmt(parser_t *y) {
+static void break_stmt(rf_parser *y) {
     if (!y->ld)
         err(y, "break statement outside of loop");
     // Reserve a forward jump
@@ -409,7 +409,7 @@ static void break_stmt(parser_t *y) {
     p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
 
-static void cont_stmt(parser_t *y) {
+static void cont_stmt(rf_parser *y) {
     if (!y->ld)
         err(y, "continue statement outside of loop");
     // Reserve a forward jump
@@ -426,7 +426,7 @@ static void p_init(p_list *p) {
 
 // After exiting scope, "pop" local variables no longer in scope by
 // decrementing y->nlcl
-static void pop_locals(parser_t *y) {
+static void pop_locals(rf_parser *y) {
     if (!y->nlcl) return;
 
     int count = 0;
@@ -447,7 +447,7 @@ static void pop_locals(parser_t *y) {
     }
 }
 
-static void enter_loop(parser_t *y, p_list *b, p_list *c) {
+static void enter_loop(rf_parser *y, p_list *b, p_list *c) {
     y->ld++;
     p_init(b);
     p_init(c);
@@ -455,7 +455,7 @@ static void enter_loop(parser_t *y, p_list *b, p_list *c) {
     y->cont = c;
 }
 
-static void exit_loop(parser_t *y, p_list *ob, p_list *oc, p_list *nb, p_list *nc) {
+static void exit_loop(rf_parser *y, p_list *ob, p_list *oc, p_list *nb, p_list *nc) {
     pop_locals(y);
     y->ld--;
     y->brk  = ob;
@@ -463,7 +463,7 @@ static void exit_loop(parser_t *y, p_list *ob, p_list *oc, p_list *nb, p_list *n
     if (nb->n) free(nb->l);
     if (nc->n) free(nc->l);
 }
-static void do_stmt(parser_t *y) {
+static void do_stmt(rf_parser *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
     p_list b, c;
@@ -490,19 +490,19 @@ static void do_stmt(parser_t *y) {
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
-static void exit_stmt(parser_t *y) {
+static void exit_stmt(rf_parser *y) {
     push(OP_EXIT);
 }
 
 // TODO
-static void fn_def(parser_t *y) {
+static void fn_def(rf_parser *y) {
 }
 
 // TODO
-static void for_stmt(parser_t *y) {
+static void for_stmt(rf_parser *y) {
 }
 
-static void if_stmt(parser_t *y) {
+static void if_stmt(rf_parser *y) {
     expr(y, 0);
     int l1, l2;
     y->ld++;
@@ -533,10 +533,10 @@ static void if_stmt(parser_t *y) {
     pop_locals(y);
 }
 
-static void local_stmt(parser_t *y) {
+static void local_stmt(rf_parser *y) {
     while (1) {
         unset_all;
-        str_t *id;
+        rf_str *id;
         if (y->x->tk.kind != TK_ID) {
             peek;
             if (y->x->la.kind != TK_ID)
@@ -580,7 +580,7 @@ static void local_stmt(parser_t *y) {
     }
 }
 
-static void print_stmt(parser_t *y) {
+static void print_stmt(rf_parser *y) {
     int paren = 0;
     if (y->x->tk.kind == '(') { // Parenthesized expr list?
         adv;
@@ -595,7 +595,7 @@ static void print_stmt(parser_t *y) {
         consume(y, ')', "Expected ')'");
 }
 
-static void ret_stmt(parser_t *y) {
+static void ret_stmt(rf_parser *y) {
     const char *p = y->x->p; // Save pointer
     expr(y, 0);
     if (p == y->x->p)        // No expression parsed
@@ -604,7 +604,7 @@ static void ret_stmt(parser_t *y) {
         push(OP_RET1);
 }
 
-static void while_stmt(parser_t *y) {
+static void while_stmt(rf_parser *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
     p_list b, c;
@@ -633,7 +633,7 @@ static void while_stmt(parser_t *y) {
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
-static void stmt(parser_t *y) {
+static void stmt(rf_parser *y) {
     switch (y->x->tk.kind) {
     case ';':       adv;                break;
     case TK_BREAK:  adv; break_stmt(y); break;
@@ -651,13 +651,13 @@ static void stmt(parser_t *y) {
     }
 }
 
-static void stmt_list(parser_t *y) {
+static void stmt_list(rf_parser *y) {
     while (!(y->x->tk.kind == TK_EOI ||
              y->x->tk.kind == '}'))
         stmt(y);
 }
 
-static void y_init(parser_t *y, const char *src) {
+static void y_init(rf_parser *y, const char *src) {
     unset_all;
     unset(lx);
     x_init(y->x, src);
@@ -672,9 +672,9 @@ static void y_init(parser_t *y, const char *src) {
     y->cont = NULL;
 }
 
-int y_compile(const char *src, code_t *c) {
-    parser_t y;
-    lexer_t x;
+int y_compile(const char *src, rf_code *c) {
+    rf_parser y;
+    rf_lexer x;
     y.x = &x;
     y.c = c;
     y_init(&y, src);

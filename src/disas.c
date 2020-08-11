@@ -126,7 +126,7 @@ static int is_jump16(int op) {
 }
 
 // TODO This function is way too big for its own good
-void d_code_chunk(code_t *c) {
+void d_code_chunk(rf_code *c) {
     int sz  = c->n;
     int ipw = sz <= 10   ? 1
             : sz <= 100  ? 2
@@ -276,7 +276,7 @@ static const char *tokenstr[] = {
 #define OPTR_STR "<Operator, %s >"
 #define KW_STR   "<Keyword, %s>"
 
-static void tk2str(token_t *tk, char *s) {
+static void tk2str(rf_token *tk, char *s) {
     if (tk->kind < TK_AND)
         sprintf(s, "<Operator, %c >", tk->kind);
     else if (tk->kind < TK_BREAK)
@@ -310,7 +310,7 @@ static void tk2str(token_t *tk, char *s) {
 #undef KW_STR
 
 void d_tk_stream(const char *src) {
-    lexer_t x;
+    rf_lexer x;
     x_init(&x, src);
     do {
         char s[1024];

@@ -115,25 +115,25 @@ typedef struct {
     int      cap;
     uint8_t *code;
     struct {
-        int     n;
-        int     cap;
-        val_t **v;
+        int      n;
+        int      cap;
+        rf_val **v;
     } k;        // Constants table
-} code_t;
+} rf_code;
 
-void c_init(code_t *);
-void c_push(code_t *, uint8_t);
-void c_free(code_t *);
-void c_constant(code_t *, token_t *);
-void c_global(code_t *, token_t *, int);
-void c_local(code_t *, int, int);
-void c_array(code_t *, int);
-void c_prefix(code_t *, int);
-void c_infix(code_t *, int);
-void c_postfix(code_t *, int);
-void c_jump(code_t *, int, int);
-void c_patch(code_t *, int);
-int  c_prep_jump(code_t *, int);
-void c_print(code_t *, int);
+void c_init(rf_code *);
+void c_push(rf_code *, uint8_t);
+void c_free(rf_code *);
+void c_constant(rf_code *, rf_token *);
+void c_global(rf_code *, rf_token *, int);
+void c_local(rf_code *, int, int);
+void c_array(rf_code *, int);
+void c_prefix(rf_code *, int);
+void c_infix(rf_code *, int);
+void c_postfix(rf_code *, int);
+void c_jump(rf_code *, int, int);
+void c_patch(rf_code *, int);
+int  c_prep_jump(rf_code *, int);
+void c_print(rf_code *, int);
 
 #endif

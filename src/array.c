@@ -9,7 +9,7 @@ static void err(const char *msg) {
     exit(1);
 }
 
-void a_init(arr_t *a) {
+void a_init(rf_arr *a) {
     // a->n     = 0;
     // a->a.n   = 0;
     // a->a.cap = 0;
@@ -24,16 +24,16 @@ void a_init(arr_t *a) {
 // space with sparse arrays) and there is at least one used slot
 // between n/2 + 1 and n (to avoid a size n when n/2 would do)
 
-static val_t *a_lookup_str(arr_t *a, str_t *k, int set) {
+static rf_val *a_lookup_str(rf_arr *a, rf_str *k, int set) {
     return h_lookup(a->h, k, set);
 }
 
 // If int k is within the capacity of the "array" part, perform the
 // lookup. Otherwise, defer to a_lookup_str().
-// static val_t *a_lookup_int(arr_t *a, int_t k) {
+// static rf_val *a_lookup_int(rf_arr *a, rf_int k) {
 // }
 
-val_t *a_lookup(arr_t *a, val_t *k, int set) {
+rf_val *a_lookup(rf_arr *a, rf_val *k, int set) {
     switch (k->type) {
     case TYPE_NULL: return a_lookup_str(a, s_int2str(0), set); // TODO
     case TYPE_INT:  return a_lookup_str(a, s_int2str(k->u.i), set);
@@ -46,15 +46,15 @@ val_t *a_lookup(arr_t *a, val_t *k, int set) {
     return NULL;
 }
 
-static val_t *a_insert_str(arr_t *a, str_t *k, val_t *v) {
+static rf_val *a_insert_str(rf_arr *a, rf_str *k, rf_val *v) {
     return h_insert(a->h, k, v, 1);
 }
 
-val_t *a_insert_int(arr_t *a, int_t k, val_t *v) {
+rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v) {
     return h_insert(a->h, s_int2str(k), v, 1);
 }
 
-val_t *a_insert(arr_t *a, val_t *k, val_t *v) {
+rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v) {
     switch (k->type) {
     case TYPE_INT: return a_insert_str(a, s_int2str(k->u.i), v);
     case TYPE_FLT: return a_insert_str(a, s_flt2str(k->u.f), v); // TODO
@@ -67,13 +67,13 @@ val_t *a_insert(arr_t *a, val_t *k, val_t *v) {
 }
 
 // TODO
-// static void a_delete_str(arr_t *a, str_t *k) {
+// static void a_delete_str(rf_arr *a, rf_str *k) {
 // }
 
 // TODO
-// static void a_delete_int(arr_t *a, int_t k) {
+// static void a_delete_int(rf_arr *a, rf_int k) {
 // }
 
 // TODO
-void a_delete(arr_t *a, val_t *k) {
+void a_delete(rf_arr *a, rf_val *k) {
 }

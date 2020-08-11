@@ -14,7 +14,7 @@ static void err(const char *msg) {
 static hash_t globals;
 
 // Return logical result of value
-static int test(val_t *v) {
+static int test(rf_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
@@ -25,12 +25,12 @@ static int test(val_t *v) {
     }
 }
 
-static int_t str2int(str_t *s) {
+static rf_int str2int(rf_str *s) {
     char *end;
-    return (int_t) strtoull(s->str, &end, 0);
+    return (rf_int) strtoull(s->str, &end, 0);
 }
 
-static flt_t str2flt(str_t *s) {
+static rf_flt str2flt(rf_str *s) {
     char *end;
     return strtod(s->str, &end);
 }
@@ -39,10 +39,10 @@ static flt_t str2flt(str_t *s) {
                    is_flt(x) ? x->u.f : \
                    is_str(x) ? str2flt(x->u.s) : 0)
 #define intval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? (int_t) x->u.f : \
+                   is_flt(x) ? (rf_int) x->u.f : \
                    is_str(x) ? str2int(x->u.s) : 0)
 #define fltval(x) (is_flt(x) ? x->u.f : \
-                   is_int(x) ? (flt_t) x->u.i : \
+                   is_int(x) ? (rf_flt) x->u.i : \
                    is_str(x) ? str2flt(x->u.s) : 0)
 
 #define int_arith(l,r,op) \
@@ -58,36 +58,36 @@ static flt_t str2flt(str_t *s) {
         int_arith(l,r,op); \
     }
 
-void z_add(val_t *l, val_t *r) { num_arith(l,r,+); }
-void z_sub(val_t *l, val_t *r) { num_arith(l,r,-); }
-void z_mul(val_t *l, val_t *r) { num_arith(l,r,*); }
+void z_add(rf_val *l, rf_val *r) { num_arith(l,r,+); }
+void z_sub(rf_val *l, rf_val *r) { num_arith(l,r,-); }
+void z_mul(rf_val *l, rf_val *r) { num_arith(l,r,*); }
 
 // Language comparison for division by zero:
 // `inf`: lua, mawk
 // error: pretty much all others
-void z_div(val_t *l, val_t *r) {
+void z_div(rf_val *l, rf_val *r) {
     flt_arith(l,r,/);
 }
 
 // Language comparison for modulus by zero:
 // `nan`: mawk
 // error: pretty much all others
-void z_mod(val_t *l, val_t *r) {
-    flt_t res = fmod(numval(l), numval(r));
+void z_mod(rf_val *l, rf_val *r) {
+    rf_flt res = fmod(numval(l), numval(r));
     assign_flt(l, res < 0 ? res + numval(r) : res);
 }
 
-void z_pow(val_t *l, val_t *r) {
+void z_pow(rf_val *l, rf_val *r) {
     assign_flt(l, pow(fltval(l), fltval(r)));
 }
 
-void z_and(val_t *l, val_t *r) { int_arith(l,r,&);  }
-void z_or(val_t *l, val_t *r)  { int_arith(l,r,|);  }
-void z_xor(val_t *l, val_t *r) { int_arith(l,r,^);  }
-void z_shl(val_t *l, val_t *r) { int_arith(l,r,<<); }
-void z_shr(val_t *l, val_t *r) { int_arith(l,r,>>); }
+void z_and(rf_val *l, rf_val *r) { int_arith(l,r,&);  }
+void z_or(rf_val *l, rf_val *r)  { int_arith(l,r,|);  }
+void z_xor(rf_val *l, rf_val *r) { int_arith(l,r,^);  }
+void z_shl(rf_val *l, rf_val *r) { int_arith(l,r,<<); }
+void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
 
-void z_num(val_t *v) {
+void z_num(rf_val *v) {
     switch (v->type) {
     case TYPE_INT:
         assign_int(v, intval(v));
@@ -104,7 +104,7 @@ void z_num(val_t *v) {
     }
 }
 
-void z_neg(val_t *v) {
+void z_neg(rf_val *v) {
     switch (v->type) {
     case TYPE_INT:
         assign_int(v, -intval(v));
@@ -121,23 +121,23 @@ void z_neg(val_t *v) {
     }
 }
 
-void z_not(val_t *v) {
+void z_not(rf_val *v) {
     assign_int(v, ~intval(v));
 }
 
-void z_eq(val_t *l, val_t *r) { num_arith(l,r,==); }
-void z_ne(val_t *l, val_t *r) { num_arith(l,r,!=); }
-void z_gt(val_t *l, val_t *r) { num_arith(l,r,>);  }
-void z_ge(val_t *l, val_t *r) { num_arith(l,r,>=); }
-void z_lt(val_t *l, val_t *r) { num_arith(l,r,<);  }
-void z_le(val_t *l, val_t *r) { num_arith(l,r,<=); }
+void z_eq(rf_val *l, rf_val *r) { num_arith(l,r,==); }
+void z_ne(rf_val *l, rf_val *r) { num_arith(l,r,!=); }
+void z_gt(rf_val *l, rf_val *r) { num_arith(l,r,>);  }
+void z_ge(rf_val *l, rf_val *r) { num_arith(l,r,>=); }
+void z_lt(rf_val *l, rf_val *r) { num_arith(l,r,<);  }
+void z_le(rf_val *l, rf_val *r) { num_arith(l,r,<=); }
 
-void z_lnot(val_t *v) {
+void z_lnot(rf_val *v) {
     assign_int(v, !numval(v));
 }
 
-void z_len(val_t *v) {
-    int_t l = 0;
+void z_len(rf_val *v) {
+    rf_int l = 0;
     switch (v->type) {
     case TYPE_INT: l = s_int2str(v->u.i)->l; break;
     case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
@@ -149,11 +149,11 @@ void z_len(val_t *v) {
     assign_int(v, l);
 }
 
-void z_test(val_t *v) {
+void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
-void z_cat(val_t *l, val_t *r) {
+void z_cat(rf_val *l, rf_val *r) {
     switch (l->type) {
     case TYPE_NULL: l->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT:  l->u.s = s_int2str(l->u.i); break;
@@ -174,7 +174,7 @@ void z_cat(val_t *l, val_t *r) {
 // Potentially very slow for strings; allclates 2 new string objects
 // for every int or float LHS
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
-void z_idx(val_t *l, val_t *r) {
+void z_idx(rf_val *l, rf_val *r) {
     switch (l->type) {
     case TYPE_INT:
         assign_str(l, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1, 0));
@@ -195,7 +195,7 @@ void z_idx(val_t *l, val_t *r) {
 
 // OP_PRINT functionality
 // TODO Command-line switches for integer format? (hex, binary, etc)
-static void put(val_t *v) {
+static void put(rf_val *v) {
     switch (v->type) {
     case TYPE_NULL: printf("null");              break;
     case TYPE_INT:  printf("%lld", v->u.i);      break;
@@ -208,15 +208,15 @@ static void put(val_t *v) {
 }
 
 // Main interpreter loop
-int z_exec(code_t *c) {
+int z_exec(rf_code *c) {
     h_init(&globals);
-    val_t *stk[STACK_SIZE]; // Stack
-    val_t *res[STACK_SIZE]; // Reserve pointers
+    rf_val *stk[STACK_SIZE]; // Stack
+    rf_val *res[STACK_SIZE]; // Reserve pointers
 
     // Allclate and save pointers
     for (int i = 0; i < STACK_SIZE; i++)
-        res[i] = stk[i] = malloc(sizeof(val_t));
-    val_t *tp; // Temp pointer
+        res[i] = stk[i] = malloc(sizeof(rf_val));
+    rf_val *tp; // Temp pointer
     register int      sp = 0;
     register uint8_t *ip = c->code;
     while (1) {
@@ -289,9 +289,9 @@ int z_exec(code_t *c) {
         case OP_CALL: break; // TODO
 
 // Pre-increment/decrement
-// stk[sp-1] is address of some variable's val_t. Increment/decrement
-// this value directly and replace the stack element with a copy of
-// the value.
+// stk[sp-1] is address of some variable's rf_val.
+// Increment/decrement this value directly and replace the stack
+// element with a copy of the value.
 #define pre(x) \
     switch (stk[sp-1]->type) { \
     case TYPE_INT: stk[sp-1]->u.i += x; break; \
@@ -312,10 +312,10 @@ int z_exec(code_t *c) {
         case OP_PREDEC: pre(-1); break;
 
 // Post-increment/decrement
-// stk[sp-1] is address of some variable's val_t. Create a copy of the
-// raw value, then increment/decrement the val_t at the given address.
-// Replace the stack element with the previously made copy and coerce
-// to a numeric value if needed.
+// stk[sp-1] is address of some variable's rf_val. Create a copy of
+// the raw value, then increment/decrement the rf_val at the given
+// address.  Replace the stack element with the previously made copy
+// and coerce to a numeric value if needed.
 #define post(x) \
     res[sp-1]->type = stk[sp-1]->type; \
     res[sp-1]->u    = stk[sp-1]->u; \
@@ -336,8 +336,8 @@ int z_exec(code_t *c) {
         case OP_POSTDEC: post(-1); break;
 
 // Compound assignment operations
-// stk[sp-2] is address of some variable's val_t. Save the address and
-// replace stk[sp-2] with a copy of the value. Perform the binary
+// stk[sp-2] is address of some variable's rf_val. Save the address
+// and replace stk[sp-2] with a copy of the value. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
     tp              = stk[sp-2]; \
@@ -392,7 +392,7 @@ int z_exec(code_t *c) {
         case OP_PUSHK2: pushk(2);     ++ip;    break;
 
 // Push global address
-// Assign the address of global variable x's val_t in the globals table.
+// Assign the address of global variable x's rf_val in the globals table.
 // h_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
@@ -406,8 +406,8 @@ int z_exec(code_t *c) {
         case OP_GBLA2: gbla(2);     ++ip;    break;
 
 // Push global value
-// Copy the value of global variable x to the top of the stack. h_lookup()
-// will create an entry if needed, accommodating
+// Copy the value of global variable x to the top of the stack.
+// h_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
@@ -435,7 +435,6 @@ int z_exec(code_t *c) {
 
 // Push local address
 // Push the address of stk[x] to the top of the stack.
-// If SP == x, increment SP to effectively reserve local slot
 #define lcla(x) stk[sp++] = stk[x];
 
         case OP_LCLA:  lcla(ip[1]) ip += 2; break;
@@ -445,7 +444,6 @@ int z_exec(code_t *c) {
 
 // Push local value
 // Copy the value of stk[x] to the top of the stack.
-// If SP == x, increment SP to effectively reserve local slot
 #define lclv(x) \
     stk[sp]->type = stk[x]->type; \
     stk[sp]->u    = stk[x]->u; \
@@ -460,7 +458,7 @@ int z_exec(code_t *c) {
         case OP_RET1: break;   // TODO
 
 // Create a sequential array of x elements from the top
-// of the stack. Leave the array val_t on the stack.
+// of the stack. Leave the array rf_val on the stack.
 // Arrays index at 0 by default.
 #define new_array(x) \
     tp = v_newarr(); \
@@ -478,7 +476,7 @@ int z_exec(code_t *c) {
 
         // IDXA
         // Perform the lookup and leave the corresponding element's
-        // val_t address on the stack.
+        // rf_val address on the stack.
         case OP_IDXA:
             switch (stk[sp-2]->type) {
 

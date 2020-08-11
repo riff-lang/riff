@@ -4,20 +4,20 @@
 #include "hash.h"
 #include "types.h"
 
-struct arr_t {
+struct rf_arr {
     // int n;          // Total (a.n + h->n)
     // struct {
     //     int     n;
     //     int     cap;
-    //     val_t **v;
+    //     rf_val **v;
     // } a;
     hash_t *h;
 };
 
-void   a_init(arr_t *);
-val_t *a_lookup(arr_t *, val_t *, int);
-val_t *a_insert_int(arr_t *, int_t, val_t *);
-val_t *a_insert(arr_t *, val_t *, val_t *);
-void   a_delete(arr_t *, val_t *);
+void    a_init(rf_arr *);
+rf_val *a_lookup(rf_arr *, rf_val *, int);
+rf_val *a_insert_int(rf_arr *, rf_int, rf_val *);
+rf_val *a_insert(rf_arr *, rf_val *, rf_val *);
+void    a_delete(rf_arr *, rf_val *);
 
 #endif

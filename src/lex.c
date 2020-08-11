@@ -10,7 +10,7 @@
 
 #define adv (++x->p)
 
-static void err(lexer_t *x, const char *msg) {
+static void err(rf_lexer *x, const char *msg) {
     fprintf(stderr, "line %d: %s\n", x->ln, msg);
     exit(1);
 }
@@ -29,7 +29,7 @@ static int hex_value(char c) {
     return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
 }
 
-static int read_flt(lexer_t *x, token_t *tk, const char *start, int base) {
+static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     if (base == 16)
         start -= 2;
@@ -39,7 +39,7 @@ static int read_flt(lexer_t *x, token_t *tk, const char *start, int base) {
     return TK_FLT;
 }
 
-static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
+static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     uint64_t i = strtoull(start, &end, base);
     if (*end == '.') {
@@ -61,7 +61,7 @@ static int read_int(lexer_t *x, token_t *tk, const char *start, int base) {
 }
 
 // TODO Allow underscores in numeric literals e.g. 123_456_789
-static int read_num(lexer_t *x, token_t *tk) {
+static int read_num(rf_lexer *x, rf_token *tk) {
     const char *start = x->p - 1;
 
     // Quickly evaluate floating-point numbers with no integer part
@@ -83,7 +83,7 @@ static int read_num(lexer_t *x, token_t *tk) {
     return read_int(x, tk, start, base);
 }
 
-static int hex_esc(lexer_t *x) {
+static int hex_esc(rf_lexer *x) {
     if (!isxdigit(*x->p))
         err(x, "expected hexadecimal digit");
     int e = hex_value(*x->p++);
@@ -94,7 +94,7 @@ static int hex_esc(lexer_t *x) {
     return e;
 }
 
-static int dec_esc(lexer_t *x) {
+static int dec_esc(rf_lexer *x) {
     char *end;
     long e = strtoul(x->p, &end, 10);
     if (e > UCHAR_MAX)
@@ -104,8 +104,8 @@ static int dec_esc(lexer_t *x) {
 }
 
 // TODO handling of multi-line string literals
-static int read_str(lexer_t *x, token_t *tk, int d) {
-    x->buffer.n = 0;
+static int read_str(rf_lexer *x, rf_token *tk, int d) {
+    x->buf.n = 0;
     int c;
     while ((c = *x->p) != d) {
         switch(c) {
@@ -150,21 +150,21 @@ static int read_str(lexer_t *x, token_t *tk, int d) {
             adv;
             break;
         }
-        eval_resize(x->buffer.c, x->buffer.n, x->buffer.cap);
-        x->buffer.c[x->buffer.n++] = c;
+        eval_resize(x->buf.c, x->buf.n, x->buf.cap);
+        x->buf.c[x->buf.n++] = c;
     }
-    str_t *s = s_newstr(x->buffer.c, x->buffer.n, 1);
+    rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
     adv;
     tk->lexeme.s = s;
     return TK_STR;
 }
 
-static int check_kw(lexer_t *x, const char *s, int size) {
+static int check_kw(rf_lexer *x, const char *s, int size) {
     int f = x->p[size];     // Character immediately following
     return !memcmp(x->p, s, size) && !valid_alphanum(f);
 }
 
-static int read_id(lexer_t *x, token_t *tk) {
+static int read_id(rf_lexer *x, rf_token *tk) {
     const char *start = x->p - 1;
     // Check for reserved keywords
     switch (*start) {
@@ -245,12 +245,12 @@ static int read_id(lexer_t *x, token_t *tk) {
         ++count;
         adv;
     }
-    str_t *s = s_newstr(start, count, 1);
+    rf_str *s = s_newstr(start, count, 1);
     tk->lexeme.s = s;
     return TK_ID;
 }
 
-static int test2(lexer_t *x, int c, int t1, int t2) {
+static int test2(rf_lexer *x, int c, int t1, int t2) {
     if (*x->p == c) {
         adv;
         return t1;
@@ -258,7 +258,7 @@ static int test2(lexer_t *x, int c, int t1, int t2) {
         return t2;
 }
 
-static int test3(lexer_t *x, int c1, int t1, int c2, int t2, int t3) {
+static int test3(rf_lexer *x, int c1, int t1, int c2, int t2, int t3) {
     if (*x->p == c1) {
         adv;
         return t1;
@@ -270,7 +270,7 @@ static int test3(lexer_t *x, int c1, int t1, int c2, int t2, int t3) {
 }
 
 static int
-test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
+test4(rf_lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
     if (*x->p == c1) {
         adv;
         return t1;
@@ -285,7 +285,7 @@ test4(lexer_t *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
-static void line_comment(lexer_t *x) {
+static void line_comment(rf_lexer *x) {
     while (1) {
         if (*x->p == '\n' || *x->p == '\0')
             break;
@@ -294,7 +294,7 @@ static void line_comment(lexer_t *x) {
     }
 }
 
-static void block_comment(lexer_t *x) {
+static void block_comment(rf_lexer *x) {
     while (1) {
         if (*x->p == '\n')
             x->ln++;
@@ -311,7 +311,7 @@ static void block_comment(lexer_t *x) {
     }
 }
 
-static int tokenize(lexer_t *x, token_t *tk) {
+static int tokenize(rf_lexer *x, rf_token *tk) {
     int c;
     while (1) {
         switch (c = *x->p++) {
@@ -364,26 +364,26 @@ static int tokenize(lexer_t *x, token_t *tk) {
     }
 }
 
-int x_init(lexer_t *x, const char *src) {
-    x->ln         = 1;
-    x->p          = src;
-    x->tk.kind    = 0;
-    x->la.kind    = 0;
-    x->buffer.n   = 0;
-    x->buffer.cap = 0;
-    x->buffer.c   = NULL;
+int x_init(rf_lexer *x, const char *src) {
+    x->ln      = 1;
+    x->p       = src;
+    x->tk.kind = 0;
+    x->la.kind = 0;
+    x->buf.n   = 0;
+    x->buf.cap = 0;
+    x->buf.c   = NULL;
     x_adv(x);
     return 0;
 }
 
 // Lexer itself should be stack-allocated, but the string buffer is
 // heap-allocated
-void x_free(lexer_t *x) {
-    if (x->buffer.c != NULL)
-        free(x->buffer.c);
+void x_free(rf_lexer *x) {
+    if (x->buf.c != NULL)
+        free(x->buf.c);
 }
 
-int x_adv(lexer_t *x) {
+int x_adv(rf_lexer *x) {
 
     // Free previous string object
     if (x->tk.kind == TK_STR || x->tk.kind == TK_ID)
@@ -404,9 +404,9 @@ int x_adv(lexer_t *x) {
     return 0;
 }
 
-// Populate the lookahead token_t, leaving the current token_t
+// Populate the lookahead rf_token, leaving the current rf_token
 // unchanged
-int x_peek(lexer_t *x) {
+int x_peek(rf_lexer *x) {
     if ((x->la.kind = tokenize(x, &x->la)) == 1) {
         x->la.kind = TK_EOI;
         return 1;

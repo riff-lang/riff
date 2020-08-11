@@ -4,8 +4,8 @@
 #include "types.h"
 
 typedef struct {
-    str_t *key;
-    val_t *val;
+    rf_str *key;
+    rf_val *val;
 } entry_t;
 
 typedef struct {
@@ -15,9 +15,9 @@ typedef struct {
     entry_t **e;
 } hash_t;
 
-void   h_init(hash_t *);
-val_t *h_lookup(hash_t *, str_t *, int);
-val_t *h_insert(hash_t *, str_t *, val_t *, int);
-void   h_delete(hash_t *, str_t *);
+void    h_init(hash_t *);
+rf_val *h_lookup(hash_t *, rf_str *, int);
+rf_val *h_insert(hash_t *, rf_str *, rf_val *, int);
+void    h_delete(hash_t *, rf_str *);
 
 #endif

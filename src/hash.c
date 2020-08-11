@@ -13,10 +13,10 @@ void h_init(hash_t *h) {
     h->e   = NULL;
 }
 
-static entry_t *new_entry(str_t *k, val_t *v) {
-    str_t *nk = s_newstr(k->str, k->l, 0);
+static entry_t *new_entry(rf_str *k, rf_val *v) {
+    rf_str *nk = s_newstr(k->str, k->l, 0);
     nk->hash = k->hash;
-    val_t *nv;
+    rf_val *nv;
     switch (v->type) {
     case TYPE_NULL: nv = v_newnull();      break;
     case TYPE_INT:  nv = v_newint(v->u.i); break;
@@ -46,14 +46,14 @@ static int index(entry_t **e, int cap, uint32_t hash) {
     return i;
 }
 
-static int exists(hash_t *h, str_t *k) {
+static int exists(hash_t *h, rf_str *k) {
     if (!k->hash)
         k->hash = s_hash(k->str);
     int i = index(h->e, h->cap, k->hash);
     return h->e[i] && h->e[i]->key->hash == k->hash;
 }
 
-val_t *h_lookup(hash_t *h, str_t *k, int set) {
+rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
     // If the table is empty, call h_insert, which allocates memory
     if (!h->e)
         return h_insert(h, k, v_newnull(), set);
@@ -65,7 +65,7 @@ val_t *h_lookup(hash_t *h, str_t *k, int set) {
     return h->e[i]->val;
 }
 
-val_t *h_insert(hash_t *h, str_t *k, val_t *v, int set) {
+rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
     if (!k->hash)
         k->hash = s_hash(k->str);
     // Evaluate hash table size
@@ -113,7 +113,7 @@ val_t *h_insert(hash_t *h, str_t *k, val_t *v, int set) {
 }
 
 // TODO
-void h_delete(hash_t *h, str_t *k) {
+void h_delete(hash_t *h, rf_str *k) {
     h->n--;
 }
 

@@ -20,43 +20,43 @@
 
 #define is_num(x)  (x->type & (TYPE_INT | TYPE_FLT))
 
-typedef double  flt_t;
-typedef int64_t int_t;
+typedef double  rf_flt;
+typedef int64_t rf_int;
 
 typedef struct {
     size_t    l;
     uint32_t  hash;
     char     *str;
-} str_t;
+} rf_str;
 
 // Forward declaration
-typedef struct arr_t arr_t;
+typedef struct rf_arr rf_arr;
 
 typedef struct {
     int type;
     union {
-        flt_t  f;
-        int_t  i;
-        str_t *s;
-        arr_t *a;
+        rf_flt  f;
+        rf_int  i;
+        rf_str *s;
+        rf_arr *a;
         // Add function
     } u;
-} val_t;
+} rf_val;
 
-// Assign value x to val_t *p
+// Assign value x to rf_val *p
 #define assign_int(p, x) (p)->u.i = (x); (p)->type = TYPE_INT
 #define assign_flt(p, x) (p)->u.f = (x); (p)->type = TYPE_FLT
 #define assign_str(p, x) (p)->u.s = (x); (p)->type = TYPE_STR
 
 uint32_t  s_hash(const char *);
-str_t    *s_newstr(const char *, size_t, int);
-str_t    *s_concat(str_t *, str_t *, int);
-str_t    *s_int2str(int_t);
-str_t    *s_flt2str(flt_t);
-val_t    *v_newnull(void);
-val_t    *v_newint(int_t);
-val_t    *v_newflt(flt_t);
-val_t    *v_newstr(str_t *);
-val_t    *v_newarr(void);
+rf_str    *s_newstr(const char *, size_t, int);
+rf_str    *s_concat(rf_str *, rf_str *, int);
+rf_str    *s_int2str(rf_int);
+rf_str    *s_flt2str(rf_flt);
+rf_val    *v_newnull(void);
+rf_val    *v_newint(rf_int);
+rf_val    *v_newflt(rf_flt);
+rf_val    *v_newstr(rf_str *);
+rf_val    *v_newarr(void);
 
 #endif
