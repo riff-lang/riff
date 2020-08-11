@@ -33,6 +33,7 @@ typedef struct {
     uint8_t ox;     // Typical (i.e. not ++/--) operation flag
     uint8_t px;     // Prefix or postfix increment/decrement flag
 
+    uint8_t argx;   // Current nud is RHS of '$'
     uint8_t lx;     // Local flag (newly-declared)
     uint8_t rx;     // Reference flag - OP_xxA vs OP_xxV instructions
 

@@ -96,6 +96,8 @@ enum opcodes {
     OP_ARRAYK,  // Create array of the top K[IP+1] stack elements
     OP_IDXA,    // Index of a set, leaving pointer on stack
     OP_IDXV,    // Index of a set, leaving value on stack
+    OP_ARGA,
+    OP_ARGV,
     OP_SET,     // Assignment
     OP_PRINT1,  // Print value at SP[-1]; --SP
     OP_PRINT,   // Print (IP+1) values from stack; SP -= (IP+1)

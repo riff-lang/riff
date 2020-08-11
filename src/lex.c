@@ -350,9 +350,9 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                 return test2(x, '=', TK_CATX, TK_CAT);
             } else
                 return ':';
-        case '#': case '(': case ')': case ',': case ';':
-        case '?': case ']': case '[': case '{': case '}':
-        case '~': 
+        case '#': case '$': case '(': case ')': case ',':
+        case ';': case '?': case ']': case '[': case '{':
+        case '}': case '~': 
             return c;
         default:
             if (valid_alpha(c)) {

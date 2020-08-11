@@ -6,13 +6,14 @@
 #define adv       x_adv(y->x)
 #define peek      x_peek(y->x)
 #define push(b)   c_push(y->c, b)
-#define set(f)    y->f   = 1;
-#define unset(f)  y->f   = 0;
-#define unset_all y->lhs = 0; \
-                  y->ax  = 0; \
-                  y->ox  = 0; \
-                  y->px  = 0; \
-                  y->rx  = 0;
+#define set(f)    y->f    = 1;
+#define unset(f)  y->f    = 0;
+#define unset_all y->lhs  = 0; \
+                  y->argx = 0; \
+                  y->ax   = 0; \
+                  y->ox   = 0; \
+                  y->px   = 0; \
+                  y->rx   = 0;
 
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned
 // up
@@ -74,6 +75,7 @@ static int lbp(int tk) {
     }
 }
 
+// Standard unary ops with standard unary binding power
 static int uop(int tk) {
     return tk == '!' || tk == '#' || tk == '+' ||
            tk == '-' || tk == '~';
@@ -98,7 +100,7 @@ static void literal(rf_parser *y) {
     c_constant(y->c, &y->x->tk);
     adv;
     // Assert no assignment appears following a constant literal
-    if (is_asgmt(y->x->tk.kind))
+    if (!y->argx && is_asgmt(y->x->tk.kind))
         err(y, "Attempt to assign to constant value");
 }
 
@@ -246,11 +248,25 @@ static int nud(rf_parser *y) {
         return 0;
     }
     switch (tk) {
+    case '$':
+        adv;
+        set(argx);
+        expr(y, 16);
+        if (y->rx                   ||
+            is_asgmt(y->x->tk.kind) ||
+            is_incdec(y->x->tk.kind)) {
+            set(ax);
+            push(OP_ARGA);
+        } else
+            push(OP_ARGV);
+        unset(argx);
+        if (!y->lhs) set(lhs);
+        break;
     case '(':
         adv;
         expr(y, 0);
         consume(y, ')', "Expected ')'");
-        if (is_asgmt(y->x->tk.kind))
+        if (!y->argx && is_asgmt(y->x->tk.kind))
             err(y, "Invalid operator following expr");
         return ')';
     case '{':
@@ -260,7 +276,8 @@ static int nud(rf_parser *y) {
     case TK_INC: case TK_DEC:
         if (adv)
             err(y, "Expected symbol following prefix ++/--");
-        if (y->x->tk.kind != TK_ID)
+        if (!(y->x->tk.kind == TK_ID ||
+              y->x->tk.kind == '$'))
             err(y, "Unexpected symbol following prefix ++/--");
         set(rx);
         expr(y, 14);
@@ -332,7 +349,7 @@ static int led(rf_parser *y, int p, int tk) {
                 } else {
                     set(ox);
                 }
-            } else if (is_asgmt(tk) && y->ox) {
+            } else if (!(y->argx || (is_asgmt(tk) && y->ox))) {
                 err(y, "Syntax error");
             }
             unset(rx);

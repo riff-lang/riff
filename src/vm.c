@@ -208,8 +208,9 @@ static void put(rf_val *v) {
 }
 
 // Main interpreter loop
-int z_exec(rf_code *c) {
+int z_exec(rf_env *e, rf_code *c) {
     h_init(&globals);
+    rf_arr  argv = *e->argv;
     rf_val *stk[STACK_SIZE]; // Stack
     rf_val *res[STACK_SIZE]; // Reserve pointers
 
@@ -530,6 +531,19 @@ int z_exec(rf_code *c) {
             default:
                 break;
             }
+            break;
+
+        case OP_ARGA:
+            stk[sp-1] = a_lookup(&argv, stk[sp-1], 1);
+            ++ip;
+            break;
+
+        case OP_ARGV:
+            tp = a_lookup(&argv, stk[sp-1], 0);
+            res[sp-1]->type = tp->type;
+            res[sp-1]->u    = tp->u;
+            stk[sp-1]       = res[sp-1];
+            ++ip;
             break;
 
         case OP_SET:

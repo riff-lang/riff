@@ -2,6 +2,7 @@
 #define VM_H
 
 #include "code.h"
+#include "env.h"
 #include "hash.h"
 #include "types.h"
 
@@ -34,6 +35,6 @@ void z_test(rf_val *);
 void z_cat(rf_val *, rf_val *);
 void z_idx(rf_val *, rf_val *);
 
-int  z_exec(rf_code *);
+int  z_exec(rf_env *, rf_code *);
 
 #endif
