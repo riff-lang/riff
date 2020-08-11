@@ -349,7 +349,7 @@ static int led(rf_parser *y, int p, int tk) {
                 } else {
                     set(ox);
                 }
-            } else if (!(y->argx || (is_asgmt(tk) && y->ox))) {
+            } else if (y->argx && (is_asgmt(tk) && y->ox)) {
                 err(y, "Syntax error");
             }
             unset(rx);

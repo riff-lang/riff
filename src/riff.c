@@ -34,17 +34,6 @@ static char *stringify_file(const char *path) {
     return buf;
 }
 
-static rf_arr *build_argv(int f, int argc, char **argv) {
-    rf_arr *a = malloc(sizeof(rf_arr));
-    a_init(a);
-    int idx = f ? -3 : -2;
-    rf_str *s;
-    for (int i = 0; i < argc; ++i) {
-        s = s_newstr(argv[i], strlen(argv[i]), 1);
-        a_insert_int(a, idx++, v_newstr(s));
-    }
-    return a;
-}
 
 // TODO handle piped input (stdin)
 int main(int argc, char **argv) {
@@ -52,8 +41,6 @@ int main(int argc, char **argv) {
         printf("No program given\n");
         exit(1);
     }
-
-    rf_env e;
 
     rf_code c;
     c_init(&c);
@@ -74,7 +61,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    e.argv = build_argv(ff, argc, argv);
+    rf_env e;
+    e.argc = argc;
+    e.ff   = ff;
+    e.argv = argv;
 
     // If getopt() tries to parse an unidentified option, decrement
     // optind. getopt() will try to parse the actual program if it

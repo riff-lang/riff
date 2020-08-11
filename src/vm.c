@@ -12,6 +12,7 @@ static void err(const char *msg) {
 }
 
 static hash_t globals;
+static rf_arr argv;
 
 // Return logical result of value
 static int test(rf_val *v) {
@@ -207,10 +208,22 @@ static void put(rf_val *v) {
     }
 }
 
+// TODO
+#include <string.h>
+static void init_argv(rf_arr *a, int f, int argc, char **argv) {
+    a_init(a);
+    int idx = f ? -3 : -2;
+    rf_str *s;
+    for (int i = 0; i < argc; ++i) {
+        s = s_newstr(argv[i], strlen(argv[i]), 1);
+        a_insert_int(a, idx++, v_newstr(s));
+    }
+}
+
 // Main interpreter loop
 int z_exec(rf_env *e, rf_code *c) {
     h_init(&globals);
-    rf_arr  argv = *e->argv;
+    init_argv(&argv, e->ff, e->argc, e->argv);
     rf_val *stk[STACK_SIZE]; // Stack
     rf_val *res[STACK_SIZE]; // Reserve pointers
 

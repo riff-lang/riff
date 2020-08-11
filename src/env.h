@@ -4,8 +4,10 @@
 #include "types.h"
 
 typedef struct {
-    const char *src;    // Source program
-    rf_arr     *argv;   // User-provided arguments
+    const char  *src;   // Source program
+    int          argc;
+    int          ff;
+    char       **argv;
 } rf_env;
 
 #endif
