@@ -5,11 +5,13 @@
 #include "types.h"
 
 struct rf_arr {
-    int      n;     // Number of elements (excluding null values)
-    int      an;    // Number of elements (including null values)
-    int      cap;
-    uint8_t  nullx; // null flag ("null" index set?)
-    uint8_t  lx;    // Re-calculate length?
+    int n;          // Number of elements (excluding null values)
+    int an;         // Number of elements (including null values)
+    int cap;
+
+    int nullx: 1;   // null flag ("null" index set?)
+    int lx:    1;   // Re-calculate length?
+
     rf_val  *nullv; // Special slot for the "null" index in an array
     rf_val **v;
     hash_t  *h;

@@ -28,14 +28,14 @@ typedef struct {
 
     // Flags used when evaluating whether expression statements should
     // be printed
-    uint8_t lhs;    // Set when leftmost expr has been evaluated
-    uint8_t ax;     // Assignment flag
-    uint8_t ox;     // Typical (i.e. not ++/--) operation flag
-    uint8_t px;     // Prefix or postfix increment/decrement flag
+    int lhs: 1;     // Set when leftmost expr has been evaluated
+    int ax:  1;     // Assignment flag
+    int ox:  1;     // Typical (i.e. not ++/--) operation flag
+    int px:  1;     // Prefix or postfix increment/decrement flag
 
-    uint8_t argx;   // Current nud is RHS of '$'
-    uint8_t lx;     // Local flag (newly-declared)
-    uint8_t rx;     // Reference flag - OP_xxA vs OP_xxV instructions
+    int argx: 1;    // Current nud is RHS of '$'
+    int lx:   1;    // Local flag (newly-declared)
+    int rx:   1;    // Reference flag - OP_xxA vs OP_xxV instructions
 
     uint8_t idx;    // Depth of index (for exprs inside [])
     uint8_t ld;     // Lexical depth/scope
