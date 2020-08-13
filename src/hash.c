@@ -6,11 +6,27 @@
 
 #define LOAD_FACTOR 0.7
 
+#define set(f)   h->f = 1;
+#define unset(f) h->f = 0;
+
 void h_init(hash_t *h) {
     h->n   = 0;
     h->an  = 0;
     h->cap = 0;
     h->e   = NULL;
+}
+
+rf_int h_length(hash_t *h) {
+    if (!h->lx)
+        return h->n;
+    rf_int l = 0;
+    for (int i = 0; i < h->cap; ++i) {
+        if (h->e[i] && !is_null(h->e[i]->val))
+            ++l;
+    }
+    h->n = l;
+    unset(lx);
+    return l;
 }
 
 static entry_t *new_entry(rf_str *k, rf_val *v) {
@@ -54,6 +70,7 @@ static int exists(hash_t *h, rf_str *k) {
 }
 
 rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
+    if (set) set(lx);
     // If the table is empty, call h_insert, which allocates memory
     if (!h->e)
         return h_insert(h, k, v_newnull(), set);
@@ -66,6 +83,7 @@ rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
 }
 
 rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
+    if (set) set(lx);
     if (!k->hash)
         k->hash = s_hash(k->str);
     // Evaluate hash table size
@@ -112,9 +130,6 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
     return h->e[i]->val;
 }
 
-// TODO
-void h_delete(hash_t *h, rf_str *k) {
-    h->n--;
-}
-
 #undef LOAD_FACTOR
+#undef set
+#undef unset

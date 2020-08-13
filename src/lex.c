@@ -221,6 +221,11 @@ static int read_id(rf_lexer *x, rf_token *tk) {
             x->p += 4;
             return TK_LOCAL;
         } else break;
+    case 'n':
+        if (check_kw(x, "ull", 3)) {
+            x->p += 3;
+            return TK_NULL;
+        } else break;
     case 'p':
         if (check_kw(x, "rint", 4)) {
             x->p += 4;

@@ -100,6 +100,11 @@ static void c_pushk(rf_code *c, int i) {
 // necessary
 void c_constant(rf_code *c, rf_token *tk) {
 
+    if (tk->kind == TK_NULL) {
+        push(OP_NULL);
+        return;
+    }
+
     // Search for existing duplicate literal
     for (int i = 0; i < c->k.n; i++) {
         switch (tk->kind) {

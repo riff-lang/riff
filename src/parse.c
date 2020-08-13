@@ -30,7 +30,7 @@ static int is_asgmt(int tk) {
 }
 
 static int is_const(int tk) {
-    return tk == TK_INT || tk == TK_FLT || tk == TK_STR;
+    return tk == TK_NULL || tk == TK_FLT || tk == TK_INT || tk == TK_STR;
 }
 
 static int is_incdec(int tk) {
@@ -293,7 +293,7 @@ static int nud(rf_parser *y) {
             set(lhs);
         }
         break;
-    case TK_FLT: case TK_INT: case TK_STR:
+    case TK_NULL: case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
         break;
     case TK_ID:

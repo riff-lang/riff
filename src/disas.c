@@ -63,6 +63,7 @@ static struct {
     [OP_NEG]     = { "neg",      0 },
     [OP_NE]      = { "ne",       0 },
     [OP_NOT]     = { "not",      0 },
+    [OP_NULL]    = { "null",     0 },
     [OP_NUM]     = { "num",      0 },
     [OP_ORX]     = { "orx",      0 },
     [OP_OR]      = { "or",       0 },
@@ -287,6 +288,9 @@ static void tk2str(rf_token *tk, char *s) {
         sprintf(s, KW_STR, tokenstr[tk->kind]);
     else {
         switch(tk->kind) {
+        case TK_NULL:
+            sprintf(s, "<null");
+            break;
         case TK_FLT:
             sprintf(s, "<Float, %f (0x%a)>", tk->lexeme.f, tk->lexeme.f);
             break;

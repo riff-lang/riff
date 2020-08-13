@@ -44,6 +44,7 @@ typedef struct {
 } rf_val;
 
 // Assign value x to rf_val *p
+#define assign_null(p)   (p)->type = TYPE_NULL
 #define assign_int(p, x) (p)->u.i = (x); (p)->type = TYPE_INT
 #define assign_flt(p, x) (p)->u.f = (x); (p)->type = TYPE_FLT
 #define assign_str(p, x) (p)->u.s = (x); (p)->type = TYPE_STR

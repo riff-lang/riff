@@ -60,6 +60,7 @@ enum tokens {
     TK_WHILE,
 
     // Literals
+    TK_NULL,
     TK_FLT,
     TK_INT,
     TK_STR,

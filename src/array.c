@@ -3,20 +3,42 @@
 #include "array.h"
 #include "mem.h"
 
+#define set(f)   a->f = 1
+#define unset(f) a->f = 0
+
 static void err(const char *msg) {
     fprintf(stderr, "%s\n", msg);
     exit(1);
 }
 
 void a_init(rf_arr *a) {
+    unset(nullx);
+    unset(lx);
     a->n     = 0;
     a->an    = 0;
     a->cap   = 0;
-    a->nullx = 0;
     a->nullv = v_newnull();
     a->v     = NULL;
     a->h     = malloc(sizeof(hash_t));
     h_init(a->h);
+}
+
+// lx flag is set whenever the VM performs a lookup with the intent on
+// setting the value (OP_xxA). When lx is set, recalculate length of
+// the array. This accomodates "deletion" via assigning `null`.
+rf_int a_length(rf_arr *a) {
+    if (!a->lx)
+        return a->n + h_length(a->h);
+    rf_int l = 0;
+    for (int i = 0; i < a->cap; ++i) {
+        if (a->v[i] && !is_null(a->v[i]))
+            ++l;
+    }
+    // Don't forget special "null" index
+    l += (a->nullx && !is_null(a->nullv));
+    a->n = l;
+    unset(lx);
+    return l + h_length(a->h);
 }
 
 static int exists(rf_val **v, rf_int k) {
@@ -32,6 +54,7 @@ static int exists(rf_val **v, rf_int k) {
 // If int k is within the capacity of the "array" part, perform the
 // lookup. Otherwise, defer to h_lookup().
 static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
+    if (set) set(lx);
     if (k <= a->cap) {
         if (exists(a->v, k))
             return a->v[k];
@@ -44,10 +67,11 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
 
 // TODO flt lookup is horribly slow with string conversion
 rf_val *a_lookup(rf_arr *a, rf_val *k, int set) {
+    if (set) set(lx);
     switch (k->type) {
     case TYPE_NULL:
         if (set && !a->nullx) {
-            a->nullx = 1;
+            set(nullx);
             a->n++;
         }
         return a->nullv;
@@ -113,10 +137,5 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
     return NULL;
 }
 
-// TODO
-// static void a_delete_int(rf_arr *a, rf_int k) {
-// }
-
-// TODO
-void a_delete(rf_arr *a, rf_val *k) {
-}
+#undef set
+#undef unset

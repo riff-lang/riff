@@ -147,9 +147,9 @@ void z_len(rf_val *v) {
         l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
             v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
         break;
-    case TYPE_FLT: l = s_flt2str(v->u.f)->l;     break;
-    case TYPE_STR: l = v->u.s->l;                break;
-    case TYPE_ARR: l = v->u.a->n + v->u.a->h->n; break; // TODO
+    case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
+    case TYPE_STR: l = v->u.s->l;            break;
+    case TYPE_ARR: l = a_length(v->u.a);     break; // TODO
     case TYPE_FN:  // TODO
     default: break;
     }
@@ -390,6 +390,9 @@ int z_exec(rf_env *e, rf_code *c) {
 
         // Pop IP+1 values from stack
         case OP_POPI: sp -= ip[1]; ip += 2; break;
+
+        // Push null literal on stack
+        case OP_NULL: assign_null(stk[sp++]); ++ip; break;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
