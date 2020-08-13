@@ -172,7 +172,7 @@ void z_cat(rf_val *l, rf_val *r) {
     assign_str(l, s_concat(l->u.s, r->u.s, 0));
 }
 
-// Potentially very slow for strings; allclates 2 new string objects
+// Potentially very slow for strings; allocates 2 new string objects
 // for every int or float LHS
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
 void z_idx(rf_val *l, rf_val *r) {
@@ -218,6 +218,7 @@ static void init_argv(rf_arr *a, int f, int argc, char **argv) {
         a_insert_int(a, i++, v_newstr(s), 1, 1);
     }
 
+    // TODO this will break if array is resized
     // Advance pointer such that `$0` represents the first
     // user-provided arg
     a->v += f ? 3 : 2;
