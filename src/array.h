@@ -17,7 +17,7 @@ struct rf_arr {
 
 void    a_init(rf_arr *);
 rf_int  a_length(rf_arr *);
-rf_val *a_lookup(rf_arr *, rf_val *, int);
+rf_val *a_lookup(rf_arr *, rf_val *, int, int);
 rf_val *a_insert_int(rf_arr *, rf_int, rf_val *, int, int);
 rf_val *a_insert(rf_arr *, rf_val *, rf_val *, int);
 

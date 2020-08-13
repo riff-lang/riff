@@ -147,9 +147,10 @@ void z_len(rf_val *v) {
         l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
             v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
         break;
+    // TODO? defer to TYPE_INT behavior if v->u.f == (int) v->u.f
     case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
     case TYPE_STR: l = v->u.s->l;            break;
-    case TYPE_ARR: l = a_length(v->u.a);     break; // TODO
+    case TYPE_ARR: l = a_length(v->u.a);     break;
     case TYPE_FN:  // TODO
     default: break;
     }
@@ -216,24 +217,22 @@ static void put(rf_val *v) {
 
 // TODO
 #include <string.h>
-static void init_argv(rf_arr *a, int f, int argc, char **argv) {
+static void init_argv(rf_arr *a, int argc, char **argv) {
     a_init(a);
     rf_str *s;
     for (int i = 0; i < argc; ++i) {
         s = s_newstr(argv[i], strlen(argv[i]), 1);
-        a_insert_int(a, i++, v_newstr(s), 1, 1);
+        a_insert_int(a, i, v_newstr(s), 1, 1);
     }
-
-    // TODO this will break if array is resized
-    // Advance pointer such that `$0` represents the first
-    // user-provided arg
-    a->v += f ? 3 : 2;
 }
 
 // Main interpreter loop
 int z_exec(rf_env *e, rf_code *c) {
     h_init(&globals);
-    init_argv(&argv, e->ff, e->argc, e->argv);
+    init_argv(&argv, e->argc, e->argv);
+
+    // Offset for the argv; $0 should be the first user-provided arg
+    rf_int aos = e->ff ? 3 : 2;
     rf_val *stk[STACK_SIZE]; // Stack
     rf_val *res[STACK_SIZE]; // Reserve pointers
 
@@ -452,7 +451,7 @@ int z_exec(rf_env *e, rf_code *c) {
 // Nullify slot at stack[x] for use as a local var
 // Increment SP to reserve slot
 #define lcl(x) \
-    stk[x]->type = TYPE_NULL; \
+    assign_null(stk[x]); \
     ++sp;
 
         case OP_LCL:  lcl(ip[1]); ip += 2; break;
@@ -514,7 +513,7 @@ int z_exec(rf_env *e, rf_code *c) {
                 stk[sp-2]->u    = tp->u;
                 // Fall-through
             case TYPE_ARR:
-                stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1], 1);
+                stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1], 1, 0);
                 break;
 
             // IDXA is invalid for all other types
@@ -538,7 +537,7 @@ int z_exec(rf_env *e, rf_code *c) {
                 stk[sp-2] = v_newarr();
                 // Fall-through
             case TYPE_ARR:
-                tp = a_lookup(stk[sp-2]->u.a, stk[sp-1], 0);
+                tp = a_lookup(stk[sp-2]->u.a, stk[sp-1], 0, 0);
                 res[sp-2]->type = tp->type;
                 res[sp-2]->u    = tp->u;
                 stk[sp-2]       = res[sp-2];
@@ -560,12 +559,12 @@ int z_exec(rf_env *e, rf_code *c) {
             break;
 
         case OP_ARGA:
-            stk[sp-1] = a_lookup(&argv, stk[sp-1], 1);
+            stk[sp-1] = a_lookup(&argv, stk[sp-1], 1, aos);
             ++ip;
             break;
 
         case OP_ARGV:
-            tp = a_lookup(&argv, stk[sp-1], 0);
+            tp = a_lookup(&argv, stk[sp-1], 0, aos);
             res[sp-1]->type = tp->type;
             res[sp-1]->u    = tp->u;
             stk[sp-1]       = res[sp-1];
