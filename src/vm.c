@@ -20,7 +20,7 @@ static int test(rf_val *v) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
     case TYPE_STR: return !!(v->u.s->l);
-    case TYPE_ARR: return !!(v->u.a->h->n); // TODO
+    case TYPE_ARR: return !!(v->u.a->h->n + v->u.a->n); // TODO
     case TYPE_FN:  return 1;
     default:       return 0;
     }
@@ -140,10 +140,10 @@ void z_lnot(rf_val *v) {
 void z_len(rf_val *v) {
     rf_int l = 0;
     switch (v->type) {
-    case TYPE_INT: l = s_int2str(v->u.i)->l; break;
-    case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
-    case TYPE_STR: l = v->u.s->l;            break;
-    case TYPE_ARR: l = v->u.a->h->n;         break; // TODO
+    case TYPE_INT: l = s_int2str(v->u.i)->l;     break;
+    case TYPE_FLT: l = s_flt2str(v->u.f)->l;     break;
+    case TYPE_STR: l = v->u.s->l;                break;
+    case TYPE_ARR: l = v->u.a->n + v->u.a->h->n; break; // TODO
     case TYPE_FN:  // TODO
     default: break;
     }
@@ -212,12 +212,15 @@ static void put(rf_val *v) {
 #include <string.h>
 static void init_argv(rf_arr *a, int f, int argc, char **argv) {
     a_init(a);
-    int idx = f ? -3 : -2;
     rf_str *s;
     for (int i = 0; i < argc; ++i) {
         s = s_newstr(argv[i], strlen(argv[i]), 1);
-        a_insert_int(a, idx++, v_newstr(s));
+        a_insert_int(a, i++, v_newstr(s), 1, 1);
     }
+
+    // Advance pointer such that `$0` represents the first
+    // user-provided arg
+    a->v += f ? 3 : 2;
 }
 
 // Main interpreter loop
@@ -227,7 +230,7 @@ int z_exec(rf_env *e, rf_code *c) {
     rf_val *stk[STACK_SIZE]; // Stack
     rf_val *res[STACK_SIZE]; // Reserve pointers
 
-    // Allclate and save pointers
+    // Allocate and save pointers
     for (int i = 0; i < STACK_SIZE; i++)
         res[i] = stk[i] = malloc(sizeof(rf_val));
     rf_val *tp; // Temp pointer
@@ -477,7 +480,7 @@ int z_exec(rf_env *e, rf_code *c) {
 #define new_array(x) \
     tp = v_newarr(); \
     for (int i = (x) - 1; i >= 0; --i) { \
-        a_insert_int(tp->u.a, i, stk[--sp]); \
+        a_insert_int(tp->u.a, i, stk[--sp], 1, 1); \
     } \
     stk[sp++] = tp;
 
