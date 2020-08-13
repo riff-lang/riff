@@ -9,11 +9,13 @@ static void err(const char *msg) {
 }
 
 void a_init(rf_arr *a) {
-    a->n   = 0;
-    a->an  = 0;
-    a->cap = 0;
-    a->v   = NULL;
-    a->h   = malloc(sizeof(hash_t));
+    a->n     = 0;
+    a->an    = 0;
+    a->cap   = 0;
+    a->nullx = 0;
+    a->nullv = v_newnull();
+    a->v     = NULL;
+    a->h     = malloc(sizeof(hash_t));
     h_init(a->h);
 }
 
@@ -26,10 +28,6 @@ static int exists(rf_val **v, rf_int k) {
 // least half the slots between 1 and n are in use (to avoid wasting
 // space with sparse arrays) and there is at least one used slot
 // between n/2 + 1 and n (to avoid a size n when n/2 would do)
-
-static rf_val *a_lookup_str(rf_arr *a, rf_str *k, int set) {
-    return h_lookup(a->h, k, set);
-}
 
 // If int k is within the capacity of the "array" part, perform the
 // lookup. Otherwise, defer to h_lookup().
@@ -47,23 +45,28 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
 // TODO flt lookup is horribly slow with string conversion
 rf_val *a_lookup(rf_arr *a, rf_val *k, int set) {
     switch (k->type) {
-    case TYPE_NULL: return a_lookup_str(a, s_int2str(0), set); // TODO
+    case TYPE_NULL:
+        if (set && !a->nullx) {
+            a->nullx = 1;
+            a->n++;
+        }
+        return a->nullv;
     case TYPE_INT:  return a_lookup_int(a, k->u.i, set);
     case TYPE_FLT:
         if (k->u.f == (rf_int) k->u.f)
             return a_lookup_int(a, (rf_int) k->u.f, set);
         else
-            return a_lookup_str(a, s_flt2str(k->u.f), set); // TODO
-    case TYPE_STR:  return a_lookup_str(a, k->u.s, set);
+            return h_lookup(a->h, s_flt2str(k->u.f), set); // TODO
+    case TYPE_STR:  return h_lookup(a->h, k->u.s, set);
+
+    // TODO monitor
     case TYPE_ARR:
-    case TYPE_FN: // TODO Error?
+        printf("%llx\n", (rf_int) k->u.a);
+        return h_lookup(a->h, s_int2str((rf_int) k->u.a), set);
+    case TYPE_FN: // TODO
     default: break;
     }
     return NULL;
-}
-
-static rf_val *a_insert_str(rf_arr *a, rf_str *k, rf_val *v, int set) {
-    return h_insert(a->h, k, v, set);
 }
 
 // TODO
@@ -88,23 +91,27 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
 
 rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
     switch (k->type) {
+    case TYPE_NULL:
+        a->nullv->type = v->type;
+        a->nullv->u    = v->u;
+        if (!is_null(v)) a->n++;
+        return a->nullv;
     case TYPE_INT: return a_insert_int(a, k->u.i, v, set, 0);
     case TYPE_FLT:
         if (k->u.f == (rf_int) k->u.f)
             return a_insert_int(a, (rf_int) k->u.f, v, set, 0);
         else
-            return a_insert_str(a, s_flt2str(k->u.f), v, set); // TODO
-    case TYPE_STR: return a_insert_str(a, k->u.s, v, set);
+            return h_insert(a->h, s_flt2str(k->u.f), v, set); // TODO
+    case TYPE_STR: return h_insert(a->h, k->u.s, v, set);
+
+    // TODO monitor
     case TYPE_ARR:
-    case TYPE_FN: // TODO Error?
+        return h_insert(a->h, s_int2str((rf_int) k->u.a), v, set);
+    case TYPE_FN: // TODO
     default: break;
     }
     return NULL;
 }
-
-// TODO
-// static void a_delete_str(rf_arr *a, rf_str *k) {
-// }
 
 // TODO
 // static void a_delete_int(rf_arr *a, rf_int k) {
