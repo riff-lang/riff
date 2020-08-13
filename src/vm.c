@@ -20,7 +20,7 @@ static int test(rf_val *v) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
     case TYPE_STR: return !!(v->u.s->l);
-    case TYPE_ARR: return !!(v->u.a->h->n + v->u.a->n); // TODO
+    case TYPE_ARR: return !!a_length(v->u.a);
     case TYPE_FN:  return 1;
     default:       return 0;
     }
