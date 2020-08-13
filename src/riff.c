@@ -3,13 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "array.h"
 #include "code.h"
 #include "disas.h"
 #include "env.h"
-#include "lex.h"
 #include "parse.h"
-#include "types.h"
 #include "vm.h"
 
 #define VERSION "0.1a"
