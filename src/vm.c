@@ -140,7 +140,13 @@ void z_lnot(rf_val *v) {
 void z_len(rf_val *v) {
     rf_int l = 0;
     switch (v->type) {
-    case TYPE_INT: l = s_int2str(v->u.i)->l;     break;
+    // For integers:
+    //   #x = ⌊log10(x)⌋  + 1 for x > 0
+    //        ⌊log10(-x)⌋ + 2 for x < 0
+    case TYPE_INT:
+        l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
+            v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
+        break;
     case TYPE_FLT: l = s_flt2str(v->u.f)->l;     break;
     case TYPE_STR: l = v->u.s->l;                break;
     case TYPE_ARR: l = v->u.a->n + v->u.a->h->n; break; // TODO
