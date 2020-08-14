@@ -160,8 +160,13 @@ static int read_str(rf_lexer *x, rf_token *tk, int d) {
 }
 
 static int check_kw(rf_lexer *x, const char *s, int size) {
-    int f = x->p[size];     // Character immediately following
-    return !memcmp(x->p, s, size) && !valid_alphanum(f);
+    int f = size;     // Character immediately following
+    int i = 0;
+    for (; i < size; ++i)
+        if (x->p[i] != s[i] || x->p[i] == '\0')
+            break;
+    size -= i;
+    return !size && !valid_alphanum(x->p[f]);
 }
 
 static int read_id(rf_lexer *x, rf_token *tk) {
