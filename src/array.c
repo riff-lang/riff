@@ -6,6 +6,8 @@
 #define set(f)   a->f = 1
 #define unset(f) a->f = 0
 
+#define MIN_LOAD_FACTOR 0.5
+
 static void err(const char *msg) {
     fprintf(stderr, "%s\n", msg);
     exit(1);
@@ -41,8 +43,8 @@ rf_int a_length(rf_arr *a) {
     return l + h_length(a->h);
 }
 
-static int exists(rf_val **v, rf_int k) {
-    return v[k] != NULL;
+static int exists(rf_arr *a, rf_int k) {
+    return k < a->cap && a->v[k] != NULL;
 }
 
 // Source: The Implementation of Lua 5.0, section 4
@@ -55,14 +57,27 @@ static int exists(rf_val **v, rf_int k) {
 // lookup. Otherwise, defer to h_lookup().
 static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
     if (set) set(lx);
-    if (k < a->cap) {
-        if (exists(a->v, k))
-            return a->v[k];
-        else
-            return a_insert_int(a, k, v_newnull(), set, 1);
+    if (exists(a, k))
+        return a->v[k];
+    if (!a->cap)
+        return a_insert_int(a, k, v_newnull(), set, 0);
+    if (k < a->cap ||
+        ((double)(a->an + 1) / (double)a->cap) >= MIN_LOAD_FACTOR) {
+        return a_insert_int(a, k, v_newnull(), set, 0);
     } else {
         return h_lookup(a->h, s_int2str(k), set);
     }
+}
+
+// If the entire string is is a valid integer, return the number +
+// offset.
+static rf_int str2intidx(rf_str *s, int offset) {
+    char *end;
+    rf_flt f = strtod(s->str, &end);
+    rf_int i = (rf_int) f;
+    if (f == i && *end == '\0')
+        return i + offset;
+    return -1;
 }
 
 // TODO flt lookup is slow with string conversion
@@ -89,8 +104,12 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
             return a_lookup_int(a, (rf_int) k->u.f + offset, set);
         else
             return h_lookup(a->h, s_flt2str(k->u.f + offset), set); // TODO?
-    case TYPE_STR:  return h_lookup(a->h, k->u.s, set);
+    case TYPE_STR: {
+        rf_int si = str2intidx(k->u.s, offset);
+        return si >= 0 ? a_lookup_int(a, si, set)
+                       : h_lookup(a->h, k->u.s, set);
 
+    }
     // TODO monitor
     case TYPE_ARR:
         return h_lookup(a->h, s_int2str((rf_int) k->u.a), set);
@@ -101,28 +120,44 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
 }
 
 // TODO
+// VM currently initializes sequential arrays backwards, inserting the
+// last element first by calling a_insert_int() with `force` set to 1.
+// This allows memory to be allocated once with the exact size needed
+// instead of potentially resizing multiple times throughout
+// initialization. Otherwise, a_insert_int() can defer to the hash
+// table part of the rf_arr if the rf_int `k` would cause the array
+// part to be too sparsely populated.
 rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
-    if (force) {
-        if (a->cap <= a->an) {
-            a->cap = k <= 0 ? 8 : k + 1;
+    if (set) set(lx);
+    if (force || k <= 8 ||
+        ((double)(a->an + 1) / (double)a->cap) >= MIN_LOAD_FACTOR) {
+        if (a->cap <= a->an || a->cap < k) {
+            int oc = a->cap;
+            a->cap = k + 1;
             a->v = realloc(a->v, sizeof(rf_val *) * a->cap);
-            for (int i = k; i < a->cap; ++i)
+            for (int i = oc; i < a->cap; ++i)
                 a->v[i] = NULL;
         }
-        rf_val *nv = malloc(sizeof(rf_val));
-        nv->type = v->type;
-        nv->u    = v->u;
-        a->v[k]  = nv;
-        a->an++;
-        if (set || !is_null(v))
-            a->n++;
-        return nv;
+        if (!exists(a, k)) {
+            rf_val *nv = malloc(sizeof(rf_val));
+            nv->type = v->type;
+            nv->u    = v->u;
+            a->v[k]  = nv;
+            a->an++;
+            if (set || !is_null(v))
+                a->n++;
+        } else {
+            a->v[k]->type = v->type;
+            a->v[k]->u    = v->u;
+        }
+        return a->v[k];
     }
     else
         return h_insert(a->h, s_int2str(k), v, set);
 }
 
 rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
+    if (set) set(lx);
     switch (k->type) {
     case TYPE_NULL:
         a->nullv->type = v->type;
@@ -148,3 +183,4 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
 
 #undef set
 #undef unset
+#undef MIN_LOAD_FACTOR
