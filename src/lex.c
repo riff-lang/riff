@@ -25,6 +25,10 @@ static int valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
+static int dec_value(char c) {
+    return c - '0';
+}
+
 static int hex_value(char c) {
     return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
 }
@@ -52,7 +56,7 @@ static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
     // Interpret as float if base-10 int exceeds INT64_MAX, or if
     // there's overflow in general.
     // This is a hacky way of handling the base-10 INT64_MIN with a
-    // leading unary minus sign, e.g. `-9223372036854775808`
+    // leading unary minus sign, i.e. `-9223372036854775808`
     if ((base == 10 && i > INT64_MAX) || (errno == ERANGE))
         return read_flt(x, tk, start, base);
     x->p = end;
@@ -83,6 +87,9 @@ static int read_num(rf_lexer *x, rf_token *tk) {
     return read_int(x, tk, start, base);
 }
 
+// TODO?
+// Currently reads a maximum of two hex digits (like Lua). C reads hex
+// digits until it reaches a non-hex digit.
 static int hex_esc(rf_lexer *x) {
     if (!isxdigit(*x->p))
         err(x, "expected hexadecimal digit");
@@ -94,12 +101,18 @@ static int hex_esc(rf_lexer *x) {
     return e;
 }
 
+// Reads a maximum of three decimal digits. Throws an error if
+// resulting number > 255.
 static int dec_esc(rf_lexer *x) {
-    char *end;
-    long e = strtoul(x->p, &end, 10);
+    int e = dec_value(*x->p++);
+    for (int i = 0; i < 2; ++i) {
+        if (!isdigit(*x->p))
+            break;
+        e *= 10;
+        e += dec_value(*x->p++);
+    }
     if (e > UCHAR_MAX)
         err(x, "invalid decimal escape");
-    x->p = end;
     return e;
 }
 
@@ -122,6 +135,7 @@ static int read_str(rf_lexer *x, rf_token *tk, int d) {
             case 'v': adv; c = '\v'; break;
             case 'x': adv; c = hex_esc(x); break;
 
+            // TODO ignore raw newlines following backslashes?
             // Newlines following `\`
             case '\n': case '\r':
                 ++x->ln;
