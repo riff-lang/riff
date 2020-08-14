@@ -55,7 +55,7 @@ static int exists(rf_val **v, rf_int k) {
 // lookup. Otherwise, defer to h_lookup().
 static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
     if (set) set(lx);
-    if (k <= a->cap) {
+    if (k < a->cap) {
         if (exists(a->v, k))
             return a->v[k];
         else
@@ -106,7 +106,7 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
         if (a->cap <= a->an) {
             a->cap = k <= 0 ? 8 : k + 1;
             a->v = realloc(a->v, sizeof(rf_val *) * a->cap);
-            for (int i = 0; i < a->cap; ++i)
+            for (int i = k; i < a->cap; ++i)
                 a->v[i] = NULL;
         }
         rf_val *nv = malloc(sizeof(rf_val));
