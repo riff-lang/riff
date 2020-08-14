@@ -25,7 +25,7 @@ void a_init(rf_arr *a) {
 
 // lx flag is set whenever the VM performs a lookup with the intent on
 // setting the value (OP_xxA). When lx is set, recalculate length of
-// the array. This accomodates "deletion" via assigning `null`.
+// the array. This accomodates "deletion" via `null` assignment.
 rf_int a_length(rf_arr *a) {
     if (!a->lx)
         return a->n + h_length(a->h);
@@ -34,7 +34,7 @@ rf_int a_length(rf_arr *a) {
         if (a->v[i] && !is_null(a->v[i]))
             ++l;
     }
-    // Don't forget special "null" index
+    // Include special "null" index
     l += (a->nullx && !is_null(a->nullv));
     a->n = l;
     unset(lx);
@@ -93,7 +93,6 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
 
     // TODO monitor
     case TYPE_ARR:
-        printf("%llx\n", (rf_int) k->u.a);
         return h_lookup(a->h, s_int2str((rf_int) k->u.a), set);
     case TYPE_FN: // TODO
     default: break;
