@@ -33,15 +33,17 @@ void c_free(rf_code *c) {
 // patched
 int c_prep_jump(rf_code *c, int type) {
     switch (type) {
-    case JMP:  push(OP_JMP8);  break;
-    case JZ:   push(OP_JZ8);   break; 
-    case JNZ:  push(OP_JNZ8);  break;
-    case XJZ:  push(OP_XJZ8);  break;
-    case XJNZ: push(OP_XJNZ8); break;
+    case JMP:  push(OP_JMP16);  break;
+    case JZ:   push(OP_JZ16);   break; 
+    case JNZ:  push(OP_JNZ16);  break;
+    case XJZ:  push(OP_XJZ16);  break;
+    case XJNZ: push(OP_XJNZ16); break;
     default: break;
     }
-    push(0x00); // Reserve byte
-    return c->n - 1;
+    // Reserve two bytes for 16-bit jump
+    push(0x00);
+    push(0x00);
+    return c->n - 2;
 }
 
 // Simple backward jumps. Encode a 2-byte offset if necessary.
@@ -70,18 +72,19 @@ void c_jump(rf_code *c, int type, int l) {
         push((int8_t) ((d >> 8) & 0xff));
         push((int8_t) (d & 0xff));
     } else {
-        err(c, "Backward jump too large");
+        err(c, "backward jump larger than INT16_MAX");
     }
 }
 
-// Overwrite the byte at location `l` with the distance between
+// Overwrite the bytes at location l and l+1 with the distance between
 // the code object's "current" instruction and `l`. Useful for patching
 // forward jumps.
 void c_patch(rf_code *c, int l) {
     int jmp = c->n - l + 1;
-    if (jmp > INT8_MAX)
-        err(c, "Forward jump too large to patch");
-    c->code[l] = (int8_t) jmp;
+    if (jmp > INT16_MAX)
+        err(c, "forward jump too large to patch");
+    c->code[l]     = ((jmp >> 8) & 0xff);
+    c->code[l + 1] = (jmp & 0xff);
 }
 
 static void c_pushk(rf_code *c, int i) {
