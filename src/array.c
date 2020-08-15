@@ -47,6 +47,12 @@ static int exists(rf_arr *a, rf_int k) {
     return k < a->cap && a->v[k] != NULL;
 }
 
+static double potential_lf(int n, int cap, rf_int k) {
+    double n1 = n + 1;
+    double n2 = cap > k ? cap : k + 1;
+    return n1 / n2;
+}
+
 // Source: The Implementation of Lua 5.0, section 4
 // The computed size of the array part is the largest n such that at
 // least half the slots between 1 and n are in use (to avoid wasting
@@ -62,7 +68,7 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
     if (!a->cap)
         return a_insert_int(a, k, v_newnull(), set, 0);
     if (k < a->cap ||
-        ((double)(a->an + 1) / (double)a->cap) >= MIN_LOAD_FACTOR) {
+        (potential_lf(a->an, a->cap, k) >= MIN_LOAD_FACTOR)) {
         return a_insert_int(a, k, v_newnull(), set, 0);
     } else {
         return h_lookup(a->h, s_int2str(k), set);
@@ -129,11 +135,11 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
 // part to be too sparsely populated.
 rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
     if (set) set(lx);
-    if (force || k <= 8 ||
-        ((double)(a->an + 1) / (double)a->cap) >= MIN_LOAD_FACTOR) {
-        if (a->cap <= a->an || a->cap < k) {
+    double lf = potential_lf(a->an, a->cap, k);
+    if (force || (lf >= MIN_LOAD_FACTOR)) {
+        if (a->cap <= a->an || a->cap <= k) {
             int oc = a->cap;
-            a->cap = k + 1;
+            a->cap = a->cap < k ? k + 1 : a->cap + 1;
             a->v = realloc(a->v, sizeof(rf_val *) * a->cap);
             for (int i = oc; i < a->cap; ++i)
                 a->v[i] = NULL;
@@ -152,8 +158,9 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
         }
         return a->v[k];
     }
-    else
+    else {
         return h_insert(a->h, s_int2str(k), v, set);
+    }
 }
 
 rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
