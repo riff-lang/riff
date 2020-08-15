@@ -252,7 +252,9 @@ static int nud(rf_parser *y) {
     // TODO
     case '$': {
         int ox = y->ox;
+        int rx = y->rx;
         unset(ox);
+        unset(rx);
         adv;
         set(argx);
         expr(y, 16);
@@ -266,6 +268,7 @@ static int nud(rf_parser *y) {
         if (!y->lhs) set(lhs);
         unset(argx);
         y->ox = ox;
+        y->rx = rx;
         break;
     }
     case '(':
@@ -292,6 +295,7 @@ static int nud(rf_parser *y) {
             set(px);
             set(lhs);
         }
+        unset(rx);
         break;
     case TK_NULL: case TK_FLT: case TK_INT: case TK_STR:
         literal(y);
