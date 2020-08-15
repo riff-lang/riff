@@ -243,6 +243,8 @@ int z_exec(rf_env *e, rf_code *c) {
     register int      sp = 0;
     register uint8_t *ip = c->code;
     while (1) {
+        if (sp >= STACK_SIZE)
+            err("stack limit reached");
         switch (*ip) {
 
 // Unconditional jumps

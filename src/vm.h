@@ -6,7 +6,8 @@
 #include "hash.h"
 #include "types.h"
 
-#define STACK_SIZE 256
+// TODO dynamic stack allocation
+#define STACK_SIZE 1024
 
 // VM operations exposed for (future) codegen optimizations
 void z_add(rf_val *, rf_val *);
