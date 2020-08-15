@@ -125,7 +125,8 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
     return NULL;
 }
 
-// TODO
+// TODO: Collect qualifying integer keys from the hash table part when
+// growing the size of the array part.
 // VM currently initializes sequential arrays backwards, inserting the
 // last element first by calling a_insert_int() with `force` set to 1.
 // This allows memory to be allocated once with the exact size needed
