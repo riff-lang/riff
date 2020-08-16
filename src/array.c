@@ -71,7 +71,10 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
         (potential_lf(a->an, a->cap, k) >= MIN_LOAD_FACTOR)) {
         return a_insert_int(a, k, v_newnull(), set, 0);
     } else {
-        return h_lookup(a->h, s_int2str(k), set);
+        rf_str *ik = s_int2str(k);
+        rf_val *v  = h_lookup(a->h, ik, set);
+        free(ik);
+        return v;
     }
 }
 
@@ -100,16 +103,24 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
         }
         return a->nullv;
     case TYPE_INT:
-        if ((k->u.i + offset) < 0)
-            return h_lookup(a->h, s_int2str(k->u.i + offset), set);
+        if ((k->u.i + offset) < 0) {
+            rf_str *ik = s_int2str(k->u.i + offset);
+            rf_val *v  = h_lookup(a->h, ik, set);
+            free(ik);
+            return v;
+        }
         else
             return a_lookup_int(a, k->u.i + offset, set);
     case TYPE_FLT:
         if ((k->u.f == (rf_int) k->u.f) &&
             (((rf_int) k->u.f + offset) >= 0))
             return a_lookup_int(a, (rf_int) k->u.f + offset, set);
-        else
-            return h_lookup(a->h, s_flt2str(k->u.f + offset), set); // TODO?
+        else {
+            rf_str *fk = s_flt2str(k->u.f + offset);
+            rf_val *v  = h_lookup(a->h, fk, set);
+            free(fk);
+            return v;
+        }
     case TYPE_STR: {
         rf_int si = str2intidx(k->u.s, offset);
         return si >= 0 ? a_lookup_int(a, si, set)
@@ -117,16 +128,18 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
 
     }
     // TODO monitor
-    case TYPE_ARR:
-        return h_lookup(a->h, s_int2str((rf_int) k->u.a), set);
+    case TYPE_ARR: {
+        rf_str *ak = s_int2str((rf_int) k->u.a);
+        rf_val *v  = h_lookup(a->h, s_int2str((rf_int) k->u.a), set);
+        free(ak);
+        return v;
+    }
     case TYPE_FN: // TODO
     default: break;
     }
     return NULL;
 }
 
-// TODO: Collect qualifying integer keys from the hash table part when
-// growing the size of the array part.
 // VM currently initializes sequential arrays backwards, inserting the
 // last element first by calling a_insert_int() with `force` set to 1.
 // This allows memory to be allocated once with the exact size needed
@@ -142,8 +155,15 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
             int oc = a->cap;
             a->cap = a->cap < k ? k + 1 : a->cap + 1;
             a->v = realloc(a->v, sizeof(rf_val *) * a->cap);
-            for (int i = oc; i < a->cap; ++i)
-                a->v[i] = NULL;
+
+            // Collect valid integer keys from the hash part and move
+            // them to the newly allocated array part
+            for (int i = oc; i < a->cap; ++i) {
+                rf_str *ik = s_int2str(i);
+                a->v[i] = h_delete(a->h, ik);
+                if (a->v[i]) a->an++;
+                free(ik);
+            }
         }
         if (!exists(a, k)) {
             rf_val *nv = malloc(sizeof(rf_val));
@@ -160,7 +180,10 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
         return a->v[k];
     }
     else {
-        return h_insert(a->h, s_int2str(k), v, set);
+        rf_str *ik = s_int2str(k);
+        rf_val *rv = h_insert(a->h, ik, v, set);
+        free(ik);
+        return rv;
     }
 }
 
@@ -176,13 +199,21 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
     case TYPE_FLT:
         if (k->u.f == (rf_int) k->u.f)
             return a_insert_int(a, (rf_int) k->u.f, v, set, 0);
-        else
-            return h_insert(a->h, s_flt2str(k->u.f), v, set); // TODO
+        else {
+            rf_str *fk = s_flt2str(k->u.f);
+            rf_val *rv = h_insert(a->h, fk, v, set);
+            free(fk);
+            return rv;
+        }
     case TYPE_STR: return h_insert(a->h, k->u.s, v, set);
 
     // TODO monitor
-    case TYPE_ARR:
-        return h_insert(a->h, s_int2str((rf_int) k->u.a), v, set);
+    case TYPE_ARR: {
+        rf_str *ak = s_int2str((rf_int) k->u.a);
+        rf_val *rv = h_insert(a->h, ak, v, set);
+        free(ak);
+        return rv;
+    }
     case TYPE_FN: // TODO
     default: break;
     }
