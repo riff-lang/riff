@@ -20,7 +20,7 @@ void c_init(rf_code *c) {
 }
 
 void c_push(rf_code *c, uint8_t b) {
-    eval_resize(c->code, c->n, c->cap);
+    m_growarray(c->code, c->n, c->cap);
     c->code[c->n++] = b;
 }
 
@@ -169,7 +169,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     default: break;
     }
 
-    eval_resize(c->k.v, c->k.n, c->k.cap);
+    m_growarray(c->k.v, c->k.n, c->k.cap);
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
@@ -217,7 +217,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
     }
     rf_val *v;
     v = v_newstr(tk->lexeme.s);
-    eval_resize(c->k.v, c->k.n, c->k.cap);
+    m_growarray(c->k.v, c->k.n, c->k.cap);
     c->k.v[c->k.n++] = v;
     if (c->k.n > 255)
         err(c, "Exceeded max number of unique literals");
@@ -279,7 +279,7 @@ void c_array(rf_code *c, int n) {
         }
 
         // Otherwise, add `n` to constants pool
-        eval_resize(c->k.v, c->k.n, c->k.cap);
+        m_growarray(c->k.v, c->k.n, c->k.cap);
         c->k.v[c->k.n++] = v_newint(n);
         push((uint8_t) c->k.n - 1);
     }

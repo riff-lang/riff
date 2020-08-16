@@ -164,7 +164,7 @@ static int read_str(rf_lexer *x, rf_token *tk, int d) {
             adv;
             break;
         }
-        eval_resize(x->buf.c, x->buf.n, x->buf.cap);
+        m_growarray(x->buf.c, x->buf.n, x->buf.cap);
         x->buf.c[x->buf.n++] = c;
     }
     rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
@@ -410,9 +410,9 @@ void x_free(rf_lexer *x) {
 int x_adv(rf_lexer *x) {
 
     // Free previous string object
-    if (x->tk.kind == TK_STR || x->tk.kind == TK_ID)
-        free(x->tk.lexeme.s);
-    else if (x->tk.kind == TK_EOI)
+    if (x->tk.kind == TK_STR || x->tk.kind == TK_ID) {
+        m_freestr(x->tk.lexeme.s);
+    } else if (x->tk.kind == TK_EOI)
         return 1;
 
     // If a lookahead token already exists, assign it to the current

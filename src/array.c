@@ -73,7 +73,7 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
     } else {
         rf_str *ik = s_int2str(k);
         rf_val *v  = h_lookup(a->h, ik, set);
-        free(ik);
+        m_freestr(ik);
         return v;
     }
 }
@@ -106,7 +106,7 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
         if ((k->u.i + offset) < 0) {
             rf_str *ik = s_int2str(k->u.i + offset);
             rf_val *v  = h_lookup(a->h, ik, set);
-            free(ik);
+            m_freestr(ik);
             return v;
         }
         else
@@ -118,7 +118,7 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
         else {
             rf_str *fk = s_flt2str(k->u.f + offset);
             rf_val *v  = h_lookup(a->h, fk, set);
-            free(fk);
+            m_freestr(fk);
             return v;
         }
     case TYPE_STR: {
@@ -131,7 +131,7 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
     case TYPE_ARR: {
         rf_str *ak = s_int2str((rf_int) k->u.a);
         rf_val *v  = h_lookup(a->h, s_int2str((rf_int) k->u.a), set);
-        free(ak);
+        m_freestr(ak);
         return v;
     }
     case TYPE_FN: // TODO
@@ -162,7 +162,7 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
                 rf_str *ik = s_int2str(i);
                 a->v[i] = h_delete(a->h, ik);
                 if (a->v[i]) a->an++;
-                free(ik);
+                m_freestr(ik);
             }
         }
         if (!exists(a, k)) {
@@ -182,7 +182,7 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
     else {
         rf_str *ik = s_int2str(k);
         rf_val *rv = h_insert(a->h, ik, v, set);
-        free(ik);
+        m_freestr(ik);
         return rv;
     }
 }
@@ -202,7 +202,7 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
         else {
             rf_str *fk = s_flt2str(k->u.f);
             rf_val *rv = h_insert(a->h, fk, v, set);
-            free(fk);
+            m_freestr(fk);
             return rv;
         }
     case TYPE_STR: return h_insert(a->h, k->u.s, v, set);
@@ -211,7 +211,7 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
     case TYPE_ARR: {
         rf_str *ak = s_int2str((rf_int) k->u.a);
         rf_val *rv = h_insert(a->h, ak, v, set);
-        free(ak);
+        m_freestr(ak);
         return rv;
     }
     case TYPE_FN: // TODO

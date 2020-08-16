@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "array.h"
+#include "mem.h"
 #include "vm.h"
 
 static void err(const char *msg) {
@@ -15,6 +16,7 @@ static hash_t globals;
 static rf_arr argv;
 
 // Return logical result of value
+// TODO str->num conversion s.t. "0" evaluates to false
 static int test(rf_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
@@ -148,9 +150,14 @@ void z_len(rf_val *v) {
             v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
         break;
     // TODO? defer to TYPE_INT behavior if v->u.f == (int) v->u.f
-    case TYPE_FLT: l = s_flt2str(v->u.f)->l; break;
-    case TYPE_STR: l = v->u.s->l;            break;
-    case TYPE_ARR: l = a_length(v->u.a);     break;
+    case TYPE_FLT: {
+        rf_str *fs = s_flt2str(v->u.f);
+        l = fs->l;
+        m_freestr(fs);
+        break;
+    }
+    case TYPE_STR: l = v->u.s->l;        break;
+    case TYPE_ARR: l = a_length(v->u.a); break;
     case TYPE_FN:  // TODO
     default: break;
     }
@@ -161,18 +168,20 @@ void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
+// TODO free newly allocated strings after assigning concatenation
+// result
 void z_cat(rf_val *l, rf_val *r) {
     switch (l->type) {
     case TYPE_NULL: l->u.s = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  l->u.s = s_int2str(l->u.i); break;
-    case TYPE_FLT:  l->u.s = s_flt2str(l->u.f); break;
+    case TYPE_INT:  l->u.s = s_int2str(l->u.i);    break;
+    case TYPE_FLT:  l->u.s = s_flt2str(l->u.f);    break;
     default: break;
     }
 
     switch (r->type) {
     case TYPE_NULL: r->u.s = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  r->u.s = s_int2str(r->u.i); break;
-    case TYPE_FLT:  r->u.s = s_flt2str(r->u.f); break;
+    case TYPE_INT:  r->u.s = s_int2str(r->u.i);    break;
+    case TYPE_FLT:  r->u.s = s_flt2str(r->u.f);    break;
     default: break;
     }
 
@@ -184,15 +193,22 @@ void z_cat(rf_val *l, rf_val *r) {
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
 void z_idx(rf_val *l, rf_val *r) {
     switch (l->type) {
-    case TYPE_INT:
-        assign_str(l, s_newstr(&s_int2str(l->u.i)->str[intval(r)], 1, 0));
+    case TYPE_INT: {
+        rf_str *is = s_int2str(l->u.i);
+        assign_str(l, s_newstr(&is->str[intval(r)], 1, 0));
+        m_freestr(is);
         break;
-    case TYPE_FLT:
-        assign_str(l, s_newstr(&s_flt2str(l->u.f)->str[intval(r)], 1, 0));
+    }
+    case TYPE_FLT: {
+        rf_str *fs = s_flt2str(l->u.f);
+        assign_str(l, s_newstr(&fs->str[intval(r)], 1, 0));
+        m_freestr(fs);
         break;
-    case TYPE_STR:
+    }
+    case TYPE_STR: {
         assign_str(l, s_newstr(&l->u.s->str[intval(r)], 1, 0));
         break;
+    }
     case TYPE_ARR: // TODO? e.g. {2,4,7,1}[0]
         break;
     default:
@@ -219,10 +235,10 @@ static void put(rf_val *v) {
 #include <string.h>
 static void init_argv(rf_arr *a, int argc, char **argv) {
     a_init(a);
-    rf_str *s;
     for (int i = 0; i < argc; ++i) {
-        s = s_newstr(argv[i], strlen(argv[i]), 1);
+        rf_str *s = s_newstr(argv[i], strlen(argv[i]), 1);
         a_insert_int(a, i, v_newstr(s), 1, 1);
+        m_freestr(s);
     }
 }
 
