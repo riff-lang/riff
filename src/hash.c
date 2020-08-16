@@ -90,7 +90,7 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
     if ((h->cap * LOAD_FACTOR) <= h->an + 1) {
         int new_cap = h->cap < 8 ? 8 : h->cap * 2;
         entry_t **new_e = malloc(new_cap * sizeof(entry_t *));
-        for (int i = 0; i < new_cap; i++)
+        for (int i = 0; i < new_cap; ++i)
             new_e[i] = NULL;
         int new_n  = 0;
         int new_an = 0;
@@ -128,6 +128,22 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
         h->e[i]->val->u    = v->u;
     }
     return h->e[i]->val;
+}
+
+// Remove the key/value pair by nullifying its slot
+rf_val *h_delete(hash_t *h, rf_str *k) {
+    if (!h->e || !exists(h, k))
+        return NULL;
+    if (!k->hash)
+        k->hash = s_hash(k->str);
+    int idx = index(h->e, h->cap, k->hash);
+    rf_val *v = h->e[idx]->val;
+    h->an--;
+    if (!is_null(v))
+        h->n--;
+    free(h->e[idx]->key);
+    h->e[idx] = NULL;
+    return v;
 }
 
 #undef LOAD_FACTOR

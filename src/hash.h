@@ -20,5 +20,6 @@ void    h_init(hash_t *);
 rf_int  h_length(hash_t *);
 rf_val *h_lookup(hash_t *, rf_str *, int);
 rf_val *h_insert(hash_t *, rf_str *, rf_val *, int);
+rf_val *h_delete(hash_t *, rf_str *);
 
 #endif
