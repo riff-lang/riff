@@ -114,14 +114,12 @@ enum jumps {
 };
 
 typedef struct {
-    int      n;
-    int      cap;
-    uint8_t *code;
-    struct {
-        int      n;
-        int      cap;
-        rf_val **v;
-    } k;        // Constants table
+    int      n;     // Number of bytes in bytecode array
+    int      cap;   // Bytecode array capacity
+    uint8_t *code;  // Bytecode array
+    int      nk;    // Number of constants in pool
+    int      kcap;  // Constants pool capacity
+    rf_val  *k;     // Constants pool
 } rf_code;
 
 void c_init(rf_code *);

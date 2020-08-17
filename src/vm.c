@@ -257,8 +257,9 @@ int z_exec(rf_env *e, rf_code *c) {
 
     // Offset for the argv; $0 should be the first user-provided arg
     rf_int aos = e->ff ? 3 : 2;
-    rf_val *stk[STACK_SIZE]; // Stack
-    rf_val *res[STACK_SIZE]; // Reserve pointers
+
+    rf_val *stk[STACK_SIZE];    // Stack
+    rf_val *res[STACK_SIZE];    // Reserve pointers
 
     // Allocate and save pointers
     for (int i = 0; i < STACK_SIZE; i++)
@@ -434,8 +435,8 @@ int z_exec(rf_env *e, rf_code *c) {
 // Copy constant x from code object's constant table to the top of the
 // stack.
 #define pushk(x) \
-    stk[sp]->type = c->k.v[(x)]->type; \
-    stk[sp]->u    = c->k.v[(x)]->u; \
+    stk[sp]->type = c->k[(x)].type; \
+    stk[sp]->u    = c->k[(x)].u; \
     ++sp;
 
         case OP_PUSHK:  pushk(ip[1]); ip += 2; break;
@@ -444,12 +445,13 @@ int z_exec(rf_env *e, rf_code *c) {
         case OP_PUSHK2: pushk(2);     ++ip;    break;
 
 // Push global address
-// Assign the address of global variable x's rf_val in the globals table.
+// Assign the address of global variable x's rf_val in the globals
+// table.
 // h_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
 #define gbla(x) \
-    stk[sp] = h_lookup(&globals, c->k.v[(x)]->u.s, 1); \
+    stk[sp] = h_lookup(&globals, c->k[(x)].u.s, 1); \
     ++sp;
 
         case OP_GBLA:  gbla(ip[1]); ip += 2; break;
@@ -464,7 +466,7 @@ int z_exec(rf_env *e, rf_code *c) {
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
 #define gblv(x) \
-    tp = h_lookup(&globals, c->k.v[(x)]->u.s, 0); \
+    tp = h_lookup(&globals, c->k[(x)].u.s, 0); \
     stk[sp]->type = tp->type; \
     stk[sp]->u    = tp->u; \
     ++sp;
@@ -522,7 +524,7 @@ int z_exec(rf_env *e, rf_code *c) {
         case OP_ARRAY0: new_array(0);    ++ip;    break;
         case OP_ARRAY:  new_array(ip[1]) ip += 2; break;
         case OP_ARRAYK:
-            new_array(c->k.v[ip[1]]->u.i);
+            new_array(c->k[ip[1]].u.i);
             ip += 2;
             break;
 

@@ -433,7 +433,7 @@ static void break_stmt(rf_parser *y) {
         err(y, "break statement outside of loop");
     // Reserve a forward jump
     p_list *p = y->brk;
-    m_growarray(p->l, p->n, p->cap);
+    m_growarray(p->l, p->n, p->cap, int);
     p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
 
@@ -442,7 +442,7 @@ static void cont_stmt(rf_parser *y) {
         err(y, "continue statement outside of loop");
     // Reserve a forward jump
     p_list *p = y->cont;
-    m_growarray(p->l, p->n, p->cap);
+    m_growarray(p->l, p->n, p->cap, int);
     p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
 

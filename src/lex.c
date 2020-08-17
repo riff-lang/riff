@@ -164,7 +164,7 @@ static int read_str(rf_lexer *x, rf_token *tk, int d) {
             adv;
             break;
         }
-        m_growarray(x->buf.c, x->buf.n, x->buf.cap);
+        m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
     rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);

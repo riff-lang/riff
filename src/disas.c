@@ -113,10 +113,10 @@ static struct {
 #define INST1ADDR   "%*d| %02x %02x    %-6s %-6d // %d\n"
 #define INST2ADDR   "%*d| %02x %02x %02x %-6s %-6d // %d\n"
 
-#define OPND(x)     (c->k.v[b1]->u.x)
-#define OPND0(x)    (c->k.v[0]->u.x)
-#define OPND1(x)    (c->k.v[1]->u.x)
-#define OPND2(x)    (c->k.v[2]->u.x)
+#define OPND(x)     (c->k[b1].u.x)
+#define OPND0(x)    (c->k[0].u.x)
+#define OPND1(x)    (c->k[1].u.x)
+#define OPND2(x)    (c->k[2].u.x)
 
 static int is_jump8(int op) {
     return op == OP_JMP8 || op == OP_JZ8 || op == OP_JNZ8 ||
@@ -147,7 +147,7 @@ void d_code_chunk(rf_code *c) {
             switch (b0) {
             case OP_PUSHK:
             case OP_ARRAYK:
-                switch (c->k.v[b1]->type) {
+                switch (c->k[b1].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND(f));
                     break;
@@ -184,7 +184,7 @@ void d_code_chunk(rf_code *c) {
         } else if (b0 >= OP_PUSHK0 && b0 <= OP_GBLV2) {
             switch (b0) {
             case OP_PUSHK0:
-                switch (c->k.v[0]->type) {
+                switch (c->k[0].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND0(f));
                     break;
@@ -200,7 +200,7 @@ void d_code_chunk(rf_code *c) {
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
             case OP_PUSHK1:
-                switch (c->k.v[1]->type) {
+                switch (c->k[1].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND1(f));
                     break;
@@ -216,7 +216,7 @@ void d_code_chunk(rf_code *c) {
                 printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
                 break;
             case OP_PUSHK2:
-                switch (c->k.v[2]->type) {
+                switch (c->k[2].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND2(f));
                     break;
