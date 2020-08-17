@@ -15,19 +15,6 @@ static void err(const char *msg) {
 static hash_t globals;
 static rf_arr argv;
 
-// Return logical result of value
-// TODO str->num conversion s.t. "0" evaluates to false
-static int test(rf_val *v) {
-    switch (v->type) {
-    case TYPE_INT: return !!(v->u.i);
-    case TYPE_FLT: return !!(v->u.f);
-    case TYPE_STR: return !!(v->u.s->l);
-    case TYPE_ARR: return !!a_length(v->u.a);
-    case TYPE_FN:  return 1;
-    default:       return 0;
-    }
-}
-
 static rf_int str2int(rf_str *s) {
     char *end;
     return (rf_int) strtoull(s->str, &end, 0);
@@ -36,6 +23,27 @@ static rf_int str2int(rf_str *s) {
 static rf_flt str2flt(rf_str *s) {
     char *end;
     return strtod(s->str, &end);
+}
+
+// Return logical result of value
+static int test(rf_val *v) {
+    switch (v->type) {
+    case TYPE_INT: return !!(v->u.i);
+    case TYPE_FLT: return !!(v->u.f);
+    // If entire string is a numeric value, return logical result of
+    // the number. Otherwise, return whether the string is longer than
+    // 0.
+    case TYPE_STR: {
+        char *end;
+        rf_flt f = strtod(v->u.s->str, &end);
+        if (*end == '\0')
+            return !!f;
+        return !!v->u.s->l;
+    }
+    case TYPE_ARR: return !!a_length(v->u.a);
+    case TYPE_FN:  return 1;
+    default:       return 0;
+    }
 }
 
 #define numval(x) (is_int(x) ? x->u.i : \
