@@ -240,12 +240,13 @@ static void array(rf_parser *y) {
 
 static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
+    int e = 0;
     if (uop(tk)) {
         set(ox);
         adv;
-        expr(y, 12);
+        e = expr(y, 12);
         c_prefix(y->c, tk);
-        return 0;
+        return e;
     }
     switch (tk) {
 
