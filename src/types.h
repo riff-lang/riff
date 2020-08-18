@@ -29,8 +29,8 @@ typedef struct {
     char     *str;
 } rf_str;
 
-// Forward declaration
 typedef struct rf_arr rf_arr;
+typedef struct rf_fn  rf_fn;
 
 typedef struct {
     int type;
@@ -39,7 +39,7 @@ typedef struct {
         rf_int  i;
         rf_str *s;
         rf_arr *a;
-        // Add function
+        rf_fn  *fn;
     } u;
 } rf_val;
 

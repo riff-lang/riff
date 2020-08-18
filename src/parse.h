@@ -2,6 +2,7 @@
 #define PARSE_H
 
 #include "code.h"
+#include "env.h"
 #include "lex.h"
 #include "types.h"
 
@@ -19,6 +20,8 @@ typedef struct {
 } p_list;
 
 typedef struct {
+    rf_env *e;      // Global environment struct
+
     rf_lexer *x;    // Parser controls lexical analysis
     rf_code  *c;    // Current code object
 
@@ -36,6 +39,7 @@ typedef struct {
     int argx: 1;    // Current nud is RHS of '$'
     int lx:   1;    // Local flag (newly-declared)
     int rx:   1;    // Reference flag - OP_xxA vs OP_xxV instructions
+    int retx: 1;    // Return flag
 
     uint8_t idx;    // Depth of index (for exprs inside [])
     uint8_t ld;     // Lexical depth/scope
@@ -44,6 +48,6 @@ typedef struct {
     p_list *cont;   // Patch list for continue stmts (current loop)
 } rf_parser;
 
-int y_compile(const char *, rf_code *);
+int y_compile(rf_env *);
 
 #endif

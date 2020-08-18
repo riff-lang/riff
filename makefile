@@ -13,6 +13,7 @@ SRC     = src/riff.c
 SRC    += src/array.c
 SRC    += src/code.c
 SRC    += src/disas.c
+SRC    += src/fn.c
 SRC    += src/hash.c
 SRC    += src/lex.c
 SRC    += src/parse.c

@@ -129,7 +129,7 @@ static int is_jump16(int op) {
 }
 
 // TODO This function is way too big for its own good
-void d_code_chunk(rf_code *c) {
+static void d_code_obj(rf_code *c, const char *name) {
     int sz  = c->n;
     int ipw = sz <= 10   ? 1
             : sz <= 100  ? 2
@@ -139,7 +139,7 @@ void d_code_chunk(rf_code *c) {
 
     char s[80];
     int b0, b1;
-    printf("code obj @ %p -> %d bytes\n", c, sz);
+    printf("%s @ %p -> %d bytes\n", name, c, sz);
     while (ip < sz) {
         b0 = c->code[ip];
         if (OP_ARITY) {
@@ -266,6 +266,14 @@ void d_code_chunk(rf_code *c) {
 #undef OPND0
 #undef OPND1
 #undef OPND2
+
+void d_prog(rf_env *e) {
+    d_code_obj(e->main.code, e->pname);
+    for (int i = 0; i < e->nf; ++i) {
+        printf("\n");
+        d_code_obj(e->fn[i]->code, e->fn[i]->name->str);
+    }
+}
 
 static const char *tokenstr[] = {
     [TK_AND] =

@@ -253,7 +253,8 @@ static void init_argv(rf_arr *a, int argc, char **argv) {
 }
 
 // Main interpreter loop
-int z_exec(rf_env *e, rf_code *c) {
+int z_exec(rf_env *e) {
+    rf_code *c = e->main.code;
     h_init(&globals);
     init_argv(&argv, e->argc, e->argv);
 

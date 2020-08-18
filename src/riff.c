@@ -7,6 +7,7 @@
 #include "disas.h"
 #include "env.h"
 #include "parse.h"
+#include "types.h"
 #include "vm.h"
 
 #define VERSION "0.1a"
@@ -39,8 +40,16 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    rf_env e;
+    rf_fn  main;
     rf_code c;
     c_init(&c);
+    main.code = &c;
+    main.arity = 0;
+    e.nf   = 0;
+    e.fcap = 0;
+    e.fn   = NULL;
+    e.main = main;
 
     int df = 0;
     int ff = 0;
@@ -58,7 +67,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    rf_env e;
     e.argc = argc;
     e.ff   = ff;
     e.argv = argv;
@@ -69,15 +77,21 @@ int main(int argc, char **argv) {
     if (uf) --optind;
 
     // -f: Open file and convert contents to null-terminated string
-    if (ff)
-        y_compile(stringify_file(argv[optind]), &c);
-    else
-        y_compile(argv[optind], &c);
+    if (ff) {
+        e.pname = argv[optind];
+        e.src   = stringify_file(argv[optind]);
+    } else {
+        e.pname = "<command-line>";
+        e.src   = argv[optind];
+    }
+
+    main.name = s_newstr(e.pname, strlen(e.pname), 1);
+    y_compile(&e);
 
     // -d: Dump riff's arbitrary disassembly for the given program
     if (df)
-        d_code_chunk(&c);
+        d_prog(&e);
     else
-        z_exec(&e, &c);
+        z_exec(&e);
     return 0;
 }

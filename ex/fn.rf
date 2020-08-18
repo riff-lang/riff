@@ -1,6 +1,8 @@
 // User functions
 
-fn f(x) {
+fn f() {
     local y = x ** 2
     return x + y
 }
+
+f()

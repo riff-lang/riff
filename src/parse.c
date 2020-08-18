@@ -13,7 +13,8 @@
                   y->ax   = 0; \
                   y->ox   = 0; \
                   y->px   = 0; \
-                  y->rx   = 0;
+                  y->rx   = 0; \
+                  y->retx = 0;
 
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned
 // up
@@ -524,6 +525,33 @@ static void exit_stmt(rf_parser *y) {
 
 // TODO
 static void fn_def(rf_parser *y) {
+    rf_fn *f = malloc(sizeof(rf_fn));
+    rf_str *s;
+    if (y->x->tk.kind != TK_ID) {
+        s = s_newstr("<anonymous function>", 20, 0);
+    } else {
+        s = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
+        adv;
+    }
+    f_init(f, s);
+    m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
+    y->e->fn[y->e->nf++] = f;
+    rf_code *sv = y->c;
+    y->c = f->code;
+    y->ld++;
+    consume(y, '(', "expected '('");
+    // Params go here
+    consume(y, ')', "expected ')'");
+    consume(y, '{', "expected '{'");
+    stmt_list(y);
+    y->ld--;
+    pop_locals(y);
+
+    // If the last stmt was not a return statement, push OP_RET
+    if (!y->retx)
+        push(OP_RET);
+    y->c = sv;
+    consume(y, '}', "expected '}'");
 }
 
 // TODO
@@ -624,6 +652,7 @@ static void print_stmt(rf_parser *y) {
 }
 
 static void ret_stmt(rf_parser *y) {
+    set(retx); // TODO
     const char *p = y->x->p; // Save pointer
     expr(y, 0);
     if (p == y->x->p)        // No expression parsed
@@ -662,6 +691,7 @@ static void while_stmt(rf_parser *y) {
 }
 
 static void stmt(rf_parser *y) {
+    unset(retx);
     switch (y->x->tk.kind) {
     case ';':       adv;                break;
     case TK_BREAK:  adv; break_stmt(y); break;
@@ -700,15 +730,16 @@ static void y_init(rf_parser *y, const char *src) {
     y->cont = NULL;
 }
 
-int y_compile(const char *src, rf_code *c) {
+int y_compile(rf_env *e) {
     rf_parser y;
-    rf_lexer x;
+    rf_lexer  x;
     y.x = &x;
-    y.c = c;
-    y_init(&y, src);
+    y.c = e->main.code;
+    y_init(&y, e->src);
+    y.e = e;
     stmt_list(&y);
     pop_locals(&y);
-    c_push(c, OP_RET);
+    c_push(y.c, OP_RET);
     x_free(&x);
     return 0;
 }
