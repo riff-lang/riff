@@ -143,8 +143,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     switch (tk->kind) {
     case TK_FLT:
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk].type  = TYPE_FLT;
-        c->k[c->nk++].u.f = tk->lexeme.f;
+        c->k[c->nk++] = (rf_val) {TYPE_FLT, .u.f = tk->lexeme.f};
         break;
     case TK_INT: {
         rf_int i = tk->lexeme.i;
@@ -159,8 +158,7 @@ void c_constant(rf_code *c, rf_token *tk) {
                 return;
             } else {
                 m_growarray(c->k, c->nk, c->kcap, rf_val);
-                c->k[c->nk].type  = TYPE_INT;
-                c->k[c->nk++].u.i = i;
+                c->k[c->nk++] = (rf_val) {TYPE_INT, .u.i = i};
             }
             break;
         }
@@ -169,8 +167,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     case TK_STR: {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
         rf_str *s = s_newstr(tk->lexeme.s->str, tk->lexeme.s->l, 1);
-        c->k[c->nk].type  = TYPE_STR;
-        c->k[c->nk++].u.s = s;
+        c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
         break;
     }
     default: break;
@@ -222,8 +219,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
     }
     rf_str *s = s_newstr(tk->lexeme.s->str, tk->lexeme.s->l, 1);
     m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk].type  = TYPE_STR;
-    c->k[c->nk++].u.s = s;
+    c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
     if (c->nk > 255)
         err(c, "Exceeded max number of unique literals");
     if (mode) push_global_addr(c, c->nk - 1);
@@ -285,8 +281,7 @@ void c_array(rf_code *c, int n) {
 
         // Otherwise, add `n` to constants pool
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk].type  = TYPE_INT;
-        c->k[c->nk++].u.i = (rf_int) n;
+        c->k[c->nk++] = (rf_val) {TYPE_INT, .u.i = (rf_int) n};
         push((uint8_t) c->nk - 1);
     }
 }

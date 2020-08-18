@@ -58,9 +58,11 @@ static int test(rf_val *v) {
 
 #define int_arith(l,r,op) \
     assign_int(l, (intval(l) op intval(r)));
+    // *l = (rf_val) {TYPE_INT, .u.i = (intval(l) op intval(r))};
 
 #define flt_arith(l,r,op) \
     assign_flt(l, (numval(l) op numval(r)));
+    // *l = (rf_val) {TYPE_FLT, .u.f = (numval(l) op numval(r))};
 
 #define num_arith(l,r,op) \
     if (is_flt(l) || is_flt(r)) { \
