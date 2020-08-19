@@ -41,7 +41,6 @@ enum opcodes {
     OP_LE,      // Less-than or equal-to
     OP_LNOT,    // Logical NOT
     OP_CAT,     // Concatenate
-    OP_CALL,    // Function call
     OP_PREINC,  // Pre-increment
     OP_PREDEC,  // Pre-decrement
     OP_POSTINC, // Post-increment
@@ -90,6 +89,7 @@ enum opcodes {
     OP_LCLV0,   // Copy value of stack[0] onto stack
     OP_LCLV1,   // Copy value of stack[1] onto stack
     OP_LCLV2,   // Copy value of stack[2] onto stack
+    OP_CALL,    // Function call
     OP_RET,     // Return (stack unmodified)
     OP_RET1,    // Return 1 value from stack top
     OP_ARRAY0,  // Create empty array

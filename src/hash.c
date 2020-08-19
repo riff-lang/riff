@@ -43,6 +43,9 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
         nv->type = TYPE_ARR;
         nv->u.a  = v->u.a;
         break;
+    case TYPE_FN:
+        nv = v; // Don't allocate new functions
+        break;
     default: break;
     }
     entry_t *e = malloc(sizeof(entry_t));

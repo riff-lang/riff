@@ -14,6 +14,9 @@ static void err(const char *msg) {
 
 static hash_t globals;
 static rf_arr argv;
+static rf_int aos;
+static rf_val *stk[STACK_SIZE];    // Stack
+static rf_val *res[STACK_SIZE];    // Reserve pointers
 
 static rf_int str2int(rf_str *s) {
     char *end;
@@ -235,7 +238,7 @@ static void put(rf_val *v) {
     case TYPE_FLT:  printf("%g", v->u.f);        break;
     case TYPE_STR:  printf("%s", v->u.s->str);   break;
     case TYPE_ARR:  printf("array: %p", v->u.a); break;
-    case TYPE_FN:   // TODO
+    case TYPE_FN:   printf("fn: %p", v->u.fn);   break;
     default: break;
     }
 }
@@ -251,24 +254,35 @@ static void init_argv(rf_arr *a, int argc, char **argv) {
     }
 }
 
-// Main interpreter loop
+static int exec(rf_code *c, register unsigned int sp);
+
+// VM entry point/initialization
 int z_exec(rf_env *e) {
-    rf_code *c = e->main.code;
     h_init(&globals);
     init_argv(&argv, e->argc, e->argv);
 
     // Offset for the argv; $0 should be the first user-provided arg
-    rf_int aos = e->ff ? 3 : 2;
+    aos = e->ff ? 3 : 2;
 
-    rf_val *stk[STACK_SIZE];    // Stack
-    rf_val *res[STACK_SIZE];    // Reserve pointers
+    // Add user-defined functions to the global hash table
+    for (int i = 0; i < e->nf; ++i) {
+        rf_val *fn = malloc(sizeof(rf_val));
+        *fn = (rf_val) {TYPE_FN, .u.fn = e->fn[i]};
+        h_insert(&globals, e->fn[i]->name, fn, 1);
+    }
 
     // Allocate and save pointers
     for (int i = 0; i < STACK_SIZE; i++)
         res[i] = stk[i] = malloc(sizeof(rf_val));
+
+    return exec(e->main.code, 0);
+}
+
+// VM interpreter loop
+static int exec(rf_code *c, register unsigned int sp) {
     rf_val *tp; // Temp pointer
-    register int      sp = 0;
-    register uint8_t *ip = c->code;
+    register unsigned int  fp = 0;
+    register uint8_t      *ip = c->code;
     while (1) {
         if (sp >= STACK_SIZE)
             err("stack limit reached");
@@ -338,30 +352,6 @@ int z_exec(rf_env *e) {
         case OP_LE:  binop(le);  break;
         case OP_CAT: binop(cat); break;
 
-// Calling convention
-// ex: Stack for call such as f(1,2,3):
-//   gblv 0     // `f`
-//   imm  1
-//   imm  2
-//   imm  3
-//   <empty>    <- SP
-//
-// Steps:
-// - Populate function parameters with arguments on stack, starting
-//   with the function's first parameter and the value at SP-(IP[1]).
-//   This should facilitate calling functions with fewer or more than
-//   the function's defined arity.
-// - At this point, check for default parameter values (TODO) and/or
-//   discard extra values on the stack. SP should be pointing to the
-//   slot where the function's name was.
-// - Increment IP past the OP_CALL instruction and push on the stack
-//   as the return address.
-#define call(x) \
-    if (!is_fn(stk[sp-(x)])) \
-        err("attempt to perform function call on non-function value");
-
-        case OP_CALL: ip += 2; break; // TODO
-
 // Pre-increment/decrement
 // stk[sp-1] is address of some variable's rf_val.
 // Increment/decrement this value directly and replace the stack
@@ -372,7 +362,7 @@ int z_exec(rf_env *e) {
     case TYPE_FLT: stk[sp-1]->u.f += x; break; \
     case TYPE_STR: \
         assign_flt(stk[sp-1], str2flt(stk[sp-1]->u.s) + x); \
-        break;\
+        break; \
     default: \
         assign_int(stk[sp-1], x); \
         break; \
@@ -398,7 +388,7 @@ int z_exec(rf_env *e) {
     case TYPE_FLT: stk[sp-1]->u.f += x; break; \
     case TYPE_STR: \
         assign_flt(stk[sp-1], str2flt(stk[sp-1]->u.s) + x); \
-        break;\
+        break; \
     default: \
         assign_int(stk[sp-1], x); \
         break; \
@@ -532,8 +522,32 @@ int z_exec(rf_env *e) {
         case OP_LCLV1: lclv(1);    ++ip;    break;
         case OP_LCLV2: lclv(2);    ++ip;    break;
 
-        case OP_RET:  exit(0); // TODO
-        case OP_RET1: break;   // TODO
+// Calling convention
+// ex: Stack for call such as f(1,2,3):
+//   gblv 0     // `f`
+//   imm  1
+//   imm  2
+//   imm  3
+//   <empty>    <- SP
+//
+// Steps:
+// - Populate function parameters with arguments on stack, starting
+//   with the function's first parameter and the value at SP-(IP[1]).
+//   This should facilitate calling functions with fewer or more than
+//   the function's defined arity.
+// - At this point, check for default parameter values (TODO) and/or
+//   discard extra values on the stack. SP should be pointing to the
+//   slot where the function's name was.
+
+        case OP_CALL: {
+            if (!is_fn(stk[sp-(ip[1]+1)]))
+                err("attempt to call non-function value");
+            exec(stk[sp-(ip[1]+1)]->u.fn->code, sp);
+            ip += 2;
+            break;
+        }
+
+        case OP_RET: case OP_RET1: return 0;
 
 // Create a sequential array of x elements from the top
 // of the stack. Leave the array rf_val on the stack.

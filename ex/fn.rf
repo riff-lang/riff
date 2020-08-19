@@ -1,8 +1,15 @@
 // User functions
 
 fn f() {
+    "inside f()"
     local y = x ** 2
     return x + y
 }
 
+fn g() {
+    "inside g()"
+    return 3
+}
+
 f()
+g()
