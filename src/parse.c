@@ -523,6 +523,11 @@ static void exit_stmt(rf_parser *y) {
     push(OP_EXIT);
 }
 
+static void add_local(rf_parser *y, rf_str *id) {
+    m_growarray(y->lcl, y->nlcl, y->lcap, local);
+    y->lcl[y->nlcl++] = (local) {s_newstr(id->str, id->l, 1), y->ld};
+}
+
 // TODO
 static void fn_def(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
@@ -608,22 +613,16 @@ static void local_stmt(rf_parser *y) {
         // current scope, add a new local
         if (idx < 0 || y->lcl[idx].d != y->ld) {
             set(lx);    // Only set for newly-declared locals
-            if (y->lcap <= y->nlcl) {
-                y->lcap = y->lcap < 8 ? 8 : y->lcap * 2;
-                y->lcl = realloc(y->lcl, sizeof(local) * y->lcap);
-            }
-            y->lcl[y->nlcl].id = s_newstr(id->str, id->l, 1);
-            y->lcl[y->nlcl].d  = y->ld;
-            switch (y->nlcl) {
+            add_local(y, id);
+            switch (y->nlcl - 1) {
             case 0: push(OP_LCL0); break;
             case 1: push(OP_LCL1); break;
             case 2: push(OP_LCL2); break;
             default:
                 push(OP_LCL);
-                push((uint8_t) y->nlcl);
+                push((uint8_t) y->nlcl - 1);
                 break;
             }
-            y->nlcl++;
         }
         expr(y, 0);
         push(OP_POP);
