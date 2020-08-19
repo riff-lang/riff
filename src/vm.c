@@ -281,8 +281,8 @@ int z_exec(rf_env *e) {
 // VM interpreter loop
 static int exec(rf_code *c, register unsigned int sp) {
     rf_val *tp; // Temp pointer
-    register unsigned int  fp = 0;
-    register uint8_t      *ip = c->code;
+    unsigned int      fp = sp;
+    register uint8_t *ip = c->code;
     while (1) {
         if (sp >= STACK_SIZE)
             err("stack limit reached");
@@ -490,10 +490,10 @@ static int exec(rf_code *c, register unsigned int sp) {
         case OP_GBLV1: gblv(1);     ++ip;    break;
         case OP_GBLV2: gblv(2);     ++ip;    break;
 
-// Nullify slot at stack[x] for use as a local var
+// Nullify slot at stack[FP+x] for use as a local var
 // Increment SP to reserve slot
 #define lcl(x) \
-    assign_null(stk[x]); \
+    assign_null(stk[fp+(x)]); \
     ++sp;
 
         case OP_LCL:  lcl(ip[1]); ip += 2; break;
@@ -502,8 +502,8 @@ static int exec(rf_code *c, register unsigned int sp) {
         case OP_LCL2: lcl(2);     ++ip;    break;
 
 // Push local address
-// Push the address of stk[x] to the top of the stack.
-#define lcla(x) stk[sp++] = stk[x];
+// Push the address of stk[FP+x] to the top of the stack.
+#define lcla(x) stk[sp++] = stk[fp+(x)];
 
         case OP_LCLA:  lcla(ip[1]) ip += 2; break;
         case OP_LCLA0: lcla(0);    ++ip;    break;
@@ -511,10 +511,10 @@ static int exec(rf_code *c, register unsigned int sp) {
         case OP_LCLA2: lcla(2);    ++ip;    break;
 
 // Push local value
-// Copy the value of stk[x] to the top of the stack.
+// Copy the value of stk[FP+x] to the top of the stack.
 #define lclv(x) \
-    stk[sp]->type = stk[x]->type; \
-    stk[sp]->u    = stk[x]->u; \
+    stk[sp]->type = stk[fp+(x)]->type; \
+    stk[sp]->u    = stk[fp+(x)]->u; \
     ++sp;
 
         case OP_LCLV:  lclv(ip[1]) ip += 2; break;
