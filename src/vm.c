@@ -228,7 +228,6 @@ void z_idx(rf_val *l, rf_val *r) {
 }
 
 // OP_PRINT functionality
-// TODO Command-line switches for integer format? (hex, binary, etc)
 static void put(rf_val *v) {
     switch (v->type) {
     case TYPE_NULL: printf("null");              break;
@@ -339,7 +338,29 @@ int z_exec(rf_env *e) {
         case OP_LE:  binop(le);  break;
         case OP_CAT: binop(cat); break;
 
-        case OP_CALL: break; // TODO
+// Calling convention
+// ex: Stack for call such as f(1,2,3):
+//   gblv 0     // `f`
+//   imm  1
+//   imm  2
+//   imm  3
+//   <empty>    <- SP
+//
+// Steps:
+// - Populate function parameters with arguments on stack, starting
+//   with the function's first parameter and the value at SP-(IP[1]).
+//   This should facilitate calling functions with fewer or more than
+//   the function's defined arity.
+// - At this point, check for default parameter values (TODO) and/or
+//   discard extra values on the stack. SP should be pointing to the
+//   slot where the function's name was.
+// - Increment IP past the OP_CALL instruction and push on the stack
+//   as the return address.
+#define call(x) \
+    if (!is_fn(stk[sp-(x)])) \
+        err("attempt to perform function call on non-function value");
+
+        case OP_CALL: ip += 2; break; // TODO
 
 // Pre-increment/decrement
 // stk[sp-1] is address of some variable's rf_val.
