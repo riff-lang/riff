@@ -21,6 +21,11 @@
 // TODO Syntax error handling; parser should do as much heavy lifting
 // as possible
 
+static int  expr(rf_parser *y, int rbp);
+static void stmt_list(rf_parser *);
+static void stmt(rf_parser *);
+static void y_init(rf_parser *y);
+
 static void err(rf_parser *y, const char *msg) {
     fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
     exit(1);
@@ -94,8 +99,6 @@ static int lbop(int tk) {
 static int rbop(int tk) {
     return is_asgmt(tk) || tk == TK_POW;
 }
-
-static int expr(rf_parser *y, int rbp);
 
 static void literal(rf_parser *y) {
     c_constant(y->c, &y->x->tk);
@@ -426,9 +429,6 @@ static void expr_stmt(rf_parser *y) {
         push(OP_POP);
 }
 
-static void stmt_list(rf_parser *);
-static void stmt(rf_parser *);
-
 static void break_stmt(rf_parser *y) {
     if (!y->ld)
         err(y, "break statement outside of loop");
@@ -492,6 +492,7 @@ static void exit_loop(rf_parser *y, p_list *ob, p_list *oc, p_list *nb, p_list *
     if (nb->n) free(nb->l);
     if (nc->n) free(nc->l);
 }
+
 static void do_stmt(rf_parser *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
@@ -541,22 +542,25 @@ static void fn_def(rf_parser *y) {
     f_init(f, s);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
-    rf_code *sv = y->c;
-    y->c = f->code;
-    y->ld++;
-    consume(y, '(', "expected '('");
+
+    // Functions parsed with their own parser, same lexer
+    rf_parser fy;
+    fy.e = y->e;
+    fy.x = y->x;
+    fy.c = f->code;
+    y_init(&fy);
+
+    consume(&fy, '(', "expected '('");
     // Params go here
-    consume(y, ')', "expected ')'");
-    consume(y, '{', "expected '{'");
-    stmt_list(y);
-    y->ld--;
-    pop_locals(y);
+    consume(&fy, ')', "expected ')'");
+    consume(&fy, '{', "expected '{'");
+    stmt_list(&fy);
+    pop_locals(&fy);
 
     // If the last stmt was not a return statement, push OP_RET
-    if (!y->retx)
+    if (!fy.retx)
         push(OP_RET);
-    y->c = sv;
-    consume(y, '}', "expected '}'");
+    consume(&fy, '}', "expected '}'");
 }
 
 // TODO
