@@ -436,14 +436,14 @@ static int exec(rf_code *c, register unsigned int sp) {
 
 // Push immediate
 // Assign integer value x to the top of the stack.
-#define pushi(x) \
+#define imm8(x) \
     assign_int(stk[sp], x); \
     ++sp;
 
-        case OP_PUSHI: pushi(ip[1]); ip += 2; break;
-        case OP_PUSH0: pushi(0);     ++ip;    break;
-        case OP_PUSH1: pushi(1);     ++ip;    break;
-        case OP_PUSH2: pushi(2);     ++ip;    break;
+        case OP_IMM8: imm8(ip[1]); ip += 2; break;
+        case OP_IMM0: imm8(0);     ++ip;    break;
+        case OP_IMM1: imm8(1);     ++ip;    break;
+        case OP_IMM2: imm8(2);     ++ip;    break;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the
@@ -693,7 +693,7 @@ static int exec(rf_code *c, register unsigned int sp) {
 #undef pre
 #undef post
 #undef cbinop
-#undef pushi
+#undef imm8
 #undef pushk
 #undef gbla
 #undef gblv

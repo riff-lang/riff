@@ -148,12 +148,12 @@ void c_constant(rf_code *c, rf_token *tk) {
     case TK_INT: {
         rf_int i = tk->lexeme.i;
         switch (i) {
-        case 0: push(OP_PUSH0); return;
-        case 1: push(OP_PUSH1); return;
-        case 2: push(OP_PUSH2); return;
+        case 0: push(OP_IMM0); return;
+        case 1: push(OP_IMM1); return;
+        case 2: push(OP_IMM2); return;
         default:
             if (i >= 3 && i <= 255) {
-                push(OP_PUSHI);
+                push(OP_IMM8);
                 push((uint8_t) i);
                 return;
             } else {
