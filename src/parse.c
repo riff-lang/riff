@@ -714,10 +714,9 @@ static void stmt_list(rf_parser *y) {
         stmt(y);
 }
 
-static void y_init(rf_parser *y, const char *src) {
+static void y_init(rf_parser *y) {
     unset_all;
     unset(lx);
-    x_init(y->x, src);
 
     y->nlcl = 0;
     y->lcap = 0;
@@ -731,11 +730,12 @@ static void y_init(rf_parser *y, const char *src) {
 
 int y_compile(rf_env *e) {
     rf_parser y;
+    y.e = e;
     rf_lexer  x;
     y.x = &x;
+    x_init(&x, e->src);
     y.c = e->main.code;
-    y_init(&y, e->src);
-    y.e = e;
+    y_init(&y);
     stmt_list(&y);
     pop_locals(&y);
     c_push(y.c, OP_RET);
