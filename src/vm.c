@@ -551,6 +551,13 @@ static int exec(rf_code *c,
             unsigned int nret = exec(fn->code, sp, sp - fn->arity);
             ip += 2;
             sp -= fn->arity;
+
+            // TODO - hacky
+            // If callee returns 0 and the next instruction is PRINT1,
+            // skip over the instruction. This facilitates user
+            // functions which conditionally return something.
+            if (!nret && *ip == OP_PRINT1)
+                ++ip;
             break;
         }
 
