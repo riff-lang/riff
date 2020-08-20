@@ -1,6 +1,8 @@
 // User functions
 
-fn f() {
+x = 10
+
+fn f(x) {
     "inside f()"
     local y = x ** 2
     return x + y

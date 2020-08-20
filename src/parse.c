@@ -529,7 +529,7 @@ static void add_local(rf_parser *y, rf_str *id) {
     y->lcl[y->nlcl++] = (local) {s_newstr(id->str, id->l, 1), y->ld};
 }
 
-// TODO
+// User-defined functions
 static void fn_def(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
     rf_str *s;
@@ -551,15 +551,29 @@ static void fn_def(rf_parser *y) {
     y_init(&fy);
 
     consume(&fy, '(', "expected '('");
-    // Params go here
+
+    // Read parameter identifiers, reserving them as locals to the
+    // function
+    while (1) {
+        if (fy.x->tk.kind == TK_ID) {
+            add_local(&fy, fy.x->tk.lexeme.s);
+            ++f->arity;
+            adv;
+        }
+        if (fy.x->tk.kind == ',')
+            adv;
+        else
+            break;
+    }
     consume(&fy, ')', "expected ')'");
     consume(&fy, '{', "expected '{'");
     stmt_list(&fy);
-    pop_locals(&fy);
+
+    // Caller cleans the stack; no need to pop locals from scope
 
     // If the last stmt was not a return statement, push OP_RET
     if (!fy.retx)
-        push(OP_RET);
+        c_push(fy.c, OP_RET);
     consume(&fy, '}', "expected '}'");
 }
 
@@ -654,8 +668,13 @@ static void print_stmt(rf_parser *y) {
         consume(y, ')', "Expected ')'");
 }
 
+// TODO
 static void ret_stmt(rf_parser *y) {
     set(retx); // TODO
+    if (y->x->tk.kind == ';' || y->x->tk.kind == '}') {
+        push(OP_RET);
+        return;
+    }
     const char *p = y->x->p; // Save pointer
     expr(y, 0);
     if (p == y->x->p)        // No expression parsed

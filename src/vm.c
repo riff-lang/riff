@@ -254,7 +254,7 @@ static void init_argv(rf_arr *a, int argc, char **argv) {
     }
 }
 
-static int exec(rf_code *c, register unsigned int sp);
+static int exec(rf_code *c, register unsigned int sp, unsigned int fp);
 
 // VM entry point/initialization
 int z_exec(rf_env *e) {
@@ -275,13 +275,14 @@ int z_exec(rf_env *e) {
     for (int i = 0; i < STACK_SIZE; i++)
         res[i] = stk[i] = malloc(sizeof(rf_val));
 
-    return exec(e->main.code, 0);
+    return exec(e->main.code, 0, 0);
 }
 
 // VM interpreter loop
-static int exec(rf_code *c, register unsigned int sp) {
+static int exec(rf_code *c,
+                register unsigned int sp,
+                unsigned int fp) {
     rf_val *tp; // Temp pointer
-    unsigned int      fp = sp;
     register uint8_t *ip = c->code;
     while (1) {
         if (sp >= STACK_SIZE)
@@ -523,31 +524,38 @@ static int exec(rf_code *c, register unsigned int sp) {
         case OP_LCLV2: lclv(2);    ++ip;    break;
 
 // Calling convention
-// ex: Stack for call such as f(1,2,3):
-//   gblv 0     // `f`
-//   imm  1
-//   imm  2
-//   imm  3
-//   <empty>    <- SP
-//
-// Steps:
-// - Populate function parameters with arguments on stack, starting
-//   with the function's first parameter and the value at SP-(IP[1]).
-//   This should facilitate calling functions with fewer or more than
-//   the function's defined arity.
-// - At this point, check for default parameter values (TODO) and/or
-//   discard extra values on the stack. SP should be pointing to the
-//   slot where the function's name was.
-
+// Arguments are pushed in-order following the rf_val containing a
+// pointer to the function to be called. Caller sets SP and FP to
+// appropriate positions and cleans up stack afterward. Callee returns
+// from exec() the number of values to be returned to the caller.
         case OP_CALL: {
-            if (!is_fn(stk[sp-(ip[1]+1)]))
+            unsigned int nargs = ip[1];
+            if (!is_fn(stk[sp-(nargs+1)]))
                 err("attempt to call non-function value");
-            exec(stk[sp-(ip[1]+1)]->u.fn->code, sp);
+            rf_fn *fn = stk[sp-(nargs+1)]->u.fn;
+
+            // If user called function with too few arguments, nullify
+            // stack elements and increment SP.
+            if (nargs < fn->arity) {
+                for (int i = nargs; i < fn->arity; ++i) {
+                    assign_null(stk[sp++]);
+                }
+            }
+            
+            // If user called function with too many arguments,
+            // decrement SP so it points to the appropriate slot for
+            // control transfer.
+            else if (nargs > fn->arity) {
+                sp -= (nargs - fn->arity);
+            }
+            unsigned int nret = exec(fn->code, sp, sp - fn->arity);
             ip += 2;
+            sp -= fn->arity;
             break;
         }
 
-        case OP_RET: case OP_RET1: return 0;
+        case OP_RET:  return 0;
+        case OP_RET1: return 1;
 
 // Create a sequential array of x elements from the top
 // of the stack. Leave the array rf_val on the stack.
