@@ -550,7 +550,7 @@ static int exec(rf_code *c,
             }
             unsigned int nret = exec(fn->code, sp, sp - fn->arity);
             ip += 2;
-            sp -= fn->arity;
+            sp -= fn->arity + 1;
 
             // TODO - hacky
             // If callee returns 0 and the next instruction is PRINT1,
