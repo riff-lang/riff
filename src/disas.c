@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 
 #include "disas.h"
@@ -106,12 +107,12 @@ static struct {
 #define OP_ARITY    (opcode_info[b0].arity)
 #define OP_MNEMONIC (opcode_info[b0].mnemonic)
 
-#define INST0       "%*d| %02x       %s\n"
-#define INST0DEREF  "%*d| %02x       %-6s      // %s\n"
-#define INST1       "%*d| %02x %02x    %-6s %d\n"
-#define INST1DEREF  "%*d| %02x %02x    %-6s %-6d // %s\n"
-#define INST1ADDR   "%*d| %02x %02x    %-6s %-6d // %d\n"
-#define INST2ADDR   "%*d| %02x %02x %02x %-6s %-6d // %d\n"
+#define INST0       "%*d: %02x       %s\n"
+#define INST0DEREF  "%*d: %02x       %-6s      // %s\n"
+#define INST1       "%*d: %02x %02x    %-6s %d\n"
+#define INST1DEREF  "%*d: %02x %02x    %-6s %-6d // %s\n"
+#define INST1ADDR   "%*d: %02x %02x    %-6s %-6d // %d\n"
+#define INST2ADDR   "%*d: %02x %02x %02x %-6s %-6d // %d\n"
 
 #define OPND(x)     (c->k[b1].u.x)
 #define OPND0(x)    (c->k[0].u.x)
@@ -129,17 +130,12 @@ static int is_jump16(int op) {
 }
 
 // TODO This function is way too big for its own good
-static void d_code_obj(rf_code *c, const char *name) {
+static void d_code_obj(rf_code *c, int ipw) {
     int sz  = c->n;
-    int ipw = sz <= 10   ? 1
-            : sz <= 100  ? 2
-            : sz <= 1000 ? 3
-            : 4;
     int ip  = 0;
 
     char s[80];
     int b0, b1;
-    printf("%s @ %p -> %d bytes\n", name, c, sz);
     while (ip < sz) {
         b0 = c->code[ip];
         if (OP_ARITY) {
@@ -268,10 +264,25 @@ static void d_code_obj(rf_code *c, const char *name) {
 #undef OPND2
 
 void d_prog(rf_env *e) {
-    d_code_obj(e->main.code, e->pname);
+    // Calculate width for the IP in the disassembly
+    int w = (int) log10(e->main.code->n) + 1;
+    for (int i = 0; i < e->nf; ++i) {
+        int fw = (int) log10(e->fn[i]->code->n) + 1;
+        w = w < fw ? fw : w;
+    }
+
+    printf("%s @ %p -> %d bytes\n",
+           e->pname,
+           e->main.code,
+           e->main.code->n);
+    d_code_obj(e->main.code, w);
     for (int i = 0; i < e->nf; ++i) {
         printf("\n");
-        d_code_obj(e->fn[i]->code, e->fn[i]->name->str);
+        printf("fn %s @ %p -> %d bytes\n",
+               e->fn[i]->name->str,
+               e->fn[i]->code,
+               e->fn[i]->code->n);
+        d_code_obj(e->fn[i]->code, w);
     }
 }
 
