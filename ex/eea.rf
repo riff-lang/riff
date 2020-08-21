@@ -1,0 +1,20 @@
+// Extended Euclidean Algorithm
+
+fn eea(n1, n2) {
+    return n1 > n2 ? eea_(n1, n2, 1, 0, 0, 1)
+                   : eea_(n2, n1, 1, 0, 0, 1)
+}
+
+fn eea_(rg, rh, sg, sh, tg, th) {
+    if !rh
+        return tg
+
+    local r = rg % rh
+    local q = (rg-r) / rh | 0
+    local s = sg - q * sh
+    local t = tg - q * th
+
+    return eea_(rh, r, sh, s, th, t)
+}
+
+eea($0, $1)
