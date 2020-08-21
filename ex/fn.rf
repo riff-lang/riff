@@ -2,7 +2,7 @@
 
 x = 10
 
-fn f(x) {
+fn f() {
     "inside f()"
     local y = x ** 2
     return x + y
@@ -13,5 +13,11 @@ fn g() {
     return 3
 }
 
-f()
+fn h() {
+    "inside h()"
+    return
+}
+
+f() + g()
+h() + f()
 g()

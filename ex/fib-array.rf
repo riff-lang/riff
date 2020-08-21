@@ -1,0 +1,11 @@
+// Iterative Fibonacci number program, using arrays/caching
+
+f[i++] = 0
+f[i++] = 1
+
+while i <= $0 {
+    f[i] = f[i-1] + f[i-2]
+    i++
+}
+
+f[$0]
