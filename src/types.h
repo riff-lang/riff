@@ -45,9 +45,9 @@ typedef struct {
 
 // Assign value x to rf_val *p
 #define assign_null(p)   (p)->type = TYPE_NULL
-#define assign_int(p, x) (p)->u.i = (x); (p)->type = TYPE_INT
-#define assign_flt(p, x) (p)->u.f = (x); (p)->type = TYPE_FLT
-#define assign_str(p, x) (p)->u.s = (x); (p)->type = TYPE_STR
+#define assign_int(p, x) *p = (rf_val) {TYPE_INT, .u.i = (x)}
+#define assign_flt(p, x) *p = (rf_val) {TYPE_FLT, .u.f = (x)}
+#define assign_str(p, x) *p = (rf_val) {TYPE_STR, .u.s = (x)}
 
 uint32_t  s_hash(const char *);
 rf_str    *s_newstr(const char *, size_t, int);

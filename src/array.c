@@ -167,15 +167,13 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
         }
         if (!exists(a, k)) {
             rf_val *nv = malloc(sizeof(rf_val));
-            nv->type = v->type;
-            nv->u    = v->u;
-            a->v[k]  = nv;
+            *nv     = *v;
+            a->v[k] = nv;
             a->an++;
             if (set || !is_null(v))
                 a->n++;
         } else {
-            a->v[k]->type = v->type;
-            a->v[k]->u    = v->u;
+            *a->v[k] = *v;
         }
         return a->v[k];
     }
@@ -191,8 +189,7 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
     if (set) set(lx);
     switch (k->type) {
     case TYPE_NULL:
-        a->nullv->type = v->type;
-        a->nullv->u    = v->u;
+        *a->nullv = *v;
         if (!is_null(v)) a->n++;
         return a->nullv;
     case TYPE_INT: return a_insert_int(a, k->u.i, v, set, 0);

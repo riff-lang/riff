@@ -61,11 +61,9 @@ static int test(rf_val *v) {
 
 #define int_arith(l,r,op) \
     assign_int(l, (intval(l) op intval(r)));
-    // *l = (rf_val) {TYPE_INT, .u.i = (intval(l) op intval(r))};
 
 #define flt_arith(l,r,op) \
     assign_flt(l, (numval(l) op numval(r)));
-    // *l = (rf_val) {TYPE_FLT, .u.f = (numval(l) op numval(r))};
 
 #define num_arith(l,r,op) \
     if (is_flt(l) || is_flt(r)) { \
@@ -368,9 +366,8 @@ static int exec(rf_code *c,
         assign_int(stk[sp-1], x); \
         break; \
     } \
-    res[sp-1]->type = stk[sp-1]->type; \
-    res[sp-1]->u    = stk[sp-1]->u; \
-    stk[sp-1]       = res[sp-1]; \
+    *res[sp-1] = *stk[sp-1]; \
+    stk[sp-1]  = res[sp-1]; \
     ++ip;
 
         case OP_PREINC: pre(1);  break;
@@ -382,8 +379,7 @@ static int exec(rf_code *c,
 // address.  Replace the stack element with the previously made copy
 // and coerce to a numeric value if needed.
 #define post(x) \
-    res[sp-1]->type = stk[sp-1]->type; \
-    res[sp-1]->u    = stk[sp-1]->u; \
+    *res[sp-1] = *stk[sp-1]; \
     switch (stk[sp-1]->type) { \
     case TYPE_INT: stk[sp-1]->u.i += x; break; \
     case TYPE_FLT: stk[sp-1]->u.f += x; break; \
@@ -405,13 +401,11 @@ static int exec(rf_code *c,
 // and replace stk[sp-2] with a copy of the value. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
-    tp              = stk[sp-2]; \
-    res[sp-2]->type = stk[sp-2]->type; \
-    res[sp-2]->u    = stk[sp-2]->u; \
-    stk[sp-2]       = res[sp-2]; \
+    tp         = stk[sp-2]; \
+    *res[sp-2] = *stk[sp-2]; \
+    stk[sp-2]  = res[sp-2]; \
     binop(x); \
-    tp->type = stk[sp-1]->type; \
-    tp->u    = stk[sp-1]->u;
+    *tp = *stk[sp-1];
 
         case OP_ADDX: cbinop(add); break;
         case OP_SUBX: cbinop(sub); break;
@@ -449,10 +443,7 @@ static int exec(rf_code *c,
 // Push constant
 // Copy constant x from code object's constant table to the top of the
 // stack.
-#define pushk(x) \
-    stk[sp]->type = c->k[(x)].type; \
-    stk[sp]->u    = c->k[(x)].u; \
-    ++sp;
+#define pushk(x) *stk[sp++] = c->k[(x)];
 
         case OP_PUSHK:  pushk(ip[1]); ip += 2; break;
         case OP_PUSHK0: pushk(0);     ++ip;    break;
@@ -466,8 +457,7 @@ static int exec(rf_code *c,
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
 #define gbla(x) \
-    stk[sp] = h_lookup(&globals, c->k[(x)].u.s, 1); \
-    ++sp;
+    stk[sp++] = h_lookup(&globals, c->k[(x)].u.s, 1);
 
         case OP_GBLA:  gbla(ip[1]); ip += 2; break;
         case OP_GBLA0: gbla(0);     ++ip;    break;
@@ -481,10 +471,7 @@ static int exec(rf_code *c,
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
 #define gblv(x) \
-    tp = h_lookup(&globals, c->k[(x)].u.s, 0); \
-    stk[sp]->type = tp->type; \
-    stk[sp]->u    = tp->u; \
-    ++sp;
+    *stk[sp++] = *h_lookup(&globals, c->k[(x)].u.s, 0);
 
         case OP_GBLV:  gblv(ip[1]); ip += 2; break;
         case OP_GBLV0: gblv(0);     ++ip;    break;
@@ -513,10 +500,7 @@ static int exec(rf_code *c,
 
 // Push local value
 // Copy the value of stk[FP+x] to the top of the stack.
-#define lclv(x) \
-    stk[sp]->type = stk[fp+(x)]->type; \
-    stk[sp]->u    = stk[fp+(x)]->u; \
-    ++sp;
+#define lclv(x) *stk[sp++] = *stk[fp+(x)];
 
         case OP_LCLV:  lclv(ip[1]) ip += 2; break;
         case OP_LCLV0: lclv(0);    ++ip;    break;
@@ -550,14 +534,21 @@ static int exec(rf_code *c,
             }
             unsigned int nret = exec(fn->code, sp, sp - fn->arity);
             ip += 2;
-            sp -= fn->arity + 1;
+            sp -= fn->arity;
+
+            // Copy the function's return value to the stack top -
+            // this should be where the caller pushed the original
+            // function.
+            *stk[sp-1] = *stk[sp+fn->arity];
 
             // TODO - hacky
             // If callee returns 0 and the next instruction is PRINT1,
             // skip over the instruction. This facilitates user
             // functions which conditionally return something.
-            if (!nret && *ip == OP_PRINT1)
+            if (!nret && *ip == OP_PRINT1) {
                 ++ip;
+                --sp;
+            }
             break;
         }
 
@@ -589,9 +580,7 @@ static int exec(rf_code *c,
 
             // Create array if stk[sp-2] is an uninitialized variable
             case TYPE_NULL:
-                tp              = v_newarr();
-                stk[sp-2]->type = tp->type;
-                stk[sp-2]->u    = tp->u;
+                *stk[sp-2] = *v_newarr();
                 // Fall-through
             case TYPE_ARR:
                 stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1], 1, 0);
@@ -618,10 +607,8 @@ static int exec(rf_code *c,
                 stk[sp-2] = v_newarr();
                 // Fall-through
             case TYPE_ARR:
-                tp = a_lookup(stk[sp-2]->u.a, stk[sp-1], 0, 0);
-                res[sp-2]->type = tp->type;
-                res[sp-2]->u    = tp->u;
-                stk[sp-2]       = res[sp-2];
+                *res[sp-2] = *a_lookup(stk[sp-2]->u.a, stk[sp-1], 0, 0);
+                stk[sp-2]  = res[sp-2];
                 --sp;
                 ++ip;
                 break;
@@ -629,9 +616,8 @@ static int exec(rf_code *c,
             // TODO parser should be signaling OP_GBLV, this handles
             // OP_GBLA usage for now
             case TYPE_INT: case TYPE_FLT: case TYPE_STR:
-                res[sp-2]->type = stk[sp-2]->type;
-                res[sp-2]->u    = stk[sp-2]->u;
-                stk[sp-2]       = res[sp-2];
+                *res[sp-2] = *stk[sp-2];
+                stk[sp-2]  = res[sp-2];
                 binop(idx);
                 break;
             default:
@@ -645,20 +631,16 @@ static int exec(rf_code *c,
             break;
 
         case OP_ARGV:
-            tp = a_lookup(&argv, stk[sp-1], 0, aos);
-            res[sp-1]->type = tp->type;
-            res[sp-1]->u    = tp->u;
-            stk[sp-1]       = res[sp-1];
+            *res[sp-1] = *a_lookup(&argv, stk[sp-1], 0, aos);
+            stk[sp-1]  = res[sp-1];
             ++ip;
             break;
 
         case OP_SET:
-            tp              = stk[sp-2];
-            res[sp-2]->type = stk[sp-1]->type;
-            res[sp-2]->u    = stk[sp-1]->u;
-            stk[sp-2]       = res[sp-2];
-            tp->type        = res[sp-2]->type;
-            tp->u           = res[sp-2]->u;
+            tp         = stk[sp-2];
+            *res[sp-2] = *stk[sp-1];
+            stk[sp-2]  = res[sp-2];
+            *tp        = *res[sp-2];
             --sp;
             ++ip;
             break;

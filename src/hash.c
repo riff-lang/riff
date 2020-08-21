@@ -39,9 +39,8 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
     case TYPE_FLT:  nv = v_newflt(v->u.f); break;
     case TYPE_STR:  nv = v_newstr(v->u.s); break;
     case TYPE_ARR:
-        nv = v_newarr();
-        nv->type = TYPE_ARR;
-        nv->u.a  = v->u.a;
+        nv      = v_newarr();
+        nv->u.a = v->u.a;
         break;
     case TYPE_FN:
         nv = v; // Don't allocate new functions
@@ -127,8 +126,7 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
         if (set || !is_null(v))
             h->n++;
     } else {
-        h->e[i]->val->type = v->type;
-        h->e[i]->val->u    = v->u;
+        *h->e[i]->val = *v;
     }
     return h->e[i]->val;
 }
