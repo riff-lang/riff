@@ -459,9 +459,7 @@ static void pop_locals(rf_parser *y) {
     if (!y->nlcl) return;
 
     int count = 0;
-    // Remove !y->ld in terminating condition if top-level locals
-    // aren't meant to be popped
-    for (int i = y->nlcl - 1; i >= 0 && (!y->ld || y->lcl[i].d > y->ld); --i) {
+    for (int i = y->nlcl - 1; i >= 0 && (y->lcl[i].d > y->ld); --i) {
         y->nlcl--;
         free(y->lcl[i].id);
         ++count;

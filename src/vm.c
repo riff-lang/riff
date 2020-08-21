@@ -280,6 +280,7 @@ int z_exec(rf_env *e) {
 static int exec(rf_code *c,
                 register unsigned int sp,
                 unsigned int fp) {
+    unsigned int retp = sp; // Save original SP
     rf_val *tp; // Temp pointer
     register uint8_t *ip = c->code;
     while (1) {
@@ -552,8 +553,15 @@ static int exec(rf_code *c,
             break;
         }
 
-        case OP_RET:  return 0;
-        case OP_RET1: return 1;
+        case OP_RET: return 0;
+
+        // Caller expects return value to be at its original SP +
+        // arity of the function. "clean up" any created locals by
+        // copying the return value to the appropriate slot.
+        case OP_RET1:
+            *stk[retp] = *stk[sp-1];
+            return 1;
+            
 
 // Create a sequential array of x elements from the top
 // of the stack. Leave the array rf_val on the stack.
