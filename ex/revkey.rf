@@ -1,3 +1,4 @@
+// Function g used in key scheduling layer
 fn g(x,i) {
     local a = (x >> 24) & 0xff
     local b = (x >> 16) & 0xff
