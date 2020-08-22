@@ -246,7 +246,7 @@ static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
     int e = 0;
     if (uop(tk)) {
-        set(ox);
+        if (!y->idx) set(ox);
         adv;
         e = expr(y, 12);
         c_prefix(y->c, tk);
