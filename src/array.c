@@ -179,7 +179,7 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
     }
     else {
         rf_str *ik = s_int2str(k);
-        rf_val *rv = h_insert(a->h, ik, v, set);
+        rf_val *rv = h_lookup(a->h, ik, set); // TODO?
         m_freestr(ik);
         return rv;
     }
