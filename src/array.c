@@ -63,13 +63,15 @@ static double potential_lf(int n, int cap, rf_int k) {
 // lookup. Otherwise, defer to h_lookup().
 static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
     if (set) set(lx);
-    if (exists(a, k))
+    if (exists(a, k)) {
         return a->v[k];
-    if (!a->cap)
+    }
+    if (!a->cap) {
         return a_insert_int(a, k, v_newnull(), set, 0);
+    }
     if (k < a->cap ||
         (potential_lf(a->an, a->cap, k) >= MIN_LOAD_FACTOR)) {
-        return a_insert_int(a, k, v_newnull(), set, 0);
+        return a_insert_int(a, k, v_newnull(), set, 1);
     } else {
         rf_str *ik = s_int2str(k);
         rf_val *v  = h_lookup(a->h, ik, set);
@@ -140,6 +142,14 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
     return NULL;
 }
 
+static int new_size(int n, int cap, rf_int k) {
+    int sz = cap < k ? k + 1 : cap + 1;
+    while (potential_lf(n, sz, k) >= MIN_LOAD_FACTOR) {
+        ++sz;
+    }
+    return sz + 1;
+}
+
 // VM currently initializes sequential arrays backwards, inserting the
 // last element first by calling a_insert_int() with `force` set to 1.
 // This allows memory to be allocated once with the exact size needed
@@ -152,18 +162,24 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
     double lf = potential_lf(a->an, a->cap, k);
     if (force || (lf >= MIN_LOAD_FACTOR)) {
         if (a->cap <= a->an || a->cap <= k) {
+            set(lx);
             int oc = a->cap;
-            a->cap = a->cap < k ? k + 1 : a->cap + 1;
-            a->v = realloc(a->v, sizeof(rf_val *) * a->cap);
+            int nc = force ? k + 1 : new_size(a->an, a->cap, k);
+            // TODO the hackiest hack that ever hacked - maybe keep
+            // track of integer keys in the hash part instead
+            nc += !force * h_length(a->h);
+            a->v = realloc(a->v, sizeof(rf_val *) * nc);
 
             // Collect valid integer keys from the hash part and move
             // them to the newly allocated array part
-            for (int i = oc; i < a->cap; ++i) {
+            for (int i = oc; i < nc; ++i) {
+                if (exists(a,i)) continue;
                 rf_str *ik = s_int2str(i);
                 a->v[i] = h_delete(a->h, ik);
                 if (a->v[i]) a->an++;
                 m_freestr(ik);
             }
+            a->cap = nc;
         }
         if (!exists(a, k)) {
             rf_val *nv = malloc(sizeof(rf_val));

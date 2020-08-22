@@ -13,6 +13,7 @@ void h_init(hash_t *h) {
     h->n   = 0;
     h->an  = 0;
     h->cap = 0;
+    h->lx  = 0;
     h->e   = NULL;
 }
 
