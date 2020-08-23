@@ -556,7 +556,9 @@ static int exec(rf_code *c,
             break;
         }
 
-        case OP_RET: return 0;
+        case OP_RET:
+            assign_null(stk[retp]);
+            return 0;
 
         // Caller expects return value to be at its original SP +
         // arity of the function. "clean up" any created locals by
