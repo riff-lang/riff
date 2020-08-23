@@ -264,6 +264,9 @@ int z_exec(rf_env *e) {
 
     // Add user-defined functions to the global hash table
     for (int i = 0; i < e->nf; ++i) {
+        // Don't add anonymous functions to globals (rf_str should not
+        // have a computed hash)
+        if (!e->fn[i]->name->hash) continue;
         rf_val *fn = malloc(sizeof(rf_val));
         *fn = (rf_val) {TYPE_FN, .u.fn = e->fn[i]};
         h_insert(&globals, e->fn[i]->name, fn, 1);

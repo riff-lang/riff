@@ -248,6 +248,8 @@ static void anon_fn(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
     rf_str *s = s_newstr("<anonymous fn>", 14, 0);
     f_init(f, s);
+    m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
+    y->e->fn[y->e->nf++] = f;
     rf_parser fy;
     fy.e = y->e;
     fy.x = y->x;
