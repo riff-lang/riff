@@ -387,7 +387,7 @@ static int expr(rf_parser *y, int rbp) {
         // token would make for an invalid expression. This allows the
         // succeeding token to be parsed as a new expression instead
         // of throwing an error
-        if ((is_const(p) || is_incdec(p) || p == ')') && !const_follow_ok(tk))
+        if ((is_const(p) || is_incdec(p)) && !const_follow_ok(tk))
             return p;
 
         // Return if the previous nud had a prefix ++/-- attached and

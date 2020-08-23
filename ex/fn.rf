@@ -2,6 +2,8 @@
 
 x = 10
 
+(!x ? f : h)()
+
 fn f() {
     "inside f()"
     local y = x ** 2
@@ -17,7 +19,3 @@ fn h() {
     "inside h()"
     return
 }
-
-f() + g()
-h() + f()
-g()
