@@ -154,7 +154,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "\"%s\"", OPND(s->str));
                     break;
                 case TYPE_FN:
-                    sprintf(s, "<fn>");
+                    sprintf(s, "fn: %p", OPND(fn));
                     break;
                 default:
                     break;
@@ -194,7 +194,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "\"%s\"", OPND0(s->str));
                     break;
                 case TYPE_FN:
-                    sprintf(s, "<fn>");
+                    sprintf(s, "fn: %p", OPND0(fn));
                     break;
                 default:
                     break;
@@ -213,7 +213,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "\"%s\"", OPND1(s->str));
                     break;
                 case TYPE_FN:
-                    sprintf(s, "<fn>");
+                    sprintf(s, "fn: %p", OPND1(fn));
                     break;
                 default:
                     break;
@@ -232,7 +232,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "\"%s\"", OPND2(s->str));
                     break;
                 case TYPE_FN:
-                    sprintf(s, "<fn>");
+                    sprintf(s, "fn: %p", OPND2(fn));
                     break;
                 default:
                     break;
@@ -283,17 +283,24 @@ void d_prog(rf_env *e) {
         w = w < fw ? fw : w;
     }
 
-    printf("%s @ %p -> %d bytes\n",
+    printf("source:%s @ %p -> %d bytes\n",
            e->pname,
            e->main.code,
            e->main.code->n);
     d_code_obj(e->main.code, w);
     for (int i = 0; i < e->nf; ++i) {
         printf("\n");
-        printf("fn %s @ %p -> %d bytes\n",
-               e->fn[i]->name->str,
-               e->fn[i]->code,
-               e->fn[i]->code->n);
+        if (e->fn[i]->name->hash) {
+            printf("fn %s @ %p -> %d bytes\n",
+                   e->fn[i]->name->str,
+                   e->fn[i]->code,
+                   e->fn[i]->code->n);
+        } else {
+            printf("%s @ %p -> %d bytes\n",
+                   e->fn[i]->name->str,
+                   e->fn[i]->code,
+                   e->fn[i]->code->n);
+        }
         d_code_obj(e->fn[i]->code, w);
     }
 }
