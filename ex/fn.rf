@@ -13,13 +13,17 @@ fn f() {
 }
 
 if 1 {
+    a = 0
     local f = fn () {
         "inside local f()"
+        if !a++ f()
     }
     f()
 
+    a = 0
     local fn g() {
         "inside local g()"
+        if !a++ g()
     }
     g()
 }
@@ -33,3 +37,11 @@ fn h() {
     "inside h()"
     return
 }
+
+a = 0
+ft = fn() {
+    "inside ft()"
+    if !a++ ft()
+}
+
+ft()

@@ -243,10 +243,11 @@ static void array(rf_parser *y) {
     c_array(y->c, n);
 }
 
-// Functions as constants/literals. This handles local and anonymous
-// functions
-static void fn_constant(rf_parser *y, rf_str *name) {
+// Anonymous functions in expressions, e.g.
+//   f = fn () {...}
+static void anon_fn(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
+    rf_str *name = s_newstr("<anonymous fn>", 14, 0);
     f_init(f, name);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
@@ -258,6 +259,7 @@ static void fn_constant(rf_parser *y, rf_str *name) {
     f->arity = compile_fn(&fy);
     c_fn_constant(y->c, f);
 }
+
 
 static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
@@ -333,7 +335,7 @@ static int nud(rf_parser *y) {
         break;
     case TK_FN:
         adv;
-        fn_constant(y, s_newstr("<anonymous fn>", 14, 0));
+        anon_fn(y);
         break;
     default:
         // TODO Handle invalid nuds
@@ -585,11 +587,13 @@ static int compile_fn(rf_parser *y) {
     return arity;
 }
 
-// Handler for local functions in the form of:
+// Handler for named local functions in the form of:
 //   local fn f() {...}
-// 
-// such that it's semantically equivalent to:
+//
+// This is NOT equivalent to:
 //   local f = fn () {...}
+//
+// Named local functions should be able to reference themselves
 static void local_fn(rf_parser *y) {
     if (y->x->tk.kind != TK_ID)
         err(y, "expected identifier for local function definition");
@@ -604,12 +608,12 @@ static void local_fn(rf_parser *y) {
     // If the identifier doesn't already exist as a local at the
     // current scope, add a new local
     if (idx < 0 || y->lcl[idx].d != y->ld) {
-        set(lx);
+        // set(lx);
         add_local(y, id);
         switch (y->nlcl - 1) {
         case 0: push(OP_LCL0); push(OP_LCLA0); break;
         case 1: push(OP_LCL1); push(OP_LCLA1); break;
-        case 2: push(OP_LCL2); push(OP_LCLA2);break;
+        case 2: push(OP_LCL2); push(OP_LCLA2); break;
         default:
             push(OP_LCL);
             push((uint8_t) y->nlcl - 1);
@@ -618,8 +622,27 @@ static void local_fn(rf_parser *y) {
             break;
         }
     }
+    rf_fn *f = malloc(sizeof(rf_fn));
+    f_init(f, str2);
+    rf_parser fy;
+    m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
+    y->e->fn[y->e->nf++] = f;
+    fy.e = y->e;
+    fy.x = y->x;
+    fy.c = f->code;
+    y_init(&fy);
+
+    // Add function to its own local scope to facilitate recursion
+    add_local(&fy, id);
+    c_push(fy.c, OP_LCLA0);
+    c_fn_constant(fy.c, f);
+    c_push(fy.c, OP_SET);
+
     adv;
-    fn_constant(y, str2);
+    f->arity = compile_fn(&fy) + 1; // +1 to store reference to itself
+
+    // Add function to the outer scope
+    c_fn_constant(y->c, f);
     push(OP_SET);
 }
 
