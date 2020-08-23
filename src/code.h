@@ -125,6 +125,7 @@ typedef struct {
 void c_init(rf_code *);
 void c_push(rf_code *, uint8_t);
 void c_free(rf_code *);
+void c_anon_fn(rf_code *, rf_fn *);
 void c_constant(rf_code *, rf_token *);
 void c_global(rf_code *, rf_token *, int);
 void c_local(rf_code *, int, int);

@@ -28,12 +28,13 @@ m[0][3]             // prints 8
 m[1][0]             // prints 0.8125
 
 // Array holding anonymous functions
-// Functions not yet implemented
-/* ops = { */
-/*     fn () = exit 0, */
-/*     fn () { r[w] = y                     ip += 3 }, */
-/*     fn () { s[si++] = x                  ip += 2 }, */
-/*     fn () { r[w] = s[si] delete(s[si--]) ip += 2 }, */
-/*     fn () { r[w] = y == z                ip += 4 }, */
-/*     fn () { r[w] = y >  z                ip += 4 } */
-/* } */
+ops = {
+    fn () { "anonymous fn in array" },
+    fn () { r[w] = y                     ip += 3 },
+    fn () { s[si++] = x                  ip += 2 },
+    fn () { r[w] = s[si] delete(s[si--]) ip += 2 },
+    fn () { r[w] = y == z                ip += 4 },
+    fn () { r[w] = y >  z                ip += 4 }
+}
+
+ops[0]()

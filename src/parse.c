@@ -24,6 +24,7 @@
 static int  expr(rf_parser *y, int rbp);
 static void stmt_list(rf_parser *);
 static void stmt(rf_parser *);
+static int  parse_fn(rf_parser *y);
 static void y_init(rf_parser *y);
 
 static void err(rf_parser *y, const char *msg) {
@@ -242,6 +243,20 @@ static void array(rf_parser *y) {
     c_array(y->c, n);
 }
 
+// Anonymous (constant) functions allowed within expressions
+static void anon_fn(rf_parser *y) {
+    rf_fn *f = malloc(sizeof(rf_fn));
+    rf_str *s = s_newstr("<anonymous fn>", 14, 0);
+    f_init(f, s);
+    rf_parser fy;
+    fy.e = y->e;
+    fy.x = y->x;
+    fy.c = f->code;
+    y_init(&fy);
+    f->arity = parse_fn(&fy);
+    c_anon_fn(y->c, f);
+}
+
 static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
     int e = 0;
@@ -307,6 +322,10 @@ static int nud(rf_parser *y) {
         break;
     case TK_ID:
         identifier(y);
+        break;
+    case TK_FN:
+        adv;
+        anon_fn(y);
         break;
     default:
         // TODO Handle invalid nuds
@@ -527,12 +546,42 @@ static void add_local(rf_parser *y, rf_str *id) {
     y->lcl[y->nlcl++] = (local) {s_newstr(id->str, id->l, 1), y->ld};
 }
 
+static int parse_fn(rf_parser *y) {
+    int arity = 0;
+    consume(y, '(', "expected '('");
+
+    // Read parameter identifiers, reserving them as locals to the
+    // function
+    while (1) {
+        if (y->x->tk.kind == TK_ID) {
+            add_local(y, y->x->tk.lexeme.s);
+            ++arity;
+            adv;
+        }
+        if (y->x->tk.kind == ',')
+            adv;
+        else
+            break;
+    }
+    consume(y, ')', "expected ')'");
+    consume(y, '{', "expected '{'");
+    stmt_list(y);
+
+    // Caller cleans the stack; no need to pop locals from scope
+
+    // If the last stmt was not a return statement, push OP_RET
+    if (!y->retx)
+        push(OP_RET);
+    consume(y, '}', "expected '}'");
+    return arity;
+}
+
 // User-defined functions
-static void fn_def(rf_parser *y) {
+static void fn_stmt(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
     rf_str *s;
     if (y->x->tk.kind != TK_ID) {
-        s = s_newstr("<anonymous function>", 20, 0);
+        err(y, "expected identifier for function definition");
     } else {
         s = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
         adv;
@@ -548,31 +597,7 @@ static void fn_def(rf_parser *y) {
     fy.c = f->code;
     y_init(&fy);
 
-    consume(&fy, '(', "expected '('");
-
-    // Read parameter identifiers, reserving them as locals to the
-    // function
-    while (1) {
-        if (fy.x->tk.kind == TK_ID) {
-            add_local(&fy, fy.x->tk.lexeme.s);
-            ++f->arity;
-            adv;
-        }
-        if (fy.x->tk.kind == ',')
-            adv;
-        else
-            break;
-    }
-    consume(&fy, ')', "expected ')'");
-    consume(&fy, '{', "expected '{'");
-    stmt_list(&fy);
-
-    // Caller cleans the stack; no need to pop locals from scope
-
-    // If the last stmt was not a return statement, push OP_RET
-    if (!fy.retx)
-        c_push(fy.c, OP_RET);
-    consume(&fy, '}', "expected '}'");
+    f->arity = parse_fn(&fy);
 }
 
 // TODO
@@ -718,7 +743,7 @@ static void stmt(rf_parser *y) {
     case TK_CONT:   adv; cont_stmt(y);  break;
     case TK_DO:     adv; do_stmt(y);    break;
     case TK_EXIT:   adv; exit_stmt(y);  break;
-    case TK_FN:     adv; fn_def(y);     break; // TODO
+    case TK_FN:     adv; fn_stmt(y);    break;
     case TK_FOR:    adv; for_stmt(y);   break; // TODO
     case TK_IF:     adv; if_stmt(y);    break;
     case TK_LOCAL:  adv; local_stmt(y); break;

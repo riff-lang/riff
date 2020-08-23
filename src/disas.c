@@ -153,6 +153,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND(s->str));
                     break;
+                case TYPE_FN:
+                    sprintf(s, "<fn>");
+                    break;
                 default:
                     break;
                 }
@@ -190,6 +193,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND0(s->str));
                     break;
+                case TYPE_FN:
+                    sprintf(s, "<fn>");
+                    break;
                 default:
                     break;
                 }
@@ -206,6 +212,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND1(s->str));
                     break;
+                case TYPE_FN:
+                    sprintf(s, "<fn>");
+                    break;
                 default:
                     break;
                 }
@@ -221,6 +230,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                     break;
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND2(s->str));
+                    break;
+                case TYPE_FN:
+                    sprintf(s, "<fn>");
                     break;
                 default:
                     break;
