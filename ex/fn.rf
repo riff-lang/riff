@@ -4,10 +4,24 @@ x = 10
 
 (!x ? f : h)()
 
+f() + h()
+
 fn f() {
     "inside f()"
     local y = x ** 2
     return x + y
+}
+
+if 1 {
+    local f = fn () {
+        "inside local f()"
+    }
+    f()
+
+    local fn g() {
+        "inside local g()"
+    }
+    g()
 }
 
 fn g() {

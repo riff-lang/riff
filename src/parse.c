@@ -24,7 +24,7 @@
 static int  expr(rf_parser *y, int rbp);
 static void stmt_list(rf_parser *);
 static void stmt(rf_parser *);
-static int  parse_fn(rf_parser *y);
+static int  compile_fn(rf_parser *y);
 static void y_init(rf_parser *y);
 
 static void err(rf_parser *y, const char *msg) {
@@ -243,11 +243,11 @@ static void array(rf_parser *y) {
     c_array(y->c, n);
 }
 
-// Anonymous (constant) functions allowed within expressions
-static void anon_fn(rf_parser *y) {
+// Functions as constants/literals. This handles local and anonymous
+// functions
+static void fn_constant(rf_parser *y, rf_str *name) {
     rf_fn *f = malloc(sizeof(rf_fn));
-    rf_str *s = s_newstr("<anonymous fn>", 14, 0);
-    f_init(f, s);
+    f_init(f, name);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
     rf_parser fy;
@@ -255,8 +255,8 @@ static void anon_fn(rf_parser *y) {
     fy.x = y->x;
     fy.c = f->code;
     y_init(&fy);
-    f->arity = parse_fn(&fy);
-    c_anon_fn(y->c, f);
+    f->arity = compile_fn(&fy);
+    c_fn_constant(y->c, f);
 }
 
 static int nud(rf_parser *y) {
@@ -297,8 +297,14 @@ static int nud(rf_parser *y) {
         adv;
         expr(y, 0);
         consume(y, ')', "Expected ')'");
-        if (!y->argx && is_asgmt(y->x->tk.kind))
-            err(y, "Invalid operator following expr");
+        if (!y->argx) { 
+            if (is_asgmt(y->x->tk.kind))
+                err(y, "Invalid operator following expr");
+            // Hack to prevent parsing ++/-- as postfix following
+            // parenthesized expression
+            else if (is_incdec(y->x->tk.kind))
+                return TK_INC;
+        }
         return ')';
     case '{':
         adv;
@@ -327,7 +333,7 @@ static int nud(rf_parser *y) {
         break;
     case TK_FN:
         adv;
-        anon_fn(y);
+        fn_constant(y, s_newstr("<anonymous fn>", 14, 0));
         break;
     default:
         // TODO Handle invalid nuds
@@ -548,7 +554,8 @@ static void add_local(rf_parser *y, rf_str *id) {
     y->lcl[y->nlcl++] = (local) {s_newstr(id->str, id->l, 1), y->ld};
 }
 
-static int parse_fn(rf_parser *y) {
+// Returns the arity of the parsed function
+static int compile_fn(rf_parser *y) {
     int arity = 0;
     consume(y, '(', "expected '('");
 
@@ -578,6 +585,44 @@ static int parse_fn(rf_parser *y) {
     return arity;
 }
 
+// Handler for local functions in the form of:
+//   local fn f() {...}
+// 
+// such that it's semantically equivalent to:
+//   local f = fn () {...}
+static void local_fn(rf_parser *y) {
+    if (y->x->tk.kind != TK_ID)
+        err(y, "expected identifier for local function definition");
+    rf_str *id = y->x->tk.lexeme.s;
+    int idx = resolve_local(y, id);
+
+    // Create string for disassembly
+    rf_str *str1 = s_newstr("local fn ", 9, 0);
+    rf_str *str2 = s_concat(str1, y->x->tk.lexeme.s, 0);
+    m_freestr(str1);
+
+    // If the identifier doesn't already exist as a local at the
+    // current scope, add a new local
+    if (idx < 0 || y->lcl[idx].d != y->ld) {
+        set(lx);
+        add_local(y, id);
+        switch (y->nlcl - 1) {
+        case 0: push(OP_LCL0); push(OP_LCLA0); break;
+        case 1: push(OP_LCL1); push(OP_LCLA1); break;
+        case 2: push(OP_LCL2); push(OP_LCLA2);break;
+        default:
+            push(OP_LCL);
+            push((uint8_t) y->nlcl - 1);
+            push(OP_LCLA);
+            push((uint8_t) y->nlcl - 1);
+            break;
+        }
+    }
+    adv;
+    fn_constant(y, str2);
+    push(OP_SET);
+}
+
 // User-defined functions
 static void fn_stmt(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
@@ -599,7 +644,7 @@ static void fn_stmt(rf_parser *y) {
     fy.c = f->code;
     y_init(&fy);
 
-    f->arity = parse_fn(&fy);
+    f->arity = compile_fn(&fy);
 }
 
 // TODO
@@ -638,6 +683,11 @@ static void if_stmt(rf_parser *y) {
 }
 
 static void local_stmt(rf_parser *y) {
+    if (y->x->tk.kind == TK_FN) {
+        adv;
+        local_fn(y);
+        return;
+    }
     while (1) {
         unset_all;
         rf_str *id;
