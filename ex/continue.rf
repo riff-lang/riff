@@ -18,8 +18,15 @@ while i++ < 1 {
 
 local a = 0
 do {
+    local pop, three, vars
     if 1 {
+        local fourth = 2, fifth
         print a++
+        continue
+    }
+
+    else if 4 {
+        local c
         continue
     }
     local a = 1

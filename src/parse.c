@@ -458,11 +458,34 @@ static void expr_stmt(rf_parser *y) {
         push(OP_POP);
 }
 
+// After exiting scope, "pop" local variables no longer in scope by
+// decrementing y->nlcl
+static uint8_t pop_locals(rf_parser *y, int depth, int f) {
+    if (!y->nlcl) return 0;
+
+    uint8_t count = 0;
+    for (int i = y->nlcl - 1; i >= 0 && (y->lcl[i].d > depth); --i) {
+        ++count;
+        if (f)
+            free(y->lcl[i].id);
+    }
+    if (!count)
+        return count;
+    else if (count == 1)
+        push(OP_POP);
+    else {
+        push(OP_POPI);
+        push(count);
+    }
+    return count;
+}
+
 static void break_stmt(rf_parser *y) {
     if (!y->ld)
         err(y, "break statement outside of loop");
     // Reserve a forward jump
     p_list *p = y->brk;
+    pop_locals(y, y->loop, 0);
     m_growarray(p->l, p->n, p->cap, int);
     p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
@@ -472,6 +495,7 @@ static void cont_stmt(rf_parser *y) {
         err(y, "continue statement outside of loop");
     // Reserve a forward jump
     p_list *p = y->cont;
+    pop_locals(y, y->loop, 0);
     m_growarray(p->l, p->n, p->cap, int);
     p->l[p->n++] = c_prep_jump(y->c, JMP);
 }
@@ -480,27 +504,6 @@ static void p_init(p_list *p) {
     p->n   = 0;
     p->cap = 0;
     p->l   = NULL;
-}
-
-// After exiting scope, "pop" local variables no longer in scope by
-// decrementing y->nlcl
-static void pop_locals(rf_parser *y) {
-    if (!y->nlcl) return;
-
-    int count = 0;
-    for (int i = y->nlcl - 1; i >= 0 && (y->lcl[i].d > y->ld); --i) {
-        y->nlcl--;
-        free(y->lcl[i].id);
-        ++count;
-    }
-    if (!count)
-        return;
-    else if (count == 1)
-        push(OP_POP);
-    else {
-        push(OP_POPI);
-        push((uint8_t) count);
-    }
 }
 
 static void enter_loop(rf_parser *y, p_list *b, p_list *c) {
@@ -521,7 +524,8 @@ static void do_stmt(rf_parser *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
     p_list b, c;
-    y->ld++;
+    uint8_t old_loop = y->loop;
+    y->loop = y->ld++;
     enter_loop(y, &b, &c);
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
@@ -531,13 +535,14 @@ static void do_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
+    consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
+    y->ld--;
+    y->nlcl -= pop_locals(y, y->loop, 1);
+    y->loop = old_loop;
     // Patch continue stmts
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
     }
-    consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
-    pop_locals(y);
-    y->ld--;
     expr(y, 0);
     c_jump(y->c, JNZ, l1);
     // Patch break stmts
@@ -686,6 +691,8 @@ static void if_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
+    y->ld--;
+    y->nlcl -= pop_locals(y, y->ld, 1);
     if (y->x->tk.kind == TK_ELSE) {
         adv;
         l2 = c_prep_jump(y->c, JMP);
@@ -698,11 +705,11 @@ static void if_stmt(rf_parser *y) {
             stmt(y);
         }
         c_patch(y->c, l2);
+        y->ld--;
+        y->nlcl -= pop_locals(y, y->ld, 1);
     } else {
         c_patch(y->c, l1);
     }
-    y->ld--;
-    pop_locals(y);
 }
 
 static void local_stmt(rf_parser *y) {
@@ -789,7 +796,8 @@ static void while_stmt(rf_parser *y) {
     l1 = y->c->n;
     expr(y, 0);
     l2 = c_prep_jump(y->c, JZ);
-    y->ld++;
+    uint8_t old_loop = y->loop;
+    y->loop = y->ld++;
     enter_loop(y, &b, &c);
     if (y->x->tk.kind == '{') {
         adv;
@@ -808,8 +816,8 @@ static void while_stmt(rf_parser *y) {
     for (int i = 0; i < b.n; i++) {
         c_patch(y->c, b.l[i]);
     }
-    pop_locals(y);
     y->ld--;
+    y->nlcl -= pop_locals(y, y->loop, 1);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
@@ -848,6 +856,7 @@ static void y_init(rf_parser *y) {
 
     y->idx  = 0;
     y->ld   = 0;
+    y->loop = 0;
     y->brk  = NULL;
     y->cont = NULL;
 }
@@ -861,7 +870,7 @@ int y_compile(rf_env *e) {
     y.c = e->main.code;
     y_init(&y);
     stmt_list(&y);
-    pop_locals(&y);
+    pop_locals(&y, y.ld, 1);
     c_push(y.c, OP_RET);
     x_free(&x);
     return 0;

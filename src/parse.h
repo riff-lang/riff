@@ -43,6 +43,7 @@ typedef struct {
 
     uint8_t idx;    // Depth of index (for exprs inside [])
     uint8_t ld;     // Lexical depth/scope
+    uint8_t loop;   // Depth of current loop
 
     p_list *brk;    // Patch list for break stmts (current loop)
     p_list *cont;   // Patch list for continue stmts (current loop)
