@@ -521,7 +521,16 @@ static int exec(rf_code *c,
                 else if (nargs > arity) {
                     sp -= (nargs - arity);
                 }
-                unsigned int nret = exec(fn->code, sp, sp - arity);
+
+                // Pass SP-arity-1 as the FP for the succeeding call
+                // frame. Since the function is already at this
+                // location in the stack, the compiler can reserve the
+                // slot to accommodate any references a named function
+                // makes to itself without any other work required
+                // from the VM here. This is completely necessary for
+                // local named functions, but globals benefit as
+                // well.
+                unsigned int nret = exec(fn->code, sp, sp - arity - 1);
                 ip += 2;
                 sp -= arity;
 

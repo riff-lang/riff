@@ -637,14 +637,12 @@ static void local_fn(rf_parser *y) {
     fy.c = f->code;
     y_init(&fy);
 
-    // Add function to its own local scope to facilitate recursion
+    // Reserve first local slot for itself. VM will adjust FP
+    // accordingly.
     add_local(&fy, id);
-    c_push(fy.c, OP_LCLA0);
-    c_fn_constant(fy.c, f);
-    c_push(fy.c, OP_SET);
 
     adv;
-    f->arity = compile_fn(&fy) + 1; // +1 to store reference to itself
+    f->arity = compile_fn(&fy);
 
     // Add function to the outer scope
     c_fn_constant(y->c, f);
@@ -654,14 +652,14 @@ static void local_fn(rf_parser *y) {
 // User-defined functions
 static void fn_stmt(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
-    rf_str *s;
+    rf_str *id;
     if (y->x->tk.kind != TK_ID) {
         err(y, "expected identifier for function definition");
     } else {
-        s = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
+        id = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
         adv;
     }
-    f_init(f, s);
+    f_init(f, id);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
 
@@ -671,6 +669,13 @@ static void fn_stmt(rf_parser *y) {
     fy.x = y->x;
     fy.c = f->code;
     y_init(&fy);
+
+    // Reserve first local slot for itself. This is to match behavior
+    // of named local functions which are compiled so they can
+    // reference themselves. This is only to keep the VM calling
+    // convention consistent and (should) make direct recursion a
+    // little faster.
+    add_local(&fy, id);
 
     f->arity = compile_fn(&fy);
 }
