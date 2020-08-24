@@ -15,3 +15,12 @@ while i++ < 1 {
 }
 
 "infinite loop avoided"
+
+local a = 0
+do {
+    if 1 {
+        print a++
+        continue
+    }
+    local a = 1
+} while a != 5

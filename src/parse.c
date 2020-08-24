@@ -504,7 +504,6 @@ static void pop_locals(rf_parser *y) {
 }
 
 static void enter_loop(rf_parser *y, p_list *b, p_list *c) {
-    y->ld++;
     p_init(b);
     p_init(c);
     y->brk  = b;
@@ -512,8 +511,6 @@ static void enter_loop(rf_parser *y, p_list *b, p_list *c) {
 }
 
 static void exit_loop(rf_parser *y, p_list *ob, p_list *oc, p_list *nb, p_list *nc) {
-    pop_locals(y);
-    y->ld--;
     y->brk  = ob;
     y->cont = oc;
     if (nb->n) free(nb->l);
@@ -524,6 +521,7 @@ static void do_stmt(rf_parser *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
     p_list b, c;
+    y->ld++;
     enter_loop(y, &b, &c);
     int l1 = y->c->n;
     if (y->x->tk.kind == '{') {
@@ -538,6 +536,8 @@ static void do_stmt(rf_parser *y) {
         c_patch(y->c, c.l[i]);
     }
     consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
+    pop_locals(y);
+    y->ld--;
     expr(y, 0);
     c_jump(y->c, JNZ, l1);
     // Patch break stmts
@@ -789,6 +789,7 @@ static void while_stmt(rf_parser *y) {
     l1 = y->c->n;
     expr(y, 0);
     l2 = c_prep_jump(y->c, JZ);
+    y->ld++;
     enter_loop(y, &b, &c);
     if (y->x->tk.kind == '{') {
         adv;
@@ -807,6 +808,8 @@ static void while_stmt(rf_parser *y) {
     for (int i = 0; i < b.n; i++) {
         c_patch(y->c, b.l[i]);
     }
+    pop_locals(y);
+    y->ld--;
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
