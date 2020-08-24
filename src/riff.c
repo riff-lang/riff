@@ -51,16 +51,16 @@ int main(int argc, char **argv) {
     e.fn   = NULL;
     e.main = main;
 
-    int df = 0;
     int ff = 0;
+    int lf = 0;
     int uf = 0;
     opterr = 0;
 
     int o;
-    while ((o = getopt(argc, argv, "dfv")) != -1) {
+    while ((o = getopt(argc, argv, "flv")) != -1) {
         switch (o) {
-        case 'd': df = 1; break;
         case 'f': ff = 1; break;
+        case 'l': lf = 1; break;
         case 'v': version();
         case '?': uf = 1; break;
         default: break;
@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
     main.name = s_newstr(e.pname, strlen(e.pname), 1);
     y_compile(&e);
 
-    // -d: Dump riff's arbitrary disassembly for the given program
-    if (df)
+    // -l: List riff's arbitrary disassembly for the given program
+    if (lf)
         d_prog(&e);
     else
         z_exec(&e);
