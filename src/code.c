@@ -101,7 +101,7 @@ static void c_pushk(rf_code *c, int i) {
 
 void c_fn_constant(rf_code *c, rf_fn *fn) {
     m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk++] = (rf_val) {TYPE_FN, .u.fn = fn};
+    c->k[c->nk++] = (rf_val) {TYPE_RFN, .u.fn = fn};
     if (c->nk > 255)
         err(c, "Exceeded max number of unique literals");
     c_pushk(c, c->nk - 1);

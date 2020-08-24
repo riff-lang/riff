@@ -136,7 +136,7 @@ rf_val *a_lookup(rf_arr *a, rf_val *k, int set, int offset) {
         m_freestr(ak);
         return v;
     }
-    case TYPE_FN: // TODO
+    case TYPE_RFN: // TODO
     default: break;
     }
     return NULL;
@@ -227,7 +227,7 @@ rf_val *a_insert(rf_arr *a, rf_val *k, rf_val *v, int set) {
         m_freestr(ak);
         return rv;
     }
-    case TYPE_FN: // TODO
+    case TYPE_RFN: // TODO
     default: break;
     }
     return NULL;

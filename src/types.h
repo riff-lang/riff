@@ -4,21 +4,24 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define TYPE_NULL 1  // 000001
-#define TYPE_INT  2  // 000010
-#define TYPE_FLT  4  // 000100
-#define TYPE_STR  8  // 001000
-#define TYPE_ARR  16 // 010000
-#define TYPE_FN   32 // 100000
+#define TYPE_NULL 1
+#define TYPE_INT  2
+#define TYPE_FLT  4
+#define TYPE_STR  8
+#define TYPE_ARR  16
+#define TYPE_RFN  32
+#define TYPE_CFN  64
 
 #define is_null(x) (x->type & TYPE_NULL)
 #define is_int(x)  (x->type & TYPE_INT)
 #define is_flt(x)  (x->type & TYPE_FLT)
 #define is_str(x)  (x->type & TYPE_STR)
 #define is_arr(x)  (x->type & TYPE_ARR)
-#define is_fn(x)   (x->type & TYPE_FN)
+#define is_rfn(x)  (x->type & TYPE_RFN)
+#define is_cfn(x)  (x->type & TYPE_CFN)
 
 #define is_num(x)  (x->type & (TYPE_INT | TYPE_FLT))
+#define is_fn(x)   (x->type & (TYPE_RFN | TYPE_CFN))
 
 typedef double  rf_flt;
 typedef int64_t rf_int;
@@ -31,6 +34,7 @@ typedef struct {
 
 typedef struct rf_arr rf_arr;
 typedef struct rf_fn  rf_fn;
+typedef struct c_fn   c_fn;
 
 typedef struct {
     int type;
@@ -40,6 +44,7 @@ typedef struct {
         rf_str *s;
         rf_arr *a;
         rf_fn  *fn;
+        c_fn   *cfn;
     } u;
 } rf_val;
 
@@ -48,6 +53,32 @@ typedef struct {
 #define assign_int(p, x) *p = (rf_val) {TYPE_INT, .u.i = (x)}
 #define assign_flt(p, x) *p = (rf_val) {TYPE_FLT, .u.f = (x)}
 #define assign_str(p, x) *p = (rf_val) {TYPE_STR, .u.s = (x)}
+
+#define numval(x) (is_int(x) ? x->u.i : \
+                   is_flt(x) ? x->u.f : \
+                   is_str(x) ? str2flt(x->u.s) : 0)
+#define intval(x) (is_int(x) ? x->u.i : \
+                   is_flt(x) ? (rf_int) x->u.f : \
+                   is_str(x) ? str2int(x->u.s) : 0)
+#define fltval(x) (is_flt(x) ? x->u.f : \
+                   is_int(x) ? (rf_flt) x->u.i : \
+                   is_str(x) ? str2flt(x->u.s) : 0)
+
+#define int_arith(l,r,op) \
+    assign_int(l, (intval(l) op intval(r)));
+
+#define flt_arith(l,r,op) \
+    assign_flt(l, (numval(l) op numval(r)));
+
+#define num_arith(l,r,op) \
+    if (is_flt(l) || is_flt(r)) { \
+        flt_arith(l,r,op); \
+    } else { \
+        int_arith(l,r,op); \
+    }
+
+rf_int    str2int(rf_str *);
+rf_flt    str2flt(rf_str *);
 
 uint32_t  s_hash(const char *);
 rf_str    *s_newstr(const char *, size_t, int);

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "array.h"
+#include "lib.h"
 #include "mem.h"
 #include "vm.h"
 
@@ -18,12 +19,12 @@ static rf_int aos;
 static rf_val *stk[STACK_SIZE];    // Stack
 static rf_val *res[STACK_SIZE];    // Reserve pointers
 
-static rf_int str2int(rf_str *s) {
+rf_int str2int(rf_str *s) {
     char *end;
     return (rf_int) strtoull(s->str, &end, 0);
 }
 
-static rf_flt str2flt(rf_str *s) {
+rf_flt str2flt(rf_str *s) {
     char *end;
     return strtod(s->str, &end);
 }
@@ -44,33 +45,11 @@ static int test(rf_val *v) {
         return !!v->u.s->l;
     }
     case TYPE_ARR: return !!a_length(v->u.a);
-    case TYPE_FN:  return 1;
+    case TYPE_RFN:  return 1;
     default:       return 0;
     }
 }
 
-#define numval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? x->u.f : \
-                   is_str(x) ? str2flt(x->u.s) : 0)
-#define intval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? (rf_int) x->u.f : \
-                   is_str(x) ? str2int(x->u.s) : 0)
-#define fltval(x) (is_flt(x) ? x->u.f : \
-                   is_int(x) ? (rf_flt) x->u.i : \
-                   is_str(x) ? str2flt(x->u.s) : 0)
-
-#define int_arith(l,r,op) \
-    assign_int(l, (intval(l) op intval(r)));
-
-#define flt_arith(l,r,op) \
-    assign_flt(l, (numval(l) op numval(r)));
-
-#define num_arith(l,r,op) \
-    if (is_flt(l) || is_flt(r)) { \
-        flt_arith(l,r,op); \
-    } else { \
-        int_arith(l,r,op); \
-    }
 
 void z_add(rf_val *l, rf_val *r) { num_arith(l,r,+); }
 void z_sub(rf_val *l, rf_val *r) { num_arith(l,r,-); }
@@ -169,7 +148,7 @@ void z_len(rf_val *v) {
     }
     case TYPE_STR: l = v->u.s->l;        break;
     case TYPE_ARR: l = a_length(v->u.a); break;
-    case TYPE_FN:  // TODO
+    case TYPE_RFN:  // TODO
     default: break;
     }
     assign_int(v, l);
@@ -236,7 +215,7 @@ static void put(rf_val *v) {
     case TYPE_FLT:  printf("%g", v->u.f);        break;
     case TYPE_STR:  printf("%s", v->u.s->str);   break;
     case TYPE_ARR:  printf("array: %p", v->u.a); break;
-    case TYPE_FN:   printf("fn: %p", v->u.fn);   break;
+    case TYPE_RFN:   printf("fn: %p", v->u.fn);   break;
     default: break;
     }
 }
@@ -262,13 +241,15 @@ int z_exec(rf_env *e) {
     // Offset for the argv; $0 should be the first user-provided arg
     aos = e->ff ? 3 : 2;
 
+    l_register(&globals);
+
     // Add user-defined functions to the global hash table
     for (int i = 0; i < e->nf; ++i) {
         // Don't add anonymous functions to globals (rf_str should not
         // have a computed hash)
         if (!e->fn[i]->name->hash) continue;
         rf_val *fn = malloc(sizeof(rf_val));
-        *fn = (rf_val) {TYPE_FN, .u.fn = e->fn[i]};
+        *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
         h_insert(&globals, e->fn[i]->name, fn, 1);
     }
 
@@ -520,38 +501,78 @@ static int exec(rf_code *c,
             unsigned int nargs = ip[1];
             if (!is_fn(stk[sp-(nargs+1)]))
                 err("attempt to call non-function value");
-            rf_fn *fn = stk[sp-(nargs+1)]->u.fn;
 
-            // If user called function with too few arguments, nullify
-            // stack elements and increment SP.
-            if (nargs < fn->arity) {
-                for (int i = nargs; i < fn->arity; ++i) {
-                    assign_null(stk[sp++]);
+            unsigned int arity = 0;
+            if (is_rfn(stk[sp-(nargs+1)])) {
+                rf_fn *fn = stk[sp-(nargs+1)]->u.fn;
+                arity = fn->arity;
+
+                // If user called function with too few arguments, nullify
+                // stack elements and increment SP.
+                if (nargs < arity) {
+                    for (int i = nargs; i < arity; ++i) {
+                        assign_null(stk[sp++]);
+                    }
                 }
-            }
-            
-            // If user called function with too many arguments,
-            // decrement SP so it points to the appropriate slot for
-            // control transfer.
-            else if (nargs > fn->arity) {
-                sp -= (nargs - fn->arity);
-            }
-            unsigned int nret = exec(fn->code, sp, sp - fn->arity);
-            ip += 2;
-            sp -= fn->arity;
+                
+                // If user called function with too many arguments,
+                // decrement SP so it points to the appropriate slot for
+                // control transfer.
+                else if (nargs > arity) {
+                    sp -= (nargs - arity);
+                }
+                unsigned int nret = exec(fn->code, sp, sp - arity);
+                ip += 2;
+                sp -= arity;
 
-            // Copy the function's return value to the stack top -
-            // this should be where the caller pushed the original
-            // function.
-            *stk[sp-1] = *stk[sp+fn->arity];
+                // Copy the function's return value to the stack top -
+                // this should be where the caller pushed the original
+                // function.
+                *stk[sp-1] = *stk[sp+arity];
 
-            // TODO - hacky
-            // If callee returns 0 and the next instruction is PRINT1,
-            // skip over the instruction. This facilitates user
-            // functions which conditionally return something.
-            if (!nret && *ip == OP_PRINT1) {
-                ++ip;
-                --sp;
+                // TODO - hacky
+                // If callee returns 0 and the next instruction is PRINT1,
+                // skip over the instruction. This facilitates user
+                // functions which conditionally return something.
+                if (!nret && *ip == OP_PRINT1) {
+                    ++ip;
+                    --sp;
+                }
+            } else {
+                c_fn *fn = stk[sp-(nargs+1)]->u.cfn;
+                arity = fn->arity;
+
+                // If user called function with too few arguments, nullify
+                // stack elements and increment SP.
+                if (nargs < arity) {
+                    for (int i = nargs; i < arity; ++i) {
+                        assign_null(stk[sp++]);
+                    }
+                }
+                
+                // If user called function with too many arguments,
+                // decrement SP so it points to the appropriate slot for
+                // control transfer.
+                else if (nargs > arity) {
+                    sp -= (nargs - arity);
+                }
+                unsigned int nret = fn->fn(stk[sp], stk[sp - arity]);
+                ip += 2;
+                sp -= arity;
+
+                // Copy the function's return value to the stack top -
+                // this should be where the caller pushed the original
+                // function.
+                *stk[sp-1] = *stk[sp+arity];
+
+                // TODO - hacky
+                // If callee returns 0 and the next instruction is PRINT1,
+                // skip over the instruction. This facilitates user
+                // functions which conditionally return something.
+                if (!nret && *ip == OP_PRINT1) {
+                    ++ip;
+                    --sp;
+                }
             }
             break;
         }
@@ -601,7 +622,7 @@ static int exec(rf_code *c,
 
             // IDXA is invalid for all other types
             case TYPE_INT: case TYPE_FLT: case TYPE_STR:
-            case TYPE_FN:
+            case TYPE_RFN:
                 err("idxa called with invalid type");
             default: break;
             }

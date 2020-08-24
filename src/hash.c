@@ -6,8 +6,8 @@
 
 #define LOAD_FACTOR 0.7
 
-#define set(f)   h->f = 1;
-#define unset(f) h->f = 0;
+#define set(f)   h->f = 1
+#define unset(f) h->f = 0
 
 void h_init(hash_t *h) {
     h->n   = 0;
@@ -43,7 +43,7 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
         nv      = v_newarr();
         nv->u.a = v->u.a;
         break;
-    case TYPE_FN:
+    case TYPE_RFN: case TYPE_CFN:
         nv = v; // Don't allocate new functions
         break;
     default: break;

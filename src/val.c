@@ -3,30 +3,26 @@
 
 rf_val *v_newnull(void) {
     rf_val *v = malloc(sizeof(rf_val));
-    v->type   = TYPE_NULL;
-    v->u.s    = NULL;
+    *v = (rf_val) {TYPE_NULL, .u.s = NULL};
     return v;
 }
 
 rf_val *v_newint(rf_int i) {
     rf_val *v = malloc(sizeof(rf_val));
-    v->type   = TYPE_INT;
-    v->u.i    = i;
+    *v = (rf_val) {TYPE_INT, .u.i = i};
     return v;
 }
 
 rf_val *v_newflt(rf_flt f) {
     rf_val *v = malloc(sizeof(rf_val));
-    v->type   = TYPE_FLT;
-    v->u.f    = f;
+    *v = (rf_val) {TYPE_FLT, .u.f = f};
     return v;
 }
 
 rf_val *v_newstr(rf_str *s) {
     rf_str *ns   = s_newstr(s->str, s->l, 0);
     rf_val *v    = malloc(sizeof(rf_val));
-    v->type      = TYPE_STR;
-    v->u.s       = ns;
+    *v = (rf_val) {TYPE_STR, .u.s = ns};
     v->u.s->hash = s->hash;
     return v;
 }
@@ -35,7 +31,6 @@ rf_val *v_newarr(void) {
     rf_val *v = malloc(sizeof(rf_val));
     rf_arr *a = malloc(sizeof(rf_arr));
     a_init(a);
-    v->type = TYPE_ARR;
-    v->u.a  = a;
+    *v = (rf_val) {TYPE_ARR, .u.a = a};
     return v;
 }
