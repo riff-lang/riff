@@ -12,16 +12,16 @@
 #define TYPE_RFN  32
 #define TYPE_CFN  64
 
-#define is_null(x) (x->type & TYPE_NULL)
-#define is_int(x)  (x->type & TYPE_INT)
-#define is_flt(x)  (x->type & TYPE_FLT)
-#define is_str(x)  (x->type & TYPE_STR)
-#define is_arr(x)  (x->type & TYPE_ARR)
-#define is_rfn(x)  (x->type & TYPE_RFN)
-#define is_cfn(x)  (x->type & TYPE_CFN)
+#define is_null(x) ((x)->type & TYPE_NULL)
+#define is_int(x)  ((x)->type & TYPE_INT)
+#define is_flt(x)  ((x)->type & TYPE_FLT)
+#define is_str(x)  ((x)->type & TYPE_STR)
+#define is_arr(x)  ((x)->type & TYPE_ARR)
+#define is_rfn(x)  ((x)->type & TYPE_RFN)
+#define is_cfn(x)  ((x)->type & TYPE_CFN)
 
-#define is_num(x)  (x->type & (TYPE_INT | TYPE_FLT))
-#define is_fn(x)   (x->type & (TYPE_RFN | TYPE_CFN))
+#define is_num(x)  ((x)->type & (TYPE_INT | TYPE_FLT))
+#define is_fn(x)   ((x)->type & (TYPE_RFN | TYPE_CFN))
 
 typedef double  rf_flt;
 typedef int64_t rf_int;
@@ -50,19 +50,19 @@ typedef struct {
 
 // Assign value x to rf_val *p
 #define assign_null(p)   (p)->type = TYPE_NULL
-#define assign_int(p, x) *p = (rf_val) {TYPE_INT, .u.i = (x)}
-#define assign_flt(p, x) *p = (rf_val) {TYPE_FLT, .u.f = (x)}
-#define assign_str(p, x) *p = (rf_val) {TYPE_STR, .u.s = (x)}
+#define assign_int(p, x) *(p) = (rf_val) {TYPE_INT, .u.i = (x)}
+#define assign_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .u.f = (x)}
+#define assign_str(p, x) *(p) = (rf_val) {TYPE_STR, .u.s = (x)}
 
-#define numval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? x->u.f : \
-                   is_str(x) ? str2flt(x->u.s) : 0)
-#define intval(x) (is_int(x) ? x->u.i : \
-                   is_flt(x) ? (rf_int) x->u.f : \
-                   is_str(x) ? str2int(x->u.s) : 0)
-#define fltval(x) (is_flt(x) ? x->u.f : \
-                   is_int(x) ? (rf_flt) x->u.i : \
-                   is_str(x) ? str2flt(x->u.s) : 0)
+#define numval(x) (is_int(x) ? (x)->u.i : \
+                   is_flt(x) ? (x)->u.f : \
+                   is_str(x) ? str2flt((x)->u.s) : 0)
+#define intval(x) (is_int(x) ? (x)->u.i : \
+                   is_flt(x) ? (rf_int) (x)->u.f : \
+                   is_str(x) ? str2int((x)->u.s) : 0)
+#define fltval(x) (is_flt(x) ? (x)->u.f : \
+                   is_int(x) ? (rf_flt) (x)->u.i : \
+                   is_str(x) ? str2flt((x)->u.s) : 0)
 
 #define int_arith(l,r,op) \
     assign_int(l, (intval(l) op intval(r)));
