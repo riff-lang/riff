@@ -17,7 +17,7 @@ rf_str *s_newstr(const char *start, size_t l, int h) {
     char *str = malloc(l * sizeof(char) + 1);
     memcpy(str, start, l);
     str[l] = '\0';
-    rf_str *s = malloc(sizeof(rf_str) + 1);
+    rf_str *s = malloc(sizeof(rf_str));
     s->l = l;
     s->hash = h ? s_hash(str) : 0;
     s->str = str;
@@ -30,7 +30,7 @@ rf_str *s_concat(rf_str *l, rf_str *r, int h) {
     memcpy(new, l->str, l->l);
     memcpy(new + l->l, r->str, r->l);
     new[nl] = '\0';
-    rf_str *s = malloc(sizeof(rf_str) + 1);
+    rf_str *s = malloc(sizeof(rf_str));
     s->l = nl;
     s->hash = h ? s_hash(new) : 0;
     s->str = new;
