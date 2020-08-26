@@ -498,11 +498,11 @@ static int exec(rf_code *c,
 // appropriate positions and cleans up stack afterward. Callee returns
 // from exec() the number of values to be returned to the caller.
         case OP_CALL: {
-            unsigned int nargs = ip[1];
+            int nargs = ip[1];
             if (!is_fn(stk[sp-(nargs+1)]))
                 err("attempt to call non-function value");
 
-            unsigned int arity = 0;
+            int arity = 0;
             if (is_rfn(stk[sp-(nargs+1)])) {
                 rf_fn *fn = stk[sp-(nargs+1)]->u.fn;
                 arity = fn->arity;
@@ -530,7 +530,7 @@ static int exec(rf_code *c,
                 // from the VM here. This is completely necessary for
                 // local named functions, but globals benefit as
                 // well.
-                unsigned int nret = exec(fn->code, sp, sp - arity - 1);
+                int nret = exec(fn->code, sp, sp - arity - 1);
                 ip += 2;
                 sp -= arity;
 
@@ -551,28 +551,26 @@ static int exec(rf_code *c,
                 c_fn *fn = stk[sp-(nargs+1)]->u.cfn;
                 arity = fn->arity;
 
-                // If user called function with too few arguments, nullify
-                // stack elements and increment SP.
-                if (nargs < arity) {
-                    for (int i = nargs; i < arity; ++i) {
-                        assign_null(stk[sp++]);
+                // Variadic library functions have an arity of 255
+                if (arity < 0xff) {
+                    // If user called function with too few arguments,
+                    // nullify stack elements and increment SP.
+                    if (nargs < arity) {
+                        for (int i = nargs; i < arity; ++i) {
+                            assign_null(stk[sp++]);
+                        }
+                    }
+                    
+                    // If user called function with too many
+                    // arguments, decrement SP so it points to the
+                    // appropriate slot for control transfer.
+                    else if (nargs > arity) {
+                        sp -= (nargs - arity);
                     }
                 }
-                
-                // If user called function with too many arguments,
-                // decrement SP so it points to the appropriate slot for
-                // control transfer.
-                else if (nargs > arity) {
-                    sp -= (nargs - arity);
-                }
-                unsigned int nret = fn->fn(stk[sp], stk[sp - arity]);
+                sp -= nargs;
                 ip += 2;
-                sp -= arity;
-
-                // Copy the function's return value to the stack top -
-                // this should be where the caller pushed the original
-                // function.
-                *stk[sp-1] = *stk[sp+arity];
+                int nret = fn->fn(stk[sp], nargs);
 
                 // TODO - hacky
                 // If callee returns 0 and the next instruction is PRINT1,

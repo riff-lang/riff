@@ -4,7 +4,7 @@
 #include "hash.h"
 #include "types.h"
 
-typedef int (* rf_lib_fn) (rf_val *, rf_val *);
+typedef int (* rf_lib_fn) (rf_val *, int);
 
 struct c_fn {
     uint8_t    arity;
