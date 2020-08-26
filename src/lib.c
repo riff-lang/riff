@@ -5,9 +5,12 @@
 
 // Arithmetic functions
 
-// atan2(y,x)
-static int l_atan2(rf_val *fp, int argc) {
-    assign_flt(fp-1, atan2(fltval(fp), fltval(fp+1)));
+// atan(y [,x])
+static int l_atan(rf_val *fp, int argc) {
+    if (argc == 1)
+        assign_flt(fp-1, atan(fltval(fp)));
+    else if (argc > 1)
+        assign_flt(fp-1, atan2(fltval(fp), fltval(fp+1)));
     return 1;
 }
 
@@ -23,6 +26,25 @@ static int l_exp(rf_val *fp, int argc) {
     return 1;
 }
 
+// int(x)
+static int l_int(rf_val *fp, int argc) {
+    assign_int(fp-1, intval(fp));
+    return 1;
+}
+
+// log(x [,b])
+static int l_log(rf_val *fp, int argc) {
+    if (argc == 1)
+        assign_flt(fp-1, log(fltval(fp)));
+    else if (fltval(fp+1) == 2.0)
+        assign_flt(fp-1, log2(fltval(fp)));
+    else if (fltval(fp+1) == 10.0)
+        assign_flt(fp-1, log10(fltval(fp)));
+    else
+        assign_flt(fp-1, log(fltval(fp)) / log(fltval(fp+1)));
+    return 1;
+}
+
 // sin(x)
 static int l_sin(rf_val *fp, int argc) {
     assign_flt(fp-1, sin(fltval(fp)));
@@ -32,6 +54,12 @@ static int l_sin(rf_val *fp, int argc) {
 // sqrt(x)
 static int l_sqrt(rf_val *fp, int argc) {
     assign_flt(fp-1, sqrt(fltval(fp)));
+    return 1;
+}
+
+// tan(x)
+static int l_tan(rf_val *fp, int argc) {
+    assign_flt(fp-1, tan(fltval(fp)));
     return 1;
 }
 
@@ -56,14 +84,17 @@ static struct {
     const char *name;
     c_fn        fn;
 } lib_fn[] = {
-    { "atan2", { 2,   l_atan2 } },
-    { "cos",   { 1,   l_cos }   },
-    { "exp",   { 1,   l_exp }   },
-    { "sin",   { 1,   l_sin }   },
-    { "sqrt",  { 1,   l_sqrt }  },
-    { "char",  { 255, l_char }  },
+    { "atan", { 1, l_atan } },
+    { "cos",  { 1, l_cos }  },
+    { "exp",  { 1, l_exp }  },
+    { "int",  { 1, l_int }  },
+    { "log",  { 1, l_log }  },
+    { "sin",  { 1, l_sin }  },
+    { "sqrt", { 1, l_sqrt } },
+    { "tan",  { 1, l_tan }  },
+    { "char", { 0, l_char } },
     // TODO hack for l_register loop condition
-    { NULL,    { 0,   NULL }    }
+    { NULL,   { 0, NULL }   }
 };
 
 void l_register(hash_t *g) {

@@ -498,11 +498,13 @@ static int exec(rf_code *c,
 // appropriate positions and cleans up stack afterward. Callee returns
 // from exec() the number of values to be returned to the caller.
         case OP_CALL: {
-            int nargs = ip[1];
+            unsigned int nargs = ip[1];
             if (!is_fn(stk[sp-(nargs+1)]))
                 err("attempt to call non-function value");
 
-            int arity = 0;
+            unsigned int arity, nret;
+
+            // User-defined functions
             if (is_rfn(stk[sp-(nargs+1)])) {
                 rf_fn *fn = stk[sp-(nargs+1)]->u.fn;
                 arity = fn->arity;
@@ -530,56 +532,39 @@ static int exec(rf_code *c,
                 // from the VM here. This is completely necessary for
                 // local named functions, but globals benefit as
                 // well.
-                int nret = exec(fn->code, sp, sp - arity - 1);
-                ip += 2;
+                nret = exec(fn->code, sp, sp - arity - 1);
                 sp -= arity;
 
                 // Copy the function's return value to the stack top -
                 // this should be where the caller pushed the original
                 // function.
                 *stk[sp-1] = *stk[sp+arity];
-
-                // TODO - hacky
-                // If callee returns 0 and the next instruction is PRINT1,
-                // skip over the instruction. This facilitates user
-                // functions which conditionally return something.
-                if (!nret && *ip == OP_PRINT1) {
-                    ++ip;
-                    --sp;
-                }
-            } else {
+            }
+            
+            // Built-in/C functions
+            else {
                 c_fn *fn = stk[sp-(nargs+1)]->u.cfn;
                 arity = fn->arity;
 
-                // Variadic library functions have an arity of 255
-                if (arity < 0xff) {
+                // Fully variadic library functions have an arity of 0
+                if (arity && nargs < arity) {
                     // If user called function with too few arguments,
                     // nullify stack elements and increment SP.
-                    if (nargs < arity) {
-                        for (int i = nargs; i < arity; ++i) {
-                            assign_null(stk[sp++]);
-                        }
-                    }
-                    
-                    // If user called function with too many
-                    // arguments, decrement SP so it points to the
-                    // appropriate slot for control transfer.
-                    else if (nargs > arity) {
-                        sp -= (nargs - arity);
+                    for (int i = nargs; i < arity; ++i) {
+                        assign_null(stk[sp+i]);
                     }
                 }
                 sp -= nargs;
-                ip += 2;
-                int nret = fn->fn(stk[sp], nargs);
-
-                // TODO - hacky
-                // If callee returns 0 and the next instruction is PRINT1,
-                // skip over the instruction. This facilitates user
-                // functions which conditionally return something.
-                if (!nret && *ip == OP_PRINT1) {
-                    ++ip;
-                    --sp;
-                }
+                nret = fn->fn(stk[sp], nargs);
+            }
+            ip += 2;
+            // TODO - hacky
+            // If callee returns 0 and the next instruction is PRINT1,
+            // skip over the instruction. This facilitates user
+            // functions which conditionally return something.
+            if (!nret && *ip == OP_PRINT1) {
+                ++ip;
+                --sp;
             }
             break;
         }
@@ -594,7 +579,6 @@ static int exec(rf_code *c,
         case OP_RET1:
             *stk[retp] = *stk[sp-1];
             return 1;
-            
 
 // Create a sequential array of x elements from the top
 // of the stack. Leave the array rf_val on the stack.
@@ -628,10 +612,8 @@ static int exec(rf_code *c,
                 break;
 
             // IDXA is invalid for all other types
-            case TYPE_INT: case TYPE_FLT: case TYPE_STR:
-            case TYPE_RFN:
+            default:
                 err("idxa called with invalid type");
-            default: break;
             }
             --sp;
             ++ip;
@@ -661,6 +643,8 @@ static int exec(rf_code *c,
                 stk[sp-2]  = res[sp-2];
                 binop(idx);
                 break;
+            case TYPE_RFN: case TYPE_CFN:
+                err("attempt to subscript a function");
             default:
                 break;
             }
