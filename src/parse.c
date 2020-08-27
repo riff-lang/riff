@@ -149,9 +149,10 @@ static void identifier(rf_parser *y) {
     // assignment, ++/--, or '[', signal codegen to push the address
     // of the symbol. Otherwise, push the value itself.
     peek;
-    if (is_incdec(y->x->la.kind) ||
-        is_asgmt(y->x->la.kind)  ||
-        y->x->la.kind == '[') {
+    if (!y->argx &&
+            (is_incdec(y->x->la.kind) ||
+             is_asgmt(y->x->la.kind)  ||
+             y->x->la.kind == '[')) {
         if (scope >= 0)
             c_local(y->c, scope, 1);
         else
@@ -282,9 +283,7 @@ static int nud(rf_parser *y) {
         adv;
         set(argx);
         expr(y, 16);
-        if (y->rx                   ||
-            is_asgmt(y->x->tk.kind) ||
-            is_incdec(y->x->tk.kind)) {
+        if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
             set(ax);
             push(OP_ARGA);
         } else
