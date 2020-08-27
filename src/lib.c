@@ -1,6 +1,9 @@
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
+#include "array.h"
+#include "mem.h"
 #include "lib.h"
 
 // Arithmetic functions
@@ -80,21 +83,57 @@ static int l_char(rf_val *fp, int argc) {
     return 1;
 }
 
+// split(s [,d])
+// Returns an array with elements being string `s` split on delimiter
+// `d`. The delimiter can be zero or more characters. If no delimiter
+// is provided, the default is " ". If the delimiter is the empty
+// string (""), the string is split into an array of individual
+// characters.
+static int l_split(rf_val *fp, int argc) {
+    if (!is_str(fp))
+        return 0;
+    size_t len = fp->u.s->l;
+    char str[len];
+    memcpy(str, fp->u.s->str, len);
+    const char *delim = (argc < 2 || !is_str(fp+1)) ? " " : fp[1].u.s->str;
+    rf_val *arr = v_newarr();
+    rf_str *s;
+    rf_val v;
+    if (!strlen(delim)) {
+        for (rf_int i = 0; i < len; ++i) {
+            s = s_newstr(str + i, 1, 0);
+            v = (rf_val) {TYPE_STR, .u.s = s};
+            a_insert_int(arr->u.a, i, &v, 1, 1);
+        }
+    } else {
+        char *tk = strtok(str, delim);
+        for (rf_int i = 0; tk; ++i) {
+            s = s_newstr(tk, strlen(tk), 0);
+            v = (rf_val) {TYPE_STR, .u.s = s};
+            a_insert_int(arr->u.a, i, &v, 1, 1);
+            tk = strtok(NULL, delim);
+        }
+    }
+    fp[-1] = *arr;
+    return 1;
+}
+
 static struct {
     const char *name;
     c_fn        fn;
 } lib_fn[] = {
-    { "atan", { 1, l_atan } },
-    { "cos",  { 1, l_cos }  },
-    { "exp",  { 1, l_exp }  },
-    { "int",  { 1, l_int }  },
-    { "log",  { 1, l_log }  },
-    { "sin",  { 1, l_sin }  },
-    { "sqrt", { 1, l_sqrt } },
-    { "tan",  { 1, l_tan }  },
-    { "char", { 0, l_char } },
+    { "atan",  { 1, l_atan }  },
+    { "cos",   { 1, l_cos }   },
+    { "exp",   { 1, l_exp }   },
+    { "int",   { 1, l_int }   },
+    { "log",   { 1, l_log }   },
+    { "sin",   { 1, l_sin }   },
+    { "sqrt",  { 1, l_sqrt }  },
+    { "tan",   { 1, l_tan }   },
+    { "char",  { 0, l_char }  },
+    { "split", { 1, l_split } },
     // TODO hack for l_register loop condition
-    { NULL,   { 0, NULL }   }
+    { NULL,    { 0, NULL }    }
 };
 
 void l_register(hash_t *g) {
