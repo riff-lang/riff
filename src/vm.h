@@ -9,6 +9,12 @@
 // TODO dynamic stack allocation
 #define STACK_SIZE 1024
 
+typedef union {
+    uint64_t  t; // Implicit type tag
+    rf_val   *a;
+    rf_val    v;
+} rf_stack;
+
 // VM operations exposed for (future) codegen optimizations
 void z_add(rf_val *, rf_val *);
 void z_sub(rf_val *, rf_val *);

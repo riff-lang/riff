@@ -13,11 +13,10 @@ static void err(const char *msg) {
     exit(1);
 }
 
-static hash_t globals;
-static rf_arr argv;
-static rf_int aos;
-static rf_val *stk[STACK_SIZE];    // Stack
-static rf_val *res[STACK_SIZE];    // Reserve pointers
+static hash_t   globals;
+static rf_arr   argv;
+static rf_int   aos;
+static rf_stack stack[STACK_SIZE];
 
 rf_int str2int(rf_str *s) {
     char *end;
@@ -45,7 +44,7 @@ static int test(rf_val *v) {
         return !!v->u.s->l;
     }
     case TYPE_ARR: return !!a_length(v->u.a);
-    case TYPE_RFN:  return 1;
+    case TYPE_RFN: case TYPE_CFN: return 1;
     default:       return 0;
     }
 }
@@ -126,7 +125,7 @@ void z_lt(rf_val *l, rf_val *r) { num_arith(l,r,<);  }
 void z_le(rf_val *l, rf_val *r) { num_arith(l,r,<=); }
 
 void z_lnot(rf_val *v) {
-    assign_int(v, !numval(v));
+    assign_int(v, !test(v));
 }
 
 void z_len(rf_val *v) {
@@ -199,7 +198,8 @@ void z_idx(rf_val *l, rf_val *r) {
         assign_str(l, s_newstr(&l->u.s->str[intval(r)], 1, 0));
         break;
     }
-    case TYPE_ARR: // TODO? e.g. {2,4,7,1}[0]
+    case TYPE_ARR:
+        *l = *a_lookup(l->u.a, r, 0, 0);
         break;
     default:
         assign_int(l, 0);
@@ -215,7 +215,8 @@ static void put(rf_val *v) {
     case TYPE_FLT:  printf("%g", v->u.f);        break;
     case TYPE_STR:  printf("%s", v->u.s->str);   break;
     case TYPE_ARR:  printf("array: %p", v->u.a); break;
-    case TYPE_RFN:   printf("fn: %p", v->u.fn);   break;
+    case TYPE_RFN:  printf("fn: %p", v->u.fn);   break;
+    case TYPE_CFN:  printf("fn: %p", v->u.cfn);  break;
     default: break;
     }
 }
@@ -231,7 +232,7 @@ static void init_argv(rf_arr *a, int argc, char **argv) {
     }
 }
 
-static int exec(rf_code *c, register unsigned int sp, unsigned int fp);
+static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 
 // VM entry point/initialization
 int z_exec(rf_env *e) {
@@ -247,29 +248,23 @@ int z_exec(rf_env *e) {
     for (int i = 0; i < e->nf; ++i) {
         // Don't add anonymous functions to globals (rf_str should not
         // have a computed hash)
-        if (!e->fn[i]->name->hash) continue;
+        if (!e->fn[i]->name->hash)
+            continue;
         rf_val *fn = malloc(sizeof(rf_val));
         *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
         h_insert(&globals, e->fn[i]->name, fn, 1);
     }
 
-    // Allocate and save pointers
-    for (int i = 0; i < STACK_SIZE; i++)
-        res[i] = stk[i] = malloc(sizeof(rf_val));
-
-    return exec(e->main.code, 0, 0);
+    return exec(e->main.code, stack, stack);
 }
 
 // VM interpreter loop
-static int exec(rf_code *c,
-                register unsigned int sp,
-                unsigned int fp) {
-    unsigned int retp = sp; // Save original SP
+static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
+    rf_stack *retp = sp; // Save original SP
     rf_val *tp; // Temp pointer
     register uint8_t *ip = c->code;
     while (1) {
-        if (sp >= STACK_SIZE)
-            err("stack limit reached");
+        // TODO check for impending stack overflow
         switch (*ip) {
 
 // Unconditional jumps
@@ -283,24 +278,24 @@ static int exec(rf_code *c,
 #define jc8(x)  (x ? j8  : (ip += 2)); --sp;
 #define jc16(x) (x ? j16 : (ip += 3)); --sp;
 
-        case OP_JNZ8:  jc8(test(stk[sp-1]));   break;
-        case OP_JNZ16: jc16(test(stk[sp-1]));  break;
-        case OP_JZ8:   jc8(!test(stk[sp-1]));  break;
-        case OP_JZ16:  jc16(!test(stk[sp-1])); break;
+        case OP_JNZ8:  jc8(test(&sp[-1].v));   break;
+        case OP_JNZ16: jc16(test(&sp[-1].v));  break;
+        case OP_JZ8:   jc8(!test(&sp[-1].v));  break;
+        case OP_JZ16:  jc16(!test(&sp[-1].v)); break;
 
 // Conditional jumps (pop stack if jump not taken)
 #define xjc8(x)  if (x) j8;  else {--sp; ip += 2;}
 #define xjc16(x) if (x) j16; else {--sp; ip += 3;}
 
-        case OP_XJNZ8:  xjc8(test(stk[sp-1]));   break;
-        case OP_XJNZ16: xjc16(test(stk[sp-1]));  break;
-        case OP_XJZ8:   xjc8(!test(stk[sp-1]));  break;
-        case OP_XJZ16:  xjc16(!test(stk[sp-1])); break;
+        case OP_XJNZ8:  xjc8(test(&sp[-1].v));   break;
+        case OP_XJNZ16: xjc16(test(&sp[-1].v));  break;
+        case OP_XJZ8:   xjc8(!test(&sp[-1].v));  break;
+        case OP_XJZ16:  xjc16(!test(&sp[-1].v)); break;
 
 // Unary operations
-// stk[sp-1] is assumed to be safe to overwrite
+// sp[-1].a is assumed to be safe to overwrite
 #define unop(x) \
-    z_##x(stk[sp-1]); \
+    z_##x(&sp[-1].v); \
     ++ip;
 
         case OP_LEN:  unop(len);  break;
@@ -311,9 +306,9 @@ static int exec(rf_code *c,
         case OP_TEST: unop(test); break;
 
 // Standard binary operations
-// stk[sp-2] and stk[sp-1] are assumed to be safe to overwrite
+// sp[-2].a and sp[-1].a are assumed to be safe to overwrite
 #define binop(x) \
-    z_##x(stk[sp-2], stk[sp-1]); \
+    z_##x(&sp[-2].v, &sp[-1].v); \
     --sp; \
     ++ip;
 
@@ -337,60 +332,58 @@ static int exec(rf_code *c,
         case OP_CAT: binop(cat); break;
 
 // Pre-increment/decrement
-// stk[sp-1] is address of some variable's rf_val.
+// sp[-1].a is address of some variable's rf_val.
 // Increment/decrement this value directly and replace the stack
 // element with a copy of the value.
 #define pre(x) \
-    switch (stk[sp-1]->type) { \
-    case TYPE_INT: stk[sp-1]->u.i += x; break; \
-    case TYPE_FLT: stk[sp-1]->u.f += x; break; \
+    switch (sp[-1].a->type) { \
+    case TYPE_INT: sp[-1].a->u.i += x; break; \
+    case TYPE_FLT: sp[-1].a->u.f += x; break; \
     case TYPE_STR: \
-        assign_flt(stk[sp-1], str2flt(stk[sp-1]->u.s) + x); \
+        assign_flt(sp[-1].a, str2flt(sp[-1].a->u.s) + x); \
         break; \
     default: \
-        assign_int(stk[sp-1], x); \
+        assign_int(sp[-1].a, x); \
         break; \
     } \
-    *res[sp-1] = *stk[sp-1]; \
-    stk[sp-1]  = res[sp-1]; \
+    sp[-1].v = *sp[-1].a; \
     ++ip;
 
         case OP_PREINC: pre(1);  break;
         case OP_PREDEC: pre(-1); break;
 
 // Post-increment/decrement
-// stk[sp-1] is address of some variable's rf_val. Create a copy of
+// sp[-1].a is address of some variable's rf_val. Create a copy of
 // the raw value, then increment/decrement the rf_val at the given
 // address.  Replace the stack element with the previously made copy
 // and coerce to a numeric value if needed.
 #define post(x) \
-    *res[sp-1] = *stk[sp-1]; \
-    switch (stk[sp-1]->type) { \
-    case TYPE_INT: stk[sp-1]->u.i += x; break; \
-    case TYPE_FLT: stk[sp-1]->u.f += x; break; \
+    tp = sp[-1].a; \
+    sp[-1].v = *tp; \
+    switch (tp->type) { \
+    case TYPE_INT: tp->u.i += x; break; \
+    case TYPE_FLT: tp->u.f += x; break; \
     case TYPE_STR: \
-        assign_flt(stk[sp-1], str2flt(stk[sp-1]->u.s) + x); \
+        assign_flt(tp, str2flt(tp->u.s) + x); \
         break; \
     default: \
-        assign_int(stk[sp-1], x); \
+        assign_int(tp, x); \
         break; \
     } \
-    stk[sp-1] = res[sp-1]; \
     unop(num);
 
         case OP_POSTINC: post(1);  break;
         case OP_POSTDEC: post(-1); break;
 
 // Compound assignment operations
-// stk[sp-2] is address of some variable's rf_val. Save the address
-// and replace stk[sp-2] with a copy of the value. Perform the binary
+// sp[-2].a is address of some variable's rf_val. Save the address
+// and replace sp[-2].a with a copy of the value. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
-    tp         = stk[sp-2]; \
-    *res[sp-2] = *stk[sp-2]; \
-    stk[sp-2]  = res[sp-2]; \
+    tp       = sp[-2].a; \
+    sp[-2].v = *tp; \
     binop(x); \
-    *tp = *stk[sp-1];
+    *tp = sp[-1].v;
 
         case OP_ADDX: cbinop(add); break;
         case OP_SUBX: cbinop(sub); break;
@@ -412,13 +405,11 @@ static int exec(rf_code *c,
         case OP_POPI: sp -= ip[1]; ip += 2; break;
 
         // Push null literal on stack
-        case OP_NULL: assign_null(stk[sp++]); ++ip; break;
+        case OP_NULL: assign_null(&sp++->v); ++ip; break;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
-#define imm8(x) \
-    assign_int(stk[sp], x); \
-    ++sp;
+#define imm8(x) assign_int(&sp++->v, x);
 
         case OP_IMM8: imm8(ip[1]); ip += 2; break;
         case OP_IMM0: imm8(0);     ++ip;    break;
@@ -428,7 +419,7 @@ static int exec(rf_code *c,
 // Push constant
 // Copy constant x from code object's constant table to the top of the
 // stack.
-#define pushk(x) *stk[sp++] = c->k[(x)];
+#define pushk(x) sp++->v = c->k[(x)];
 
         case OP_PUSHK:  pushk(ip[1]); ip += 2; break;
         case OP_PUSHK0: pushk(0);     ++ip;    break;
@@ -441,8 +432,7 @@ static int exec(rf_code *c,
 // h_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-#define gbla(x) \
-    stk[sp++] = h_lookup(&globals, c->k[(x)].u.s, 1);
+#define gbla(x) sp++->a = h_lookup(&globals, c->k[(x)].u.s, 1);
 
         case OP_GBLA:  gbla(ip[1]); ip += 2; break;
         case OP_GBLA0: gbla(0);     ++ip;    break;
@@ -455,19 +445,16 @@ static int exec(rf_code *c,
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
-#define gblv(x) \
-    *stk[sp++] = *h_lookup(&globals, c->k[(x)].u.s, 0);
+#define gblv(x) sp++->v = *h_lookup(&globals, c->k[(x)].u.s, 0);
 
         case OP_GBLV:  gblv(ip[1]); ip += 2; break;
         case OP_GBLV0: gblv(0);     ++ip;    break;
         case OP_GBLV1: gblv(1);     ++ip;    break;
         case OP_GBLV2: gblv(2);     ++ip;    break;
 
-// Nullify slot at stack[FP+x] for use as a local var
+// Nullify slot at FP[x] for use as a local var
 // Increment SP to reserve slot
-#define lcl(x) \
-    assign_null(stk[fp+(x)]); \
-    ++sp;
+#define lcl(x) assign_null(&fp[(x)].v); ++sp;
 
         case OP_LCL:  lcl(ip[1]); ip += 2; break;
         case OP_LCL0: lcl(0);     ++ip;    break;
@@ -476,7 +463,7 @@ static int exec(rf_code *c,
 
 // Push local address
 // Push the address of stk[FP+x] to the top of the stack.
-#define lcla(x) stk[sp++] = stk[fp+(x)];
+#define lcla(x) sp++->a = &fp[(x)].v;
 
         case OP_LCLA:  lcla(ip[1]) ip += 2; break;
         case OP_LCLA0: lcla(0);    ++ip;    break;
@@ -485,7 +472,7 @@ static int exec(rf_code *c,
 
 // Push local value
 // Copy the value of stk[FP+x] to the top of the stack.
-#define lclv(x) *stk[sp++] = *stk[fp+(x)];
+#define lclv(x) sp++->v = fp[(x)].v;
 
         case OP_LCLV:  lclv(ip[1]) ip += 2; break;
         case OP_LCLV0: lclv(0);    ++ip;    break;
@@ -498,22 +485,22 @@ static int exec(rf_code *c,
 // appropriate positions and cleans up stack afterward. Callee returns
 // from exec() the number of values to be returned to the caller.
         case OP_CALL: {
-            unsigned int nargs = ip[1];
-            if (!is_fn(stk[sp-(nargs+1)]))
+            int nargs = ip[1];
+            if (!is_fn(&sp[-nargs-1].v))
                 err("attempt to call non-function value");
 
-            unsigned int arity, nret;
+            int arity, nret;
 
             // User-defined functions
-            if (is_rfn(stk[sp-(nargs+1)])) {
-                rf_fn *fn = stk[sp-(nargs+1)]->u.fn;
+            if (is_rfn(&sp[-nargs-1].v)) {
+                rf_fn *fn = sp[-nargs-1].v.u.fn;
                 arity = fn->arity;
 
                 // If user called function with too few arguments, nullify
                 // stack elements and increment SP.
                 if (nargs < arity) {
                     for (int i = nargs; i < arity; ++i) {
-                        assign_null(stk[sp++]);
+                        assign_null(&sp[i].v);
                     }
                 }
                 
@@ -538,12 +525,12 @@ static int exec(rf_code *c,
                 // Copy the function's return value to the stack top -
                 // this should be where the caller pushed the original
                 // function.
-                *stk[sp-1] = *stk[sp+arity];
+                sp[-1].v = sp[arity].v;
             }
             
             // Built-in/C functions
             else {
-                c_fn *fn = stk[sp-(nargs+1)]->u.cfn;
+                c_fn *fn = sp[-nargs-1].v.u.cfn;
                 arity = fn->arity;
 
                 // Fully variadic library functions have an arity of 0
@@ -551,11 +538,11 @@ static int exec(rf_code *c,
                     // If user called function with too few arguments,
                     // nullify stack elements and increment SP.
                     for (int i = nargs; i < arity; ++i) {
-                        assign_null(stk[sp+i]);
+                        assign_null(&sp[i].v);
                     }
                 }
                 sp -= nargs;
-                nret = fn->fn(stk[sp], nargs);
+                nret = fn->fn(&sp->v, nargs);
             }
             ip += 2;
             // TODO - hacky
@@ -570,14 +557,14 @@ static int exec(rf_code *c,
         }
 
         case OP_RET:
-            assign_null(stk[retp]);
+            assign_null(&retp->v);
             return 0;
 
         // Caller expects return value to be at its original SP +
         // arity of the function. "clean up" any created locals by
         // copying the return value to the appropriate slot.
         case OP_RET1:
-            *stk[retp] = *stk[sp-1];
+            retp->v = sp[-1].v;
             return 1;
 
 // Create a sequential array of x elements from the top
@@ -586,9 +573,10 @@ static int exec(rf_code *c,
 #define new_array(x) \
     tp = v_newarr(); \
     for (int i = (x) - 1; i >= 0; --i) { \
-        a_insert_int(tp->u.a, i, stk[--sp], 1, 1); \
+        --sp; \
+        a_insert_int(tp->u.a, i, &sp->v, 1, 1); \
     } \
-    stk[sp++] = tp;
+    sp++->v = *tp;
 
         case OP_ARRAY0: new_array(0);    ++ip;    break;
         case OP_ARRAY:  new_array(ip[1]) ip += 2; break;
@@ -601,14 +589,14 @@ static int exec(rf_code *c,
         // Perform the lookup and leave the corresponding element's
         // rf_val address on the stack.
         case OP_IDXA:
-            switch (stk[sp-2]->type) {
+            switch (sp[-2].a->type) {
 
-            // Create array if stk[sp-2] is an uninitialized variable
+            // Create array if sp[-2].a is an uninitialized variable
             case TYPE_NULL:
-                *stk[sp-2] = *v_newarr();
+                *sp[-2].a = *v_newarr();
                 // Fall-through
             case TYPE_ARR:
-                stk[sp-2] = a_lookup(stk[sp-2]->u.a, stk[sp-1], 1, 0);
+                sp[-2].a = a_lookup(sp[-2].a->u.a, &sp[-1].v, 1, 0);
                 break;
 
             // IDXA is invalid for all other types
@@ -623,25 +611,20 @@ static int exec(rf_code *c,
         // Perform the lookup and leave a copy of the corresponding
         // element's value on the stack.
         case OP_IDXV:
-            switch (stk[sp-2]->type) {
+            if (sp[-2].t <= 64) {
+                binop(idx);
+                break;
+            }
+            switch (sp[-2].a->type) {
 
-            // Create array if stk[sp-2] is an uninitialized variable
+            // Create array if sp[-2].a is an uninitialized variable
             case TYPE_NULL:
-                stk[sp-2] = v_newarr();
+                *sp[-2].a = *v_newarr();
                 // Fall-through
             case TYPE_ARR:
-                *res[sp-2] = *a_lookup(stk[sp-2]->u.a, stk[sp-1], 0, 0);
-                stk[sp-2]  = res[sp-2];
+                sp[-2].v = *a_lookup(sp[-2].a->u.a, &sp[-1].v, 0, 0);
                 --sp;
                 ++ip;
-                break;
-
-            // TODO parser should be signaling OP_GBLV, this handles
-            // OP_GBLA usage for now
-            case TYPE_INT: case TYPE_FLT: case TYPE_STR:
-                *res[sp-2] = *stk[sp-2];
-                stk[sp-2]  = res[sp-2];
-                binop(idx);
                 break;
             case TYPE_RFN: case TYPE_CFN:
                 err("attempt to subscript a function");
@@ -651,28 +634,24 @@ static int exec(rf_code *c,
             break;
 
         case OP_ARGA:
-            stk[sp-1] = a_lookup(&argv, stk[sp-1], 1, aos);
+            sp[-1].a = a_lookup(&argv, &sp[-1].v, 1, aos);
             ++ip;
             break;
 
         case OP_ARGV:
-            *res[sp-1] = *a_lookup(&argv, stk[sp-1], 0, aos);
-            stk[sp-1]  = res[sp-1];
+            sp[-1].v = *a_lookup(&argv, &sp[-1].v, 0, aos);
             ++ip;
             break;
 
         case OP_SET:
-            tp         = stk[sp-2];
-            *res[sp-2] = *stk[sp-1];
-            stk[sp-2]  = res[sp-2];
-            *tp        = *res[sp-2];
+            sp[-2].v = *sp[-2].a = sp[-1].v;
             --sp;
             ++ip;
             break;
 
         // Print a single element from the stack
         case OP_PRINT1:
-            put(stk[sp-1]);
+            put(&sp[-1].v);
             printf("\n");
             --sp;
             ++ip;
@@ -681,7 +660,7 @@ static int exec(rf_code *c,
         // Print (IP+1) elements from the stack
         case OP_PRINT:
             for (int i = ip[1]; i > 0; --i) {
-                put(stk[sp-i]);
+                put(&sp[-i].v);
                 if (i > 1)
                     printf(" ");
             }

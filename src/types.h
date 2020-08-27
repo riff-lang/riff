@@ -37,7 +37,9 @@ typedef struct rf_fn  rf_fn;
 typedef struct c_fn   c_fn;
 
 typedef struct {
-    int type;
+    // Type tag is aligned to the 64-bit boundary to accommodate an
+    // implicit type tag in the VM stack element union typedef.
+    uint64_t type;
     union {
         rf_flt  f;
         rf_int  i;
