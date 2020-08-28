@@ -14,9 +14,6 @@ language specification is currently non-existent. Feel free to browse
 through the [examples](ex) to get a general idea of the language and
 syntax.
 
-Currently, the interpreter has no garbage collection for managing
-unreachable data elements created during runtime.
-
 ## Usage
 
 Running `make` in the root directory of the repository will compile
