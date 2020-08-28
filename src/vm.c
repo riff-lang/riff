@@ -29,7 +29,7 @@ rf_flt str2flt(rf_str *s) {
 }
 
 // Return logical result of value
-static int test(rf_val *v) {
+static inline int test(rf_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
@@ -50,36 +50,36 @@ static int test(rf_val *v) {
 }
 
 
-void z_add(rf_val *l, rf_val *r) { num_arith(l,r,+); }
-void z_sub(rf_val *l, rf_val *r) { num_arith(l,r,-); }
-void z_mul(rf_val *l, rf_val *r) { num_arith(l,r,*); }
+static inline void z_add(rf_val *l, rf_val *r) { num_arith(l,r,+); }
+static inline void z_sub(rf_val *l, rf_val *r) { num_arith(l,r,-); }
+static inline void z_mul(rf_val *l, rf_val *r) { num_arith(l,r,*); }
 
 // Language comparison for division by zero:
 // `inf`: lua, mawk
 // error: pretty much all others
-void z_div(rf_val *l, rf_val *r) {
+static inline void z_div(rf_val *l, rf_val *r) {
     flt_arith(l,r,/);
 }
 
 // Language comparison for modulus by zero:
 // `nan`: mawk
 // error: pretty much all others
-void z_mod(rf_val *l, rf_val *r) {
+static inline void z_mod(rf_val *l, rf_val *r) {
     rf_flt res = fmod(numval(l), numval(r));
     assign_flt(l, res < 0 ? res + numval(r) : res);
 }
 
-void z_pow(rf_val *l, rf_val *r) {
+static inline void z_pow(rf_val *l, rf_val *r) {
     assign_flt(l, pow(fltval(l), fltval(r)));
 }
 
-void z_and(rf_val *l, rf_val *r) { int_arith(l,r,&);  }
-void z_or(rf_val *l, rf_val *r)  { int_arith(l,r,|);  }
-void z_xor(rf_val *l, rf_val *r) { int_arith(l,r,^);  }
-void z_shl(rf_val *l, rf_val *r) { int_arith(l,r,<<); }
-void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
+static inline void z_and(rf_val *l, rf_val *r) { int_arith(l,r,&);  }
+static inline void z_or(rf_val *l, rf_val *r)  { int_arith(l,r,|);  }
+static inline void z_xor(rf_val *l, rf_val *r) { int_arith(l,r,^);  }
+static inline void z_shl(rf_val *l, rf_val *r) { int_arith(l,r,<<); }
+static inline void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
 
-void z_num(rf_val *v) {
+static inline void z_num(rf_val *v) {
     switch (v->type) {
     case TYPE_INT:
         assign_int(v, intval(v));
@@ -96,7 +96,7 @@ void z_num(rf_val *v) {
     }
 }
 
-void z_neg(rf_val *v) {
+static inline void z_neg(rf_val *v) {
     switch (v->type) {
     case TYPE_INT:
         assign_int(v, -intval(v));
@@ -113,22 +113,22 @@ void z_neg(rf_val *v) {
     }
 }
 
-void z_not(rf_val *v) {
+static inline void z_not(rf_val *v) {
     assign_int(v, ~intval(v));
 }
 
-void z_eq(rf_val *l, rf_val *r) { num_arith(l,r,==); }
-void z_ne(rf_val *l, rf_val *r) { num_arith(l,r,!=); }
-void z_gt(rf_val *l, rf_val *r) { num_arith(l,r,>);  }
-void z_ge(rf_val *l, rf_val *r) { num_arith(l,r,>=); }
-void z_lt(rf_val *l, rf_val *r) { num_arith(l,r,<);  }
-void z_le(rf_val *l, rf_val *r) { num_arith(l,r,<=); }
+static inline void z_eq(rf_val *l, rf_val *r) { num_arith(l,r,==); }
+static inline void z_ne(rf_val *l, rf_val *r) { num_arith(l,r,!=); }
+static inline void z_gt(rf_val *l, rf_val *r) { num_arith(l,r,>);  }
+static inline void z_ge(rf_val *l, rf_val *r) { num_arith(l,r,>=); }
+static inline void z_lt(rf_val *l, rf_val *r) { num_arith(l,r,<);  }
+static inline void z_le(rf_val *l, rf_val *r) { num_arith(l,r,<=); }
 
-void z_lnot(rf_val *v) {
+static inline void z_lnot(rf_val *v) {
     assign_int(v, !test(v));
 }
 
-void z_len(rf_val *v) {
+static inline void z_len(rf_val *v) {
     rf_int l = 0;
     switch (v->type) {
     // For integers:
@@ -153,13 +153,13 @@ void z_len(rf_val *v) {
     assign_int(v, l);
 }
 
-void z_test(rf_val *v) {
+static inline void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
 // TODO free newly allocated strings after assigning concatenation
 // result
-void z_cat(rf_val *l, rf_val *r) {
+static inline void z_cat(rf_val *l, rf_val *r) {
     switch (l->type) {
     case TYPE_NULL: l->u.s = s_newstr(NULL, 0, 0); break;
     case TYPE_INT:  l->u.s = s_int2str(l->u.i);    break;
@@ -180,7 +180,7 @@ void z_cat(rf_val *l, rf_val *r) {
 // Potentially very slow for strings; allocates 2 new string objects
 // for every int or float LHS
 // TODO Index out of bounds handling, e.g. RHS > length of LHS
-void z_idx(rf_val *l, rf_val *r) {
+static inline void z_idx(rf_val *l, rf_val *r) {
     switch (l->type) {
     case TYPE_INT: {
         rf_str *is = s_int2str(l->u.i);
@@ -208,7 +208,7 @@ void z_idx(rf_val *l, rf_val *r) {
 }
 
 // OP_PRINT functionality
-static void put(rf_val *v) {
+static inline void put(rf_val *v) {
     switch (v->type) {
     case TYPE_NULL: printf("null");              break;
     case TYPE_INT:  printf("%lld", v->u.i);      break;
@@ -223,7 +223,7 @@ static void put(rf_val *v) {
 
 // TODO
 #include <string.h>
-static void init_argv(rf_arr *a, int argc, char **argv) {
+static inline void init_argv(rf_arr *a, int argc, char **argv) {
     a_init(a);
     for (int i = 0; i < argc; ++i) {
         rf_str *s = s_newstr(argv[i], strlen(argv[i]), 1);
@@ -293,7 +293,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_XJZ16:  xjc16(!test(&sp[-1].v)); break;
 
 // Unary operations
-// sp[-1].a is assumed to be safe to overwrite
+// sp[-1].v is assumed to be safe to overwrite
 #define unop(x) \
     z_##x(&sp[-1].v); \
     ++ip;
@@ -306,7 +306,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_TEST: unop(test); break;
 
 // Standard binary operations
-// sp[-2].a and sp[-1].a are assumed to be safe to overwrite
+// sp[-2].v and sp[-1].v are assumed to be safe to overwrite
 #define binop(x) \
     z_##x(&sp[-2].v, &sp[-1].v); \
     --sp; \
@@ -377,7 +377,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
 // Compound assignment operations
 // sp[-2].a is address of some variable's rf_val. Save the address
-// and replace sp[-2].a with a copy of the value. Perform the binary
+// and place a copy of the value in sp[-2].v. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
     tp       = sp[-2].a; \
@@ -462,7 +462,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_LCL2: lcl(2);     ++ip;    break;
 
 // Push local address
-// Push the address of stk[FP+x] to the top of the stack.
+// Push the address of FP[x] to the top of the stack.
 #define lcla(x) sp++->a = &fp[(x)].v;
 
         case OP_LCLA:  lcla(ip[1]) ip += 2; break;
@@ -471,7 +471,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_LCLA2: lcla(2);    ++ip;    break;
 
 // Push local value
-// Copy the value of stk[FP+x] to the top of the stack.
+// Copy the value of FP[x] to the top of the stack.
 #define lclv(x) sp++->v = fp[(x)].v;
 
         case OP_LCLV:  lclv(ip[1]) ip += 2; break;
