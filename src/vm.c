@@ -147,7 +147,8 @@ static inline void z_len(rf_val *v) {
     }
     case TYPE_STR: l = v->u.s->l;        break;
     case TYPE_ARR: l = a_length(v->u.a); break;
-    case TYPE_RFN:  // TODO
+    case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
+    case TYPE_CFN: // TODO?
     default: break;
     }
     assign_int(v, l);
@@ -677,12 +678,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     return 0;
 }
 
-#undef numval
-#undef intval
-#undef fltval
-#undef int_arith
-#undef flt_arith
-#undef num_arith
 #undef j8
 #undef j16
 #undef jc8
