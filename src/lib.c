@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "array.h"
+#include "fn.h"
 #include "mem.h"
 #include "lib.h"
 
@@ -68,18 +69,48 @@ static int l_tan(rf_val *fp, int argc) {
 
 // String functions
 
+// byte(s [,i])
+// Takes one string and an optional index argument `i` and returns the
+// numeric ASCII code associated with that character. The default
+// value for `i` is 0.
+// If a user-defined function is passed, the byte at index `i` in the
+// function's bytecode array is returned. This is the same as
+// subscripting the function, i.e. byte(f,0) == f[0] for function f.
+static int l_byte(rf_val *fp, int argc) {
+    int idx = argc > 1 ? intval(fp+1) : 0;
+    if (is_str(fp)) {
+        assign_int(fp-1, fp->u.s->str[idx]);
+    } else if (is_rfn(fp)) {
+        assign_int(fp-1, fp->u.fn->code->code[idx]);
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
 // char(...)
 // Takes zero or more integers and returns a string composed of the
 // ASCII codes of each respective argument in order
 // Example:
 //   char(114, 105, 102, 102) -> "riff"
 static int l_char(rf_val *fp, int argc) {
+    if (!argc) return 0;
     char buf[argc + 1];
     for (int i = 0; i < argc; ++i) {
         buf[i] = intval(fp+i);
     }
     buf[argc] = '\0';
     assign_str(fp-1, s_newstr(buf, argc, 0));
+    return 1;
+}
+
+// hex(x)
+static int l_hex(rf_val *fp, int argc) {
+    rf_int i = intval(fp);
+    size_t len = snprintf(NULL, 0, "0x%llx", i);
+    char buf[len + 1];
+    snprintf(buf, len + 1, "0x%llx", i);
+    assign_str(fp-1, s_newstr(buf, len, 0));
     return 1;
 }
 
@@ -130,7 +161,9 @@ static struct {
     { "sin",   { 1, l_sin }   },
     { "sqrt",  { 1, l_sqrt }  },
     { "tan",   { 1, l_tan }   },
+    { "byte",  { 1, l_byte }  },
     { "char",  { 0, l_char }  },
+    { "hex",   { 1, l_hex }   },
     { "split", { 1, l_split } },
     // TODO hack for l_register loop condition
     { NULL,    { 0, NULL }    }

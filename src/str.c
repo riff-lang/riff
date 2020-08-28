@@ -38,14 +38,14 @@ rf_str *s_concat(rf_str *l, rf_str *r, int h) {
 }
 
 rf_str *s_int2str(rf_int i) {
-    int len = snprintf(NULL, 0, "%lld", i);
+    size_t len = snprintf(NULL, 0, "%lld", i);
     char buf[len + 1];
     snprintf(buf, len + 1, "%lld", i);
     return s_newstr(buf, len, 0);
 }
 
 rf_str *s_flt2str(rf_flt f) {
-    int len = snprintf(NULL, 0, "%g", f);
+    size_t len = snprintf(NULL, 0, "%g", f);
     char buf[len + 1];
     snprintf(buf, len + 1, "%g", f);
     return s_newstr(buf, len, 0);

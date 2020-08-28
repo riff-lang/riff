@@ -202,6 +202,9 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     case TYPE_ARR:
         *l = *a_lookup(l->u.a, r, 0, 0);
         break;
+    case TYPE_RFN:
+        assign_int(l, l->u.fn->code->code[intval(r)]);
+        break;
     default:
         assign_int(l, 0);
         break;
@@ -381,7 +384,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 // and place a copy of the value in sp[-2].v. Perform the binary
 // operation x and assign the result to the saved address.
 #define cbinop(x) \
-    tp       = sp[-2].a; \
+    tp = sp[-2].a; \
     sp[-2].v = *tp; \
     binop(x); \
     *tp = sp[-1].v;
@@ -590,6 +593,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // Perform the lookup and leave the corresponding element's
         // rf_val address on the stack.
         case OP_IDXA:
+            if (sp[-2].t <= 64) {
+                err("invalid assignment");
+            }
+
             switch (sp[-2].a->type) {
 
             // Create array if sp[-2].a is an uninitialized variable
@@ -600,9 +607,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 sp[-2].a = a_lookup(sp[-2].a->u.a, &sp[-1].v, 1, 0);
                 break;
 
+            // TODO?
             // IDXA is invalid for all other types
             default:
-                err("idxa called with invalid type");
+                err("invalid assignment");
             }
             --sp;
             ++ip;
@@ -612,10 +620,20 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // Perform the lookup and leave a copy of the corresponding
         // element's value on the stack.
         case OP_IDXV:
+
+            // All expressions e.g. x[y] are compiled to push the
+            // address of the identifier being subscripted. However
+            // OP_IDXV is emitted for all expressions not requiring
+            // the address of the set element to be left on the stack.
+            // In the event the instruction is OP_IDXV and SP-2
+            // contains a raw value (not a pointer), the high order 64
+            // bits will be the type tag of the rf_val instead of a
+            // memory address. When that happens, defer to z_idx().
             if (sp[-2].t <= 64) {
                 binop(idx);
                 break;
             }
+
             switch (sp[-2].a->type) {
 
             // Create array if sp[-2].a is an uninitialized variable
@@ -627,8 +645,14 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 --sp;
                 ++ip;
                 break;
-            case TYPE_RFN: case TYPE_CFN:
-                err("attempt to subscript a function");
+
+            // Dereference and call z_idx().
+            case TYPE_INT: case TYPE_FLT: case TYPE_STR: case TYPE_RFN:
+                sp[-2].v = *sp[-2].a;
+                binop(idx);
+                break;
+            case TYPE_CFN:
+                err("attempt to subscript a C function");
             default:
                 break;
             }
