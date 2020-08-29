@@ -30,6 +30,7 @@ struct rf_iter {
     rf_iter  *p;    // Previous loop iterator
     int       t;    // Loop type
     rf_int    n;    // Control var
+    rf_int    on;   // Saved control var for freeing keys allocation
     rf_val   *k;    // Stack slot for `k` in `[k,]v`
     rf_val   *v;    // Stack slot for `v` in `[k,]v`
     rf_val   *keys; // Keys to look up arrays with (fixed at loop start)

@@ -244,33 +244,34 @@ static inline void new_iter(rf_val *set) {
     switch (set->type) {
     case TYPE_INT:
         iter->t = LOOP_SEQ;
-        iter->n = set->u.i + 1;
+        iter->on = iter->n = set->u.i + 1;
+        iter->keys = NULL;
         iter->set.seq = 0;
         break;
     // TODO - likely temporary
     case TYPE_FLT:
         iter->t = LOOP_SEQ;
-        iter->n = (rf_int) set->u.f + 1;
+        iter->on = iter->n = (rf_int) set->u.f + 1;
         iter->keys = NULL;
         iter->set.seq = 0;
         break;
     case TYPE_STR:
         iter->t = LOOP_STR;
-        iter->n = set->u.s->l;
+        iter->on = iter->n = set->u.s->l;
         iter->keys = NULL;
         iter->set.str = set->u.s->str;
         break;
     case TYPE_ARR:
         iter->t = LOOP_ARR;
-        iter->n = a_length(set->u.a);
+        iter->on = iter->n = a_length(set->u.a);
         iter->keys = a_collect_keys(set->u.a);
         iter->set.arr = set->u.a;
         break;
     case TYPE_RFN:
         iter->t = LOOP_FN;
-        iter->set.code = set->u.fn->code->code;
+        iter->on = iter->n = set->u.fn->code->n;
         iter->keys = NULL;
-        iter->n = set->u.fn->code->n;
+        iter->set.code = set->u.fn->code->code;
         break;
     case TYPE_CFN:
         err("cannot iterate over C function");
@@ -345,6 +346,8 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             if (!iter->n--) {
                 rf_iter *old = iter;
                 iter = iter->p;
+                if (old->t == LOOP_ARR)
+                    free(old->keys - old->on);
                 free(old);
                 if (jmp16)
                     ip += 3;
