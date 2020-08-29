@@ -26,13 +26,6 @@ x = a ? b           // Chained ternary
 y = a ? b ? c ? d   // Nested ternary
       : e : f : g
 
-// Various for loops - not yet implemented
-/* for i=1..10 print a[i] */
-/* for i=1..10,1 print a[i] */
-/* for i=10..1 print a[i] */
-/* for i=10..1,-1 print a[i] */
-/* for i=1; i<10; i++ print a[i] */
-
 // While loops
 while h++ < 10 h    // This will print h (1..10); h is 11 afterwards
 

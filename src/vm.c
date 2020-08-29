@@ -237,8 +237,46 @@ static inline void init_argv(rf_arr *a, int argc, char **argv) {
     }
 }
 
-// static inline void new_iter(rf_val *set) {
-// }
+static inline void new_iter(rf_val *set) {
+    rf_iter *new = malloc(sizeof(rf_iter));
+    new->p = iter;
+    iter = new;
+    switch (set->type) {
+    case TYPE_INT:
+        iter->t = LOOP_SEQ;
+        iter->n = set->u.i + 1;
+        iter->set.seq = 0;
+        break;
+    // TODO - likely temporary
+    case TYPE_FLT:
+        iter->t = LOOP_SEQ;
+        iter->n = (rf_int) set->u.f + 1;
+        iter->keys = NULL;
+        iter->set.seq = 0;
+        break;
+    case TYPE_STR:
+        iter->t = LOOP_STR;
+        iter->n = set->u.s->l;
+        iter->keys = NULL;
+        iter->set.str = set->u.s->str;
+        break;
+    case TYPE_ARR:
+        iter->t = LOOP_ARR;
+        iter->n = a_length(set->u.a);
+        iter->keys = a_collect_keys(set->u.a);
+        iter->set.arr = set->u.a;
+        break;
+    case TYPE_RFN:
+        iter->t = LOOP_FN;
+        iter->set.code = set->u.fn->code->code;
+        iter->keys = NULL;
+        iter->n = set->u.fn->code->n;
+        break;
+    case TYPE_CFN:
+        err("cannot iterate over C function");
+    default: break;
+    }
+}
 
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 
@@ -302,28 +340,90 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_XJZ16:  xjc16(!test(&sp[-1].v)); break;
 
         // Check iterator condition
-        case OP_LOOP8:
-            ip -= ip[1];
+        case OP_LOOP8: case OP_LOOP16: {
+            int jmp16 = (*ip == OP_LOOP16);
+            if (!iter->n--) {
+                rf_iter *old = iter;
+                iter = iter->p;
+                free(old);
+                if (jmp16)
+                    ip += 3;
+                else
+                    ip += 2;
+                break;
+            }
+            switch (iter->t) {
+            case LOOP_SEQ:
+                if (is_null(iter->v)) {
+                    *iter->v = (rf_val) {TYPE_INT, .u.i = iter->set.seq};
+                } else {
+                    iter->v->u.i = iter->set.seq += 1;
+                }
+                break;
+            case LOOP_STR:
+                if (iter->k != NULL) {
+                    if (is_null(iter->k)) {
+                        assign_int(iter->k, 0);
+                    } else {
+                        iter->k->u.i += 1;
+                    }
+                }
+                if (!is_null(iter->v)) {
+                    m_freestr(iter->v->u.s);
+                    iter->v->u.s = s_newstr(iter->set.str++, 1, 0);
+                } else {
+                    *iter->v = (rf_val) {TYPE_STR, .u.s = s_newstr(iter->set.str++, 1, 0)};
+                }
+                break;
+            case LOOP_ARR:
+                if (iter->k != NULL) {
+                    *iter->k = *iter->keys;
+                }
+                *iter->v = *a_lookup(iter->set.arr, iter->keys, 0, 0);
+                iter->keys++;
+                break;
+            case LOOP_FN:
+                if (iter->k != NULL) {
+                    if (is_null(iter->k)) {
+                        assign_int(iter->k, 0);
+                    } else {
+                        iter->k->u.i += 1;
+                    }
+                }
+                if (is_null(iter->v)) {
+                    *iter->v = (rf_val) {TYPE_INT, .u.i = *iter->set.code++};
+                } else {
+                    iter->v->u.i = *iter->set.code++;
+                }
+                break;
+            default: break;
+            }
+            if (jmp16)
+                ip -= (ip[1] << 8) + ip[2];
+            else
+                ip -= ip[1];
             break;
-        case OP_LOOP16:
-            ip -= (ip[1] << 8) + ip[2];
-            break;
+        }
 
         // Iterators
         // Create iterator and jump to the corresponding OP_LOOP
-        // instruction
+        // instruction for initialization.
         case OP_ITERV: {
-            // Call new_iter with value to iterated over and pop
-            // stack.
-            // new_iter(&sp[-1].v); 
+            new_iter(&sp[-1].v); 
             --sp;
             assign_null(&sp++->v);
+            iter->k = NULL;
+            iter->v = &sp[-1].v;
             j16;
             break;
         }
         case OP_ITERKV: {
+            new_iter(&sp[-1].v); 
+            --sp;
             assign_null(&sp++->v);
             assign_null(&sp++->v);
+            iter->k = &sp[-2].v;
+            iter->v = &sp[-1].v;
             j16;
             break;
         }

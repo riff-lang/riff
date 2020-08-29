@@ -123,6 +123,16 @@ static int resolve_local(rf_parser *y, rf_str *s) {
     // previously in scope.
     int i = (!y->lhs || !y->lx) ? y->nlcl - 1 : y->nlcl - 2;
 
+    // If parsing the expression `z` in a 'for' loop declaration e.g.
+    //
+    //   for x,y in z {...}
+    //
+    // Decrement `i` again to ignore both `x` and `y` for reasons
+    // similar to the above comments. Note that fx is not set for
+    // 'for' loops in the form of `for x in y`; the lx flag is
+    // sufficient
+    i -= !!y->fx;
+
     for (; i >= 0; --i) {
         if (y->lcl[i].id->hash == s->hash &&
             y->lcl[i].d <= y->ld)
@@ -614,7 +624,6 @@ static void local_fn(rf_parser *y) {
     // If the identifier doesn't already exist as a local at the
     // current scope, add a new local
     if (idx < 0 || y->lcl[idx].d != y->ld) {
-        // set(lx);
         add_local(y, id);
         switch (y->nlcl - 1) {
         case 0: push(OP_LCL0); push(OP_LCLA0); break;
@@ -699,6 +708,7 @@ static void for_stmt(rf_parser *y) {
     adv;
     int kv = 0;
     if (y->x->tk.kind == ',') {
+        set(fx);
         kv = 1;
         adv;
         if (y->x->tk.kind != TK_ID)
@@ -706,8 +716,11 @@ static void for_stmt(rf_parser *y) {
         add_local(y, y->x->tk.lexeme.s);
         adv;
     }
+    set(lx);
     consume(y, TK_IN, "expected 'in'");
     expr(y, 0);
+    unset(fx);
+    unset(lx);
     int l1 = c_prep_loop(y->c, kv);
     if (paren)
         consume(y, ')', "expected ')'");
@@ -883,8 +896,16 @@ static void stmt(rf_parser *y) {
     case TK_CONT:   adv; cont_stmt(y);  break;
     case TK_DO:     adv; do_stmt(y);    break;
     case TK_EXIT:   adv; exit_stmt(y);  break;
-    case TK_FN:     adv; fn_stmt(y);    break;
-    case TK_FOR:    adv; for_stmt(y);   break; // TODO
+    case TK_FN:
+        peek;
+        if (y->x->la.kind == TK_ID) {
+            adv;
+            fn_stmt(y);
+        } else {
+            expr_stmt(y);
+        }
+        break;
+    case TK_FOR:    adv; for_stmt(y);   break;
     case TK_IF:     adv; if_stmt(y);    break;
     case TK_LOCAL:  adv; local_stmt(y); break;
     case TK_PRINT:  adv; print_stmt(y); break;
@@ -902,6 +923,7 @@ static void stmt_list(rf_parser *y) {
 
 static void y_init(rf_parser *y) {
     unset_all;
+    unset(fx);
     unset(lx);
 
     y->nlcl = 0;

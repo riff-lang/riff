@@ -28,14 +28,16 @@ typedef struct rf_iter rf_iter;
 // Loop iterator
 struct rf_iter {
     rf_iter  *p;    // Previous loop iterator
-    uint32_t  t;    // Loop type
-    uint32_t  n;    // Control var
+    int       t;    // Loop type
+    rf_int    n;    // Control var
     rf_val   *k;    // Stack slot for `k` in `[k,]v`
     rf_val   *v;    // Stack slot for `v` in `[k,]v`
+    rf_val   *keys; // Keys to look up arrays with (fixed at loop start)
     union {
         rf_int      seq;
         const char *str;
         uint8_t    *code;
+        rf_arr     *arr;
     } set;
 };
 

@@ -35,9 +35,8 @@ fn output {
 
 fn flush_output {
     "--- BEGIN OUTPUT ---"
-    f = 0
-    while f < #outv
-        outv[f++]
+    for v in outv
+        v
     "--- END OUTPUT ---"
 }
 

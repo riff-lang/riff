@@ -37,6 +37,7 @@ typedef struct {
     int px:  1;     // Prefix or postfix increment/decrement flag
 
     int argx: 1;    // Current nud is RHS of '$'
+    int fx:   1;    // For loop flag (parsing `z` in `for x,y in z`)
     int lx:   1;    // Local flag (newly-declared)
     int rx:   1;    // Reference flag - OP_xxA vs OP_xxV instructions
     int retx: 1;    // Return flag
