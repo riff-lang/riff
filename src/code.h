@@ -18,6 +18,10 @@ enum opcodes {
     OP_XJNZ16,  // "Exclusive" jump if non-zero (2-byte offset)
     OP_XJZ8,    // "Exclusive" jump if zero (1-byte offset)
     OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
+    OP_LOOP8,
+    OP_LOOP16,
+    OP_ITERV,
+    OP_ITERKV,
     OP_TEST,    // Logical test
     OP_ADD,     // Add
     OP_SUB,     // Substract
@@ -134,8 +138,10 @@ void c_prefix(rf_code *, int);
 void c_infix(rf_code *, int);
 void c_postfix(rf_code *, int);
 void c_jump(rf_code *, int, int);
+void c_loop(rf_code *, int);
 void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
+int  c_prep_loop(rf_code *, int);
 void c_print(rf_code *, int);
 
 #endif

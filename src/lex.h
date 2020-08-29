@@ -54,6 +54,7 @@ enum tokens {
     TK_FN,
     TK_FOR,
     TK_IF,
+    TK_IN,
     TK_LOCAL,
     TK_PRINT,
     TK_RETURN,

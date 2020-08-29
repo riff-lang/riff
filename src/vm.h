@@ -9,11 +9,35 @@
 // TODO dynamic stack allocation
 #define STACK_SIZE 1024
 
+// VM stack element
 typedef union {
     uint64_t  t; // Implicit type tag
     rf_val   *a;
     rf_val    v;
 } rf_stack;
+
+enum loops {
+    LOOP_SEQ,
+    LOOP_STR,
+    LOOP_ARR,
+    LOOP_FN
+};
+
+typedef struct rf_iter rf_iter;
+
+// Loop iterator
+struct rf_iter {
+    rf_iter  *p;    // Previous loop iterator
+    uint32_t  t;    // Loop type
+    uint32_t  n;    // Control var
+    rf_val   *k;    // Stack slot for `k` in `[k,]v`
+    rf_val   *v;    // Stack slot for `v` in `[k,]v`
+    union {
+        rf_int      seq;
+        const char *str;
+        uint8_t    *code;
+    } set;
+};
 
 int  z_exec(rf_env *);
 

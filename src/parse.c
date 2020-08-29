@@ -679,8 +679,56 @@ static void fn_stmt(rf_parser *y) {
     f->arity = compile_fn(&fy);
 }
 
-// TODO
 static void for_stmt(rf_parser *y) {
+    int paren = 0;
+    if (y->x->tk.kind == '(') {
+        paren = 1;
+        adv;
+    }
+    p_list *r_brk  = y->brk;
+    p_list *r_cont = y->cont;
+    p_list b, c;
+    uint8_t old_loop = y->loop;
+    y->loop = y->ld++;
+    enter_loop(y, &b, &c);
+    if (y->x->tk.kind != TK_ID)
+        err(y, "expected identifier");
+    add_local(y, y->x->tk.lexeme.s);
+    adv;
+    int kv = 0;
+    if (y->x->tk.kind == ',') {
+        kv = 1;
+        adv;
+        if (y->x->tk.kind != TK_ID)
+            err(y, "expected identifier following ','");
+        add_local(y, y->x->tk.lexeme.s);
+        adv;
+    }
+    consume(y, TK_IN, "expected 'in'");
+    expr(y, 0);
+    int l1 = c_prep_loop(y->c, kv);
+    if (paren)
+        consume(y, ')', "expected ')'");
+    if (y->x->tk.kind == '{') {
+        adv;
+        stmt_list(y);
+        consume(y, '}', "expected '}'");
+    } else {
+        stmt(y);
+    }
+    // Patch continue stmts
+    for (int i = 0; i < c.n; i++) {
+        c_patch(y->c, c.l[i]);
+    }
+    c_patch(y->c, l1);
+    c_loop(y->c, l1 + 2);
+    // Patch break stmts
+    for (int i = 0; i < b.n; i++) {
+        c_patch(y->c, b.l[i]);
+    }
+    y->ld--;
+    y->nlcl -= pop_locals(y, y->loop, 1);
+    exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
 static void if_stmt(rf_parser *y) {

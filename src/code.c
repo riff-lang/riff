@@ -46,10 +46,20 @@ int c_prep_jump(rf_code *c, int type) {
     return c->n - 2;
 }
 
+int c_prep_loop(rf_code *c, int type) {
+    if (type)
+        push(OP_ITERKV);
+    else
+        push(OP_ITERV);
+    // Reserve two bytes for 16-bit jump
+    push(0x00);
+    push(0x00);
+    return c->n - 2;
+}
+
 // Simple backward jumps. Encode a 2-byte offset if necessary.
 void c_jump(rf_code *c, int type, int l) {
     int d = l - c->n;
-    uint8_t jmp;
     if (d <= INT8_MAX && d >= INT8_MIN) {
         switch (type) {
         case JMP:  push(OP_JMP8);  break;
@@ -73,6 +83,20 @@ void c_jump(rf_code *c, int type, int l) {
         push((int8_t) (d & 0xff));
     } else {
         err(c, "backward jump larger than INT16_MAX");
+    }
+}
+
+void c_loop(rf_code *c, int l) {
+    int d = c->n - l;
+    if (d <= UINT8_MAX) {
+        push(OP_LOOP8);
+        push((uint8_t) d);
+    } else if (d <= UINT16_MAX) {
+        push(OP_LOOP16);
+        push((uint8_t) ((d >> 8) & 0xff));
+        push((uint8_t) d);
+    } else {
+        err(c, "backward loop too large");
     }
 }
 

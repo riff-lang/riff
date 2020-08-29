@@ -234,6 +234,9 @@ static int read_id(rf_lexer *x, rf_token *tk) {
         if (check_kw(x, "f", 1)) {
             x->p += 1;
             return TK_IF;
+        } else if (check_kw(x, "n", 1)) {
+            x->p += 1;
+            return TK_IN;
         } else break;
     case 'l':
         if (check_kw(x, "ocal", 4)) {

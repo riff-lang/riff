@@ -39,6 +39,8 @@ static struct {
     [OP_IMM1]    = { "imm    1", 0 },
     [OP_IMM2]    = { "imm    2", 0 },
     [OP_IMM8]    = { "imm",      1 },
+    [OP_ITERKV]  = { "iterkv",   2 },
+    [OP_ITERV]   = { "iterv",    2 },
     [OP_JMP16]   = { "jmp",      2 },
     [OP_JMP8]    = { "jmp",      1 },
     [OP_JNZ16]   = { "jnz",      2 },
@@ -60,6 +62,8 @@ static struct {
     [OP_LEN]     = { "len",      0 },
     [OP_LE]      = { "le",       0 },
     [OP_LNOT]    = { "lnot",     0 },
+    [OP_LOOP8]   = { "loop",     1 },
+    [OP_LOOP16]  = { "loop",     2 },
     [OP_LT]      = { "lt",       0 },
     [OP_MODX]    = { "modx",     0 },
     [OP_MOD]     = { "mod",      0 },
@@ -126,7 +130,8 @@ static int is_jump8(int op) {
 
 static int is_jump16(int op) {
     return op == OP_JMP16 || op == OP_JZ16 || op == OP_JNZ16 ||
-           op == OP_XJZ16 || op == OP_XJNZ16;
+           op == OP_XJZ16 || op == OP_XJNZ16 ||
+           op == OP_ITERV || op == OP_ITERKV;
 }
 
 // TODO This function is way too big for its own good
@@ -173,6 +178,14 @@ static void d_code_obj(rf_code *c, int ipw) {
                     int16_t a = (b1 << 8) + b2;
                     printf(INST2ADDR, ipw, ip, b0, b1, b2, OP_MNEMONIC,
                             a, ip + a);
+                    ip += 1;
+                } else if (b0 == OP_LOOP8) {
+                    printf(INST1ADDR, ipw, ip, b0, b1, OP_MNEMONIC, -b1, ip - (uint8_t) b1);
+                } else if (b0 == OP_LOOP16) {
+                    int b2 = c->code[ip+2];
+                    int a = (b1 << 8) + b2;
+                    printf(INST2ADDR, ipw, ip, b0, b1, b2, OP_MNEMONIC,
+                            -a, ip - a);
                     ip += 1;
                 } else {
                     printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
@@ -310,7 +323,7 @@ static const char *tokenstr[] = {
     "&&", "::", "--", "==", ">=", "++", "<=", "!=", "||", "**",
     "<<", ">>", "+=", "&=", "::=", "/=", "%=", "*=", "|=", "**=",
     "<<=", ">>=", "-=", "^=",
-    "break", "continue", "do", "else", "exit", "fn", "for", "if",
+    "break", "continue", "do", "else", "exit", "fn", "for", "if", "in",
     "local", "print", "return", "while"
 };
 

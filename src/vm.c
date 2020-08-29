@@ -13,10 +13,11 @@ static void err(const char *msg) {
     exit(1);
 }
 
-static hash_t   globals;
-static rf_arr   argv;
-static rf_int   aos;
-static rf_stack stack[STACK_SIZE];
+static hash_t    globals;
+static rf_arr    argv;
+static rf_int    aos;
+static rf_iter  *iter;
+static rf_stack  stack[STACK_SIZE];
 
 rf_int str2int(rf_str *s) {
     char *end;
@@ -236,11 +237,15 @@ static inline void init_argv(rf_arr *a, int argc, char **argv) {
     }
 }
 
+// static inline void new_iter(rf_val *set) {
+// }
+
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 
 // VM entry point/initialization
 int z_exec(rf_env *e) {
     h_init(&globals);
+    iter = NULL;
     init_argv(&argv, e->argc, e->argv);
 
     // Offset for the argv; $0 should be the first user-provided arg
@@ -295,6 +300,33 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_XJNZ16: xjc16(test(&sp[-1].v));  break;
         case OP_XJZ8:   xjc8(!test(&sp[-1].v));  break;
         case OP_XJZ16:  xjc16(!test(&sp[-1].v)); break;
+
+        // Check iterator condition
+        case OP_LOOP8:
+            ip -= ip[1];
+            break;
+        case OP_LOOP16:
+            ip -= (ip[1] << 8) + ip[2];
+            break;
+
+        // Iterators
+        // Create iterator and jump to the corresponding OP_LOOP
+        // instruction
+        case OP_ITERV: {
+            // Call new_iter with value to iterated over and pop
+            // stack.
+            // new_iter(&sp[-1].v); 
+            --sp;
+            assign_null(&sp++->v);
+            j16;
+            break;
+        }
+        case OP_ITERKV: {
+            assign_null(&sp++->v);
+            assign_null(&sp++->v);
+            j16;
+            break;
+        }
 
 // Unary operations
 // sp[-1].v is assumed to be safe to overwrite
