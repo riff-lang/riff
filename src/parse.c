@@ -563,22 +563,24 @@ static void add_local(rf_parser *y, rf_str *id) {
 // Returns the arity of the parsed function
 static int compile_fn(rf_parser *y) {
     int arity = 0;
-    consume(y, '(', "expected '('");
+    if (y->x->tk.kind == '(') {
+        adv;
 
-    // Read parameter identifiers, reserving them as locals to the
-    // function
-    while (1) {
-        if (y->x->tk.kind == TK_ID) {
-            add_local(y, y->x->tk.lexeme.s);
-            ++arity;
-            adv;
+        // Read parameter identifiers, reserving them as locals to the
+        // function
+        while (1) {
+            if (y->x->tk.kind == TK_ID) {
+                add_local(y, y->x->tk.lexeme.s);
+                ++arity;
+                adv;
+            }
+            if (y->x->tk.kind == ',')
+                adv;
+            else
+                break;
         }
-        if (y->x->tk.kind == ',')
-            adv;
-        else
-            break;
+        consume(y, ')', "expected ')'");
     }
-    consume(y, ')', "expected ')'");
     consume(y, '{', "expected '{'");
     stmt_list(y);
 

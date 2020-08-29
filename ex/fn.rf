@@ -6,7 +6,7 @@ x = 11
 
 f() + h()                       // Print result of f() + h() (132)
 
-fn f() {
+fn f {
     "call: f()"
     local y = x ** 2
     return x + y
@@ -21,19 +21,19 @@ if 1 {
     f()                         // Call local f()
 
     a = 0
-    local fn g() {
+    local fn g {
         "call: local g()"
         (a++ ? f : g)()         // Call itself, then global f()
     }
     g()                         // Call local g()
 }
 
-fn g() {
+fn g {
     "call: g()"
     return 3
 }
 
-fn h() {
+fn h {
     "call: h()"
     return                      // NOTE: Empty return statement
 }

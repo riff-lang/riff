@@ -20,12 +20,12 @@ inpv = {399}   // 3, 7, 19
 
 verbose = 1
 
-fn input() {
+fn input {
     p[rx] = inpv[inpc++]
     ip += 2
 }
 
-fn output() {
+fn output {
     if verbose
         outv[outc++] = x
     else
@@ -33,7 +33,7 @@ fn output() {
     ip += 2
 }
 
-fn flush_output() {
+fn flush_output {
     "--- BEGIN OUTPUT ---"
     f = 0
     while f < #outv
@@ -44,19 +44,19 @@ fn flush_output() {
 // Opcodes
 opcode = {
     null,
-    fn () { p[rz] = x + y  ip += 4 },   // add
-    fn () { p[rz] = x * y  ip += 4 },   // mul
-    fn () { input()                },   // in
-    fn () { output()               },   // out
-    fn () { ip =  x ? y :  ip +  3 },   // jt
-    fn () { ip = !x ? y :  ip +  3 },   // jf
-    fn () { p[rz] = x <  y ip += 4 },   // lt
-    fn () { p[rz] = x == y ip += 4 },   // eq
-    fn () { r += x         ip += 2 }    // rel
+    fn { p[rz] = x + y  ip += 4 },   // add
+    fn { p[rz] = x * y  ip += 4 },   // mul
+    fn { input()                },   // in
+    fn { output()               },   // out
+    fn { ip =  x ? y :  ip +  3 },   // jt
+    fn { ip = !x ? y :  ip +  3 },   // jf
+    fn { p[rz] = x <  y ip += 4 },   // lt
+    fn { p[rz] = x == y ip += 4 },   // eq
+    fn { r += x         ip += 2 }    // rel
 }
 
 // halt
-opcode[99] = fn () {
+opcode[99] = fn {
     if verbose
         flush_output()
     exit
@@ -73,18 +73,18 @@ fn rel_str(p,rb) {
 
 disas = {
     null,
-    fn () { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn () { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn () { ip, "   ",   xm, m[op], px },
-    fn () { ip, "   ",   xm, m[op], px },
-    fn () { ip, " ", ym, xm, m[op], px, py },
-    fn () { ip, " ", ym, xm, m[op], px, py },
-    fn () { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn () { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn () { ip, "   ",   xm, m[op], px }
+    fn { ip, zm,  ym, xm, m[op], px, py, pz },
+    fn { ip, zm,  ym, xm, m[op], px, py, pz },
+    fn { ip, "   ",   xm, m[op], px },
+    fn { ip, "   ",   xm, m[op], px },
+    fn { ip, " ", ym, xm, m[op], px, py },
+    fn { ip, " ", ym, xm, m[op], px, py },
+    fn { ip, zm,  ym, xm, m[op], px, py, pz },
+    fn { ip, zm,  ym, xm, m[op], px, py, pz },
+    fn { ip, "   ",   xm, m[op], px }
 }
 
-disas[99] = fn () {
+disas[99] = fn {
     ip, "     ", m[op]
     "halted successfully"
     "instruction count:", count
