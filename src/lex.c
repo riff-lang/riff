@@ -116,6 +116,34 @@ static int dec_esc(rf_lexer *x) {
     return e;
 }
 
+static int read_charint(rf_lexer *x, rf_token *tk) {
+    int c = *x->p;
+    switch (c) {
+    case '\\':
+        adv;
+        switch (*x->p) {
+        case 'a':  adv; c = '\a';       break;
+        case 'b':  adv; c = '\b';       break;
+        case 'e':  adv; c = 0x1b;       break; // Escape char
+        case 'f':  adv; c = '\f';       break;
+        case 'n':  adv; c = '\n';       break;
+        case 'r':  adv; c = '\r';       break;
+        case 't':  adv; c = '\t';       break;
+        case 'v':  adv; c = '\v';       break;
+        case 'x':  adv; c = hex_esc(x); break;
+        case '\\': adv; c = '\\';       break; 
+        case '\'': adv; c = '\'';       break; 
+        default:        c = dec_esc(x); break;
+        }
+        break;
+    default: adv; break;
+    }
+    if (*x->p++ != '\'')
+        err(x, "expected `'` following character literal");
+    tk->lexeme.i = c;
+    return TK_INT;
+}
+
 // TODO handling of multi-line string literals
 static int read_str(rf_lexer *x, rf_token *tk, int d) {
     x->buf.n = 0;
@@ -125,14 +153,14 @@ static int read_str(rf_lexer *x, rf_token *tk, int d) {
         case '\\':
             adv;
             switch (*x->p) {
-            case 'a': adv; c = '\a'; break;
-            case 'b': adv; c = '\b'; break;
-            case 'e': adv; c = 0x1b; break; // Escape char
-            case 'f': adv; c = '\f'; break;
-            case 'n': adv; c = '\n'; break;
-            case 'r': adv; c = '\r'; break;
-            case 't': adv; c = '\t'; break;
-            case 'v': adv; c = '\v'; break;
+            case 'a': adv; c = '\a';       break;
+            case 'b': adv; c = '\b';       break;
+            case 'e': adv; c = 0x1b;       break; // Escape char
+            case 'f': adv; c = '\f';       break;
+            case 'n': adv; c = '\n';       break;
+            case 'r': adv; c = '\r';       break;
+            case 't': adv; c = '\t';       break;
+            case 'v': adv; c = '\v';       break;
             case 'x': adv; c = hex_esc(x); break;
 
             // TODO ignore raw newlines following backslashes?
@@ -346,7 +374,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case '\n': case '\r': ++x->ln;
         case ' ': case '\t': break;
         case '!': return test2(x, '=', TK_NE, '!');
-        case '"': case '\'': return read_str(x, tk, c);
+        case '"': return read_str(x, tk, c);
         case '%': return test2(x, '=', TK_MODX, '%');
         case '&': return test3(x, '=', TK_ANDX, '&', TK_AND, '&');
         case '*': return test4(x, '=', TK_MULX, '*', 
@@ -377,6 +405,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                 return test2(x, '=', TK_CATX, TK_CAT);
             } else
                 return ':';
+        case '\'': return read_charint(x, tk);
         case '#': case '$': case '(': case ')': case ',':
         case ';': case '?': case ']': case '[': case '{':
         case '}': case '~': 
