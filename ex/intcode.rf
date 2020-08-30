@@ -2,8 +2,13 @@
 // https://adventofcode.com/2019/day/2
 // https://adventofcode.com/2019/day/5
 // https://adventofcode.com/2019/day/9
+//
+// Provide program in the form of 9,1,204,-1,2205,-1,8,99,0 as the
+// first argument
+// Provide inputs in the form of 3,7,9 as the second argument
 
-p    = split($0, ",")
+p = split($0, ",")
+p = #p ? p : {9,1,204,-1,2205,-1,8,99,0}
 inpv = split($1, ",")
 
 verbose = 0
@@ -55,7 +60,7 @@ opcode[99] = fn {
 }
 
 // Opcode mnemonics
-m = { "nop ", "add ", "mul ", "in  ", "out ", "jt  ", "jf  ", "lt  ", "eq  ", "rel " }
+m = { "nop", "add", "mul", "in", "out", "jt", "jf", "lt", "eq", "rel" }
 m[99] = "halt"
 
 fn rel_str(p,rb) {
@@ -65,19 +70,19 @@ fn rel_str(p,rb) {
 
 disas = {
     null,
-    fn { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn { ip, "   ",   xm, m[op], px },
-    fn { ip, "   ",   xm, m[op], px },
-    fn { ip, " ", ym, xm, m[op], px, py },
-    fn { ip, " ", ym, xm, m[op], px, py },
-    fn { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn { ip, zm,  ym, xm, m[op], px, py, pz },
-    fn { ip, "   ",   xm, m[op], px }
+    fn { ip, "\t", zm,  ym, xm, m[op], "\t", px, py, pz },
+    fn { ip, "\t", zm,  ym, xm, m[op], "\t", px, py, pz },
+    fn { ip, "\t", "   ",   xm, m[op], "\t", px },
+    fn { ip, "\t", "   ",   xm, m[op], "\t", px },
+    fn { ip, "\t", " ", ym, xm, m[op], "\t", px, py },
+    fn { ip, "\t", " ", ym, xm, m[op], "\t", px, py },
+    fn { ip, "\t", zm,  ym, xm, m[op], "\t", px, py, pz },
+    fn { ip, "\t", zm,  ym, xm, m[op], "\t", px, py, pz },
+    fn { ip, "\t", "   ",   xm, m[op], "\t", px }
 }
 
 disas[99] = fn {
-    ip, "     ", m[op]
+    ip, "\t", "     ", m[op]
     "halted successfully"
     "instruction count:", count
 }
