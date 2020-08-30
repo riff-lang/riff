@@ -51,13 +51,13 @@ rf_val *a_collect_keys(rf_arr *a) {
     rf_int len = a_length(a);
     rf_val *keys = malloc(len * sizeof(rf_val));
     int n = 0;
-    for (rf_int i = 0; i < a->cap && n < len; ++i) {
-        if (exists(a, i)) {
+    for (rf_int i = 0; i < a->cap && n <= len; ++i) {
+        if (exists(a, i) && !is_null(a->v[i])) {
             keys[n++] = (rf_val) {TYPE_INT, .u.i = i};
         }
     }
     hash_t *h = a->h;
-    for (int i = 0; i < h->cap && n < len; ++i) {
+    for (int i = 0; i < h->cap && n <= len; ++i) {
         if (h->e[i] && !is_null(h->e[i]->val)) {
             keys[n++] = (rf_val) {TYPE_STR, .u.s = h->e[i]->key};
         }
