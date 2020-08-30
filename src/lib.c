@@ -72,6 +72,13 @@ static int l_tan(rf_val *fp, int argc) {
 // Pseudo-random number generation
 
 // rand([x])
+// Uses POSIX drand48() to produce random floats and two calls to
+// lrand48()/mrand48() concatenated together to produce random 64-bit
+// integers.
+// Ex:
+//   rand()  -> float in the range [0..1)
+//   rand(0) -> random Riff integer (64 bit signed)
+//   rand(n) -> random integer in the range [0..n]; n can be negative
 // TODO handle rand(x,y), returning a random integer in the range of
 // [x,y]
 static int l_rand(rf_val *fp, int argc) {
@@ -97,6 +104,11 @@ static int l_rand(rf_val *fp, int argc) {
 }
 
 // srand([x])
+// Initializes the PRNG with seed `x` or time(0) if no argument given.
+// rand() will produce the same sequence when srand is initialized
+// with a given seed every time.
+// Ex:
+//   srand(99); rand(); rand() -> 0.380257, 0.504358
 static int l_srand(rf_val *fp, int argc) {
     if (!argc)
         srand48(time(0));
@@ -129,7 +141,7 @@ static int l_byte(rf_val *fp, int argc) {
 // char(...)
 // Takes zero or more integers and returns a string composed of the
 // ASCII codes of each respective argument in order
-// Example:
+// Ex:
 //   char(114, 105, 102, 102) -> "riff"
 static int l_char(rf_val *fp, int argc) {
     if (!argc) return 0;
@@ -143,6 +155,10 @@ static int l_char(rf_val *fp, int argc) {
 }
 
 // hex(x)
+// Returns a string of `x` as an integer in hexadecimal (lowercase)
+// with the leading "0x"
+// Ex:
+//   hex(255) -> "0xff"
 static int l_hex(rf_val *fp, int argc) {
     rf_int i = intval(fp);
     size_t len = snprintf(NULL, 0, "0x%llx", i);
