@@ -125,7 +125,7 @@ static int l_split(rf_val *fp, int argc) {
         return 0;
     size_t len = fp->u.s->l;
     char str[len];
-    memcpy(str, fp->u.s->str, len);
+    memcpy(str, fp->u.s->str, len + 1);
     const char *delim = (argc < 2 || !is_str(fp+1)) ? " " : fp[1].u.s->str;
     rf_val *arr = v_newarr();
     rf_str *s;
