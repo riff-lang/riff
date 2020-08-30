@@ -1,6 +1,8 @@
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "array.h"
 #include "fn.h"
@@ -9,7 +11,7 @@
 
 // Arithmetic functions
 
-// atan(y [,x])
+// atan(y[,x])
 static int l_atan(rf_val *fp, int argc) {
     if (argc == 1)
         assign_flt(fp-1, atan(fltval(fp)));
@@ -36,7 +38,7 @@ static int l_int(rf_val *fp, int argc) {
     return 1;
 }
 
-// log(x [,b])
+// log(x[,b])
 static int l_log(rf_val *fp, int argc) {
     if (argc == 1)
         assign_flt(fp-1, log(fltval(fp)));
@@ -67,9 +69,45 @@ static int l_tan(rf_val *fp, int argc) {
     return 1;
 }
 
+// Pseudo-random number generation
+
+// rand([x])
+// TODO handle rand(x,y), returning a random integer in the range of
+// [x,y]
+static int l_rand(rf_val *fp, int argc) {
+    if (!argc) {
+        assign_flt(fp-1, drand48());
+    } else { 
+        if (intval(fp) == 0) {
+            int64_t n1 = mrand48();
+            int64_t n2 = mrand48();
+            rf_int n = (n1 << 32) ^ n2;
+            assign_int(fp-1, n);
+        } else {
+            uint64_t n1 = lrand48();
+            uint64_t n2 = lrand48();
+            rf_int n = (n1 << 32) ^ n2;
+            if (intval(fp) > 0)
+                assign_int(fp-1, n % (intval(fp) + 1));
+            else
+                assign_int(fp-1, -(n % -(intval(fp) - 1)));
+        }
+    }
+    return 1;
+}
+
+// srand([x])
+static int l_srand(rf_val *fp, int argc) {
+    if (!argc)
+        srand48(time(0));
+    else
+        srand48((long) intval(fp));
+    return 0;
+}
+
 // String functions
 
-// byte(s [,i])
+// byte(s[,i])
 // Takes one string and an optional index argument `i` and returns the
 // numeric ASCII code associated with that character. The default
 // value for `i` is 0.
@@ -114,7 +152,7 @@ static int l_hex(rf_val *fp, int argc) {
     return 1;
 }
 
-// split(s [,d])
+// split(s[,d])
 // Returns an array with elements being string `s` split on delimiter
 // `d`. The delimiter can be zero or more characters. If no delimiter
 // is provided, the default is " ". If the delimiter is the empty
@@ -153,6 +191,7 @@ static struct {
     const char *name;
     c_fn        fn;
 } lib_fn[] = {
+    // Arithmetic
     { "atan",  { 1, l_atan }  },
     { "cos",   { 1, l_cos }   },
     { "exp",   { 1, l_exp }   },
@@ -161,6 +200,10 @@ static struct {
     { "sin",   { 1, l_sin }   },
     { "sqrt",  { 1, l_sqrt }  },
     { "tan",   { 1, l_tan }   },
+    // PRNG
+    { "rand",  { 0, l_rand }  },
+    { "srand", { 0, l_srand } },
+    // Strings
     { "byte",  { 1, l_byte }  },
     { "char",  { 0, l_char }  },
     { "hex",   { 1, l_hex }   },
@@ -170,6 +213,8 @@ static struct {
 };
 
 void l_register(hash_t *g) {
+    // Initialize the PRNG with the current time
+    srand48(time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
         rf_str *s  = s_newstr(lib_fn[i].name, strlen(lib_fn[i].name), 1);
         rf_val *fn = malloc(sizeof(rf_val));
