@@ -210,8 +210,8 @@ static void logical(rf_parser *y, int tk) {
 }
 
 // Retrieve index of a set (string/array, but works for numbers as well)
-static void set_index(rf_parser *y) {
-    y->idx++;
+static void subscript(rf_parser *y) {
+    y->sd++;
     int rx = y->rx; // Save flag
     unset(rx);      // Unset
     expr(y, 0);
@@ -221,7 +221,7 @@ static void set_index(rf_parser *y) {
     else
         push(OP_IDXV);
     y->rx = rx;     // Restore flag
-    y->idx--;
+    y->sd--;
 }
 
 static int expr_list(rf_parser *y, int c) {
@@ -276,7 +276,7 @@ static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
     int e = 0;
     if (uop(tk)) {
-        if (!y->idx) set(ox);
+        if (!y->sd) set(ox);
         adv;
         e = expr(y, 12);
         c_prefix(y->c, tk);
@@ -330,7 +330,7 @@ static int nud(rf_parser *y) {
         set(rx);
         expr(y, 14);
         c_prefix(y->c, tk);
-        if (!y->idx && !y->lhs) {
+        if (!y->sd && !y->lhs) {
             set(px);
             set(lhs);
         }
@@ -362,7 +362,7 @@ static int led(rf_parser *y, int p, int tk) {
     case TK_INC: case TK_DEC:
         if (is_const(p) || y->rx)
             return p;
-        if (!y->idx && !y->lhs) {
+        if (!y->sd && !y->lhs) {
             set(px);
             set(lhs);
         }
@@ -373,38 +373,38 @@ static int led(rf_parser *y, int p, int tk) {
         break;
     case '?':
         unset(rx);
-        if (!y->ox) set(ox);
+        if (!y->sd) set(ox);
         adv;
         p = conditional(y);
         break;
     case TK_AND: case TK_OR:
         unset(rx);
-        if (!y->ox) set(ox);
+        if (!y->sd) set(ox);
         adv;
         logical(y, tk);
         p = y->x->tk.kind;
         break;
     case '[':
         adv;
-        set_index(y);
+        subscript(y);
         break;
     case '(':
-        if (!y->ox) set(ox);
+        if (!y->sd) set(ox);
         adv;
         call(y);
         break;
     default:
         if (lbop(tk) || rbop(tk)) {
-            if (!y->idx && !y->ax && !y->ox) {
+            if (!y->sd && !y->ax && !y->ox) {
                 set(lhs);
                 if (is_asgmt(tk)) {
                     set(ax);
                 } else {
                     set(ox);
                 }
+            } else if (y->lhs && !y->argx && y->ox && is_asgmt(tk)) {
+                err(y, "syntax error");
             }
-            // TODO? A syntax error check once lived here but I can't
-            // figure out what purpose it served
             unset(rx);
             adv;
             p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
@@ -930,8 +930,8 @@ static void y_init(rf_parser *y) {
     y->lcap = 0;
     y->lcl  = NULL;
 
-    y->idx  = 0;
     y->ld   = 0;
+    y->sd   = 0;
     y->loop = 0;
     y->brk  = NULL;
     y->cont = NULL;

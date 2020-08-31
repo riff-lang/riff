@@ -42,8 +42,8 @@ typedef struct {
     int rx:   1;    // Reference flag - OP_xxA vs OP_xxV instructions
     int retx: 1;    // Return flag
 
-    uint8_t idx;    // Depth of index (for exprs inside [])
     uint8_t ld;     // Lexical depth/scope
+    uint8_t sd;     // Subscript depth (exprs inside [])
     uint8_t loop;   // Depth of current loop
 
     p_list *brk;    // Patch list for break stmts (current loop)
