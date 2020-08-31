@@ -402,9 +402,9 @@ static int led(rf_parser *y, int p, int tk) {
                 } else {
                     set(ox);
                 }
-            } else if (!y->argx && (is_asgmt(tk) && y->ox)) {
-                err(y, "Syntax error");
             }
+            // TODO? A syntax error check once lived here but I can't
+            // figure out what purpose it served
             unset(rx);
             adv;
             p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
