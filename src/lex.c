@@ -11,7 +11,7 @@
 #define adv (++x->p)
 
 static void err(rf_lexer *x, const char *msg) {
-    fprintf(stderr, "line %d: %s\n", x->ln, msg);
+    fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
     exit(1);
 }
 

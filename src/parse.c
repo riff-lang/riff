@@ -28,7 +28,7 @@ static int  compile_fn(rf_parser *y);
 static void y_init(rf_parser *y);
 
 static void err(rf_parser *y, const char *msg) {
-    fprintf(stderr, "line %d: %s\n", y->x->ln, msg);
+    fprintf(stderr, "riff: [compile] line %d: %s\n", y->x->ln, msg);
     exit(1);
 }
 
@@ -106,7 +106,7 @@ static void literal(rf_parser *y) {
     adv;
     // Assert no assignment appears following a constant literal
     if (!y->argx && is_asgmt(y->x->tk.kind))
-        err(y, "Attempt to assign to constant value");
+        err(y, "attempt to assign to constant value");
 }
 
 static int resolve_local(rf_parser *y, rf_str *s) {
@@ -193,7 +193,7 @@ static int conditional(rf_parser *y) {
         expr(y, 0);
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
-        consume(y, ':', "Expected ':'");
+        consume(y, ':', "expected ':' in ternary expression");
         e = expr(y, 0);
         c_patch(y->c, l2);
     }
@@ -215,7 +215,7 @@ static void subscript(rf_parser *y) {
     int rx = y->rx; // Save flag
     unset(rx);      // Unset
     expr(y, 0);
-    consume(y, ']', "Expected ']'");
+    consume(y, ']', "expected ']' following subscript expression");
     if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind))
         push(OP_IDXA);
     else
@@ -242,7 +242,7 @@ static int expr_list(rf_parser *y, int c) {
 
 static void call(rf_parser *y) {
     int n = expr_list(y, ')');
-    consume(y, ')', "Expected ')'");
+    consume(y, ')', "expected ')'");
     push(OP_CALL);
     push((uint8_t) n);
 }
@@ -250,7 +250,7 @@ static void call(rf_parser *y) {
 // TODO Support arbitrary indexing a la C99 designators
 static void array(rf_parser *y) {
     int n = expr_list(y, '}');
-    consume(y, '}', "Expected '}'");
+    consume(y, '}', "expected '}'");
     c_array(y->c, n);
 }
 
@@ -307,10 +307,10 @@ static int nud(rf_parser *y) {
     case '(':
         adv;
         expr(y, 0);
-        consume(y, ')', "Expected ')'");
+        consume(y, ')', "expected ')'");
         if (!y->argx) { 
             if (is_asgmt(y->x->tk.kind))
-                err(y, "Invalid operator following expr");
+                err(y, "invalid operator following expr");
             // Hack to prevent parsing ++/-- as postfix following
             // parenthesized expression
             else if (is_incdec(y->x->tk.kind))
@@ -323,10 +323,10 @@ static int nud(rf_parser *y) {
         break;
     case TK_INC: case TK_DEC:
         if (adv)
-            err(y, "Expected symbol following prefix ++/--");
+            err(y, "expected symbol following prefix ++/--");
         if (!(y->x->tk.kind == TK_ID ||
               y->x->tk.kind == '$'))
-            err(y, "Unexpected symbol following prefix ++/--");
+            err(y, "unexpected symbol following prefix ++/--");
         set(rx);
         expr(y, 14);
         c_prefix(y->c, tk);
@@ -349,9 +349,9 @@ static int nud(rf_parser *y) {
     default:
         // TODO Handle invalid nuds
         if (lbop(tk) || rbop(tk))
-            err(y, "Invalid start of expression");
+            err(y, "invalid start of expression");
         else
-            err(y, "Unexpected symbol");
+            err(y, "unexpected symbol");
         break;
     }
     return tk;
@@ -540,11 +540,11 @@ static void do_stmt(rf_parser *y) {
     if (y->x->tk.kind == '{') {
         adv;
         stmt_list(y);
-        consume(y, '}', "Expected '}'");
+        consume(y, '}', "expected '}'");
     } else {
         stmt(y);
     }
-    consume(y, TK_WHILE, "Expected 'while' condition after 'do' block");
+    consume(y, TK_WHILE, "expected 'while' condition after 'do' block");
     y->ld--;
     y->nlcl -= pop_locals(y, y->loop, 1);
     y->loop = old_loop;
@@ -754,7 +754,7 @@ static void if_stmt(rf_parser *y) {
     if (y->x->tk.kind == '{') {
         adv;
         stmt_list(y);
-        consume(y, '}', "Expected '}'");
+        consume(y, '}', "expected '}'");
     } else {
         stmt(y);
     }
@@ -767,7 +767,7 @@ static void if_stmt(rf_parser *y) {
         if (y->x->tk.kind == '{') {
             adv;
             stmt_list(y);
-            consume(y, '}', "Expected '}'");
+            consume(y, '}', "expected '}'");
         } else {
             stmt(y);
         }
@@ -834,10 +834,10 @@ static void print_stmt(rf_parser *y) {
     const char *p = y->x->p;    // Save pointer
     int n = expr_list(y, paren);
     if (p == y->x->p)           // No expression parsed
-        err(y, "Expected expression following `print`");
+        err(y, "expected expression in `print` statement");
     c_print(y->c, n);
     if (paren)
-        consume(y, ')', "Expected ')'");
+        consume(y, ')', "expected ')'");
 }
 
 // TODO
@@ -869,7 +869,7 @@ static void while_stmt(rf_parser *y) {
     if (y->x->tk.kind == '{') {
         adv;
         stmt_list(y);
-        consume(y, '}', "Expected '}'");
+        consume(y, '}', "expected '}'");
     } else {
         stmt(y);
     }

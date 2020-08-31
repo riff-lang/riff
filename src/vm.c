@@ -9,7 +9,7 @@
 #include "vm.h"
 
 static void err(const char *msg) {
-    fprintf(stderr, "%s\n", msg);
+    fprintf(stderr, "riff: [vm] %s\n", msg);
     exit(1);
 }
 
@@ -330,6 +330,8 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     while (1) {
         // TODO check for impending stack overflow
         switch (*ip) {
+            if ((sp - stack) >= STACK_SIZE - 1)
+                err("stack limit reached");
 
 // Unconditional jumps
 #define j8  (ip += (int8_t) ip[1])
