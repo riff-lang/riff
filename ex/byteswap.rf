@@ -1,20 +1,20 @@
 // Swap bytes n and m in integer x
-// x = 0xDEADBEEF, n = 0, m = 2 => 0xDEEFBEAD (3740253869)
 
-x = 0xDEADBEEF
-n = 0
-m = 2
+fn byteswap(x, n, m) {
+    n <<= 3
+    m <<= 3
 
-n <<= 3
-m <<= 3
+    local maskn = 0xFF << n
+    local maskm = 0xFF << m
 
-maskn = 0xFF << n
-maskm = 0xFF << m
+    local nth_byte = ((x & maskn) >> n) & 0xFF
+    local mth_byte = ((x & maskm) >> m) & 0xFF
 
-nth_byte = ((x & maskn) >> n) & 0xFF
-mth_byte = ((x & maskm) >> m) & 0xFF
+    nth_byte <<= m
+    mth_byte <<= n
 
-nth_byte <<= m
-mth_byte <<= n
+    return x ^ (x & (maskn ^ maskm)) ^ nth_byte ^ mth_byte
+}
 
-x ^ (x & (maskn ^ maskm)) ^ nth_byte ^ mth_byte
+"Swap bytes 1 and 3 in 0x12345678:", hex(byteswap(0x12345678, 1, 3))
+"Swap bytes 0 and 2 in 0xdeadbeef:", hex(byteswap(0xdeadbeef, 0, 2))
