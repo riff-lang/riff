@@ -181,31 +181,47 @@ static inline void z_cat(rf_val *l, rf_val *r) {
 
 // Potentially very slow for strings; allocates 2 new string objects
 // for every int or float LHS
-// TODO Index out of bounds handling, e.g. RHS > length of LHS
 static inline void z_idx(rf_val *l, rf_val *r) {
     switch (l->type) {
     case TYPE_INT: {
         rf_str *is = s_int2str(l->u.i);
-        assign_str(l, s_newstr(&is->str[intval(r)], 1, 0));
+        rf_int r1 = intval(r);
+        if (r1 > is->l - 1)
+            assign_null(l);
+        else
+            assign_str(l, s_newstr(&is->str[r1], 1, 0));
         m_freestr(is);
         break;
     }
     case TYPE_FLT: {
         rf_str *fs = s_flt2str(l->u.f);
-        assign_str(l, s_newstr(&fs->str[intval(r)], 1, 0));
+        rf_int r1 = intval(r);
+        if (r1 > fs->l - 1)
+            assign_null(l);
+        else
+            assign_str(l, s_newstr(&fs->str[r1], 1, 0));
         m_freestr(fs);
         break;
     }
     case TYPE_STR: {
-        assign_str(l, s_newstr(&l->u.s->str[intval(r)], 1, 0));
+        rf_int r1 = intval(r);
+        if (r1 > l->u.s->l - 1)
+            assign_null(l);
+        else
+            assign_str(l, s_newstr(&l->u.s->str[r1], 1, 0));
         break;
     }
     case TYPE_ARR:
         *l = *a_lookup(l->u.a, r, 0, 0);
         break;
-    case TYPE_RFN:
-        assign_int(l, l->u.fn->code->code[intval(r)]);
+    case TYPE_RFN: {
+        rf_int r1 = intval(r);
+        if (r1 > l->u.fn->code->n - 1)
+            assign_null(l);
+        else
+            assign_int(l, l->u.fn->code->code[r1]);
         break;
+    }
     default:
         assign_int(l, 0);
         break;
