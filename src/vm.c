@@ -149,7 +149,7 @@ static inline void z_len(rf_val *v) {
     case TYPE_STR: l = v->u.s->l;        break;
     case TYPE_ARR: l = a_length(v->u.a); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
-    case TYPE_CFN: // TODO?
+    case TYPE_CFN: l = 1;                break; // TODO?
     default: break;
     }
     assign_int(v, l);
@@ -186,7 +186,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     case TYPE_INT: {
         rf_str *is = s_int2str(l->u.i);
         rf_int r1 = intval(r);
-        if (r1 > is->l - 1)
+        if (r1 > is->l - 1 || r1 < 0)
             assign_null(l);
         else
             assign_str(l, s_newstr(&is->str[r1], 1, 0));
@@ -196,7 +196,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     case TYPE_FLT: {
         rf_str *fs = s_flt2str(l->u.f);
         rf_int r1 = intval(r);
-        if (r1 > fs->l - 1)
+        if (r1 > fs->l - 1 || r1 < 0)
             assign_null(l);
         else
             assign_str(l, s_newstr(&fs->str[r1], 1, 0));
@@ -205,7 +205,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     }
     case TYPE_STR: {
         rf_int r1 = intval(r);
-        if (r1 > l->u.s->l - 1)
+        if (r1 > l->u.s->l - 1 || r1 < 0)
             assign_null(l);
         else
             assign_str(l, s_newstr(&l->u.s->str[r1], 1, 0));
@@ -216,7 +216,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
         break;
     case TYPE_RFN: {
         rf_int r1 = intval(r);
-        if (r1 > l->u.fn->code->n - 1)
+        if (r1 > l->u.fn->code->n - 1 || r1 < 0)
             assign_null(l);
         else
             assign_int(l, l->u.fn->code->code[r1]);
