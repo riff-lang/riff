@@ -228,7 +228,6 @@ static struct {
     { "char",  { 0, l_char }  },
     { "hex",   { 1, l_hex }   },
     { "split", { 1, l_split } },
-    // TODO hack for l_register loop condition
     { NULL,    { 0, NULL }    }
 };
 
