@@ -5,9 +5,11 @@
 
 "Escaped newline\ninside string"
 
-// Not sure if this will remain a feature
-"Raw newline
-inside string"
+"This should print
+on separate lines"
+
+"This should print \
+on a single line"
 
 "\e[31mred\e[0m",
 "\e[32mgreen\e[0m",

@@ -148,6 +148,7 @@ static int read_charint(rf_lexer *x, rf_token *tk) {
 static int read_str(rf_lexer *x, rf_token *tk, int d) {
     x->buf.n = 0;
     int c;
+str_start:
     while ((c = *x->p) != d) {
         switch(c) {
         case '\\':
@@ -163,12 +164,11 @@ static int read_str(rf_lexer *x, rf_token *tk, int d) {
             case 'v': adv; c = '\v';       break;
             case 'x': adv; c = hex_esc(x); break;
 
-            // TODO ignore raw newlines following backslashes?
-            // Newlines following `\`
+            // Ignore newlines following `\`
             case '\n': case '\r':
                 ++x->ln;
-                c = '\n';
                 adv;
+                goto str_start;
                 break;
             case '\\': case '\'': case '"':
                 c = *x->p;
