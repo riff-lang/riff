@@ -609,15 +609,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_GBLV1: gblv(1);     ++ip;    break;
         case OP_GBLV2: gblv(2);     ++ip;    break;
 
-// Nullify slot at FP[x] for use as a local var
-// Increment SP to reserve slot
-#define lcl(x) assign_null(&fp[(x)].v); ++sp;
-
-        case OP_LCL:  lcl(ip[1]); ip += 2; break;
-        case OP_LCL0: lcl(0);     ++ip;    break;
-        case OP_LCL1: lcl(1);     ++ip;    break;
-        case OP_LCL2: lcl(2);     ++ip;    break;
-
 // Push local address
 // Push the address of FP[x] to the top of the stack.
 #define lcla(x) sp++->a = &fp[(x)].v;
@@ -653,17 +644,17 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 rf_fn *fn = sp[-nargs-1].v.u.fn;
                 arity = fn->arity;
 
-                // If user called function with too few arguments, nullify
-                // stack elements and increment SP.
+                // If user called function with too few arguments,
+                // nullify stack slots and increment SP.
                 if (nargs < arity) {
                     for (int i = nargs; i < arity; ++i) {
-                        assign_null(&sp[i].v);
+                        assign_null(&sp++->v);
                     }
                 }
                 
                 // If user called function with too many arguments,
-                // decrement SP so it points to the appropriate slot for
-                // control transfer.
+                // decrement SP so it points to the appropriate slot
+                // for control transfer.
                 else if (nargs > arity) {
                     sp -= (nargs - arity);
                 }
@@ -674,8 +665,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 // slot to accommodate any references a named function
                 // makes to itself without any other work required
                 // from the VM here. This is completely necessary for
-                // local named functions, but globals benefit as
-                // well.
+                // local named functions, but globals benefit as well.
                 nret = exec(fn->code, sp, sp - arity - 1);
                 sp -= arity;
 
@@ -690,14 +680,19 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 c_fn *fn = sp[-nargs-1].v.u.cfn;
                 arity = fn->arity;
 
-                // Fully variadic library functions have an arity of 0
+                // Most library functions are somewhat variadic; their
+                // arity refers to the minimum number of arguments
+                // they require.
                 if (arity && nargs < arity) {
                     // If user called function with too few arguments,
-                    // nullify stack elements and increment SP.
+                    // nullify stack slots.
                     for (int i = nargs; i < arity; ++i) {
                         assign_null(&sp[i].v);
                     }
                 }
+                // Decrement SP to serve as the FP for the function
+                // call. Library functions assign their own return
+                // values to SP-1.
                 sp -= nargs;
                 nret = fn->fn(&sp->v, nargs);
             }

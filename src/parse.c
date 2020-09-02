@@ -625,13 +625,12 @@ static void local_fn(rf_parser *y) {
     // current scope, add a new local
     if (idx < 0 || y->lcl[idx].d != y->ld) {
         add_local(y, id);
+        push(OP_NULL); // Reserve stack slot
         switch (y->nlcl - 1) {
-        case 0: push(OP_LCL0); push(OP_LCLA0); break;
-        case 1: push(OP_LCL1); push(OP_LCLA1); break;
-        case 2: push(OP_LCL2); push(OP_LCLA2); break;
+        case 0: push(OP_LCLA0); break;
+        case 1: push(OP_LCLA1); break;
+        case 2: push(OP_LCLA2); break;
         default:
-            push(OP_LCL);
-            push((uint8_t) y->nlcl - 1);
             push(OP_LCLA);
             push((uint8_t) y->nlcl - 1);
             break;
@@ -804,15 +803,7 @@ static void local_stmt(rf_parser *y) {
         if (idx < 0 || y->lcl[idx].d != y->ld) {
             set(lx);    // Only set for newly-declared locals
             add_local(y, id);
-            switch (y->nlcl - 1) {
-            case 0: push(OP_LCL0); break;
-            case 1: push(OP_LCL1); break;
-            case 2: push(OP_LCL2); break;
-            default:
-                push(OP_LCL);
-                push((uint8_t) y->nlcl - 1);
-                break;
-            }
+            push(OP_NULL); // Reserve stack slot
         }
         expr(y, 0);
         push(OP_POP);
