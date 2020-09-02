@@ -216,7 +216,7 @@ static void subscript(rf_parser *y) {
     unset(rx);      // Unset
     expr(y, 0);
     consume(y, ']', "expected ']' following subscript expression");
-    if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind))
+    if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || y->x->tk.kind == '[')
         push(OP_IDXA);
     else
         push(OP_IDXV);
