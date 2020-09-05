@@ -189,7 +189,7 @@ static int l_split(rf_val *fp, int argc) {
     rf_str *s;
     rf_val v;
     if (!strlen(delim)) {
-        for (rf_int i = 0; i < len; ++i) {
+        for (rf_int i = 0; i < len - 1; ++i) {
             s = s_newstr(str + i, 1, 0);
             v = (rf_val) {TYPE_STR, .u.s = s};
             a_insert_int(arr->u.a, i, &v, 1, 1);
