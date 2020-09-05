@@ -226,7 +226,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
 }
 
 // OP_PRINT functionality
-static inline void put(rf_val *v) {
+static inline void z_print(rf_val *v) {
     switch (v->type) {
     case TYPE_NULL: printf("null");              break;
     case TYPE_INT:  printf("%lld", v->u.i);      break;
@@ -822,7 +822,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
         // Print a single element from the stack
         case OP_PRINT1:
-            put(&sp[-1].v);
+            z_print(&sp[-1].v);
             printf("\n");
             --sp;
             ++ip;
@@ -831,7 +831,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // Print (IP+1) elements from the stack
         case OP_PRINT:
             for (int i = ip[1]; i > 0; --i) {
-                put(&sp[-i].v);
+                z_print(&sp[-i].v);
                 if (i > 1)
                     printf(" ");
             }
