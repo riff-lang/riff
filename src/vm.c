@@ -82,17 +82,14 @@ static inline void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
 
 static inline void z_num(rf_val *v) {
     switch (v->type) {
-    case TYPE_INT:
-        assign_int(v, intval(v));
-        break;
-    case TYPE_FLT:
-        assign_flt(v, fltval(v));
-        break;
     case TYPE_STR:
         assign_flt(v, str2flt(v->u.s));
         break;
-    default:
+    case TYPE_NULL: case TYPE_ARR:
+    case TYPE_RFN: case TYPE_CFN:
         assign_int(v, 0);
+        break;
+    default:
         break;
     }
 }
@@ -260,14 +257,14 @@ static inline void new_iter(rf_val *set) {
     switch (set->type) {
     case TYPE_INT:
         iter->t = LOOP_SEQ;
-        iter->on = iter->n = set->u.i + 1;
+        iter->on = iter->n = set->u.i + 1; // Inclusive
         iter->keys = NULL;
         iter->set.seq = 0;
         break;
     // TODO - likely temporary
     case TYPE_FLT:
         iter->t = LOOP_SEQ;
-        iter->on = iter->n = (rf_int) set->u.f + 1;
+        iter->on = iter->n = (rf_int) set->u.f + 1; // Inclusive
         iter->keys = NULL;
         iter->set.seq = 0;
         break;
@@ -358,9 +355,9 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_XJZ8:   xjc8(!test(&sp[-1].v));  break;
         case OP_XJZ16:  xjc16(!test(&sp[-1].v)); break;
 
-        // Check iterator condition
+        // Initialize/cycle current iterator
         case OP_LOOP8: case OP_LOOP16: {
-            int jmp16 = (*ip == OP_LOOP16);
+            int jmp16 = *ip == OP_LOOP16;
             if (!iter->n--) {
                 rf_iter *old = iter;
                 iter = iter->p;
@@ -419,6 +416,9 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 break;
             default: break;
             }
+
+            // Treat byte(s) following OP_LOOP as unsigned since jumps
+            // are always backward
             if (jmp16)
                 ip -= (ip[1] << 8) + ip[2];
             else
@@ -426,24 +426,21 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             break;
         }
 
-        // Iterators
         // Create iterator and jump to the corresponding OP_LOOP
-        // instruction for initialization.
-        case OP_ITERV: {
+        // instruction for initialization
+        case OP_ITERV: case OP_ITERKV: {
+            int k = *ip == OP_ITERKV;
             new_iter(&sp[-1].v); 
             --sp;
             assign_null(&sp++->v);
-            iter->k = NULL;
-            iter->v = &sp[-1].v;
-            j16;
-            break;
-        }
-        case OP_ITERKV: {
-            new_iter(&sp[-1].v); 
-            --sp;
-            assign_null(&sp++->v);
-            assign_null(&sp++->v);
-            iter->k = &sp[-2].v;
+
+            // Reserve extra stack slot for k,v iterators
+            if (k) {
+                assign_null(&sp++->v);
+                iter->k = &sp[-2].v;
+            } else {
+                iter->k = NULL;
+            }
             iter->v = &sp[-1].v;
             j16;
             break;
@@ -701,16 +698,17 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // If callee returns 0 and the next instruction is PRINT1,
             // skip over the instruction. This facilitates user
             // functions which conditionally return something.
-            if (!nret && *ip == OP_PRINT1) {
-                ++ip;
-                --sp;
+            if (!nret) { 
+                assign_null(&sp[-1].v);
+                if (*ip == OP_PRINT1) {
+                    ++ip;
+                    --sp;
+                }
             }
             break;
         }
 
-        case OP_RET:
-            assign_null(&retp->v);
-            return 0;
+        case OP_RET: return 0;
 
         // Caller expects return value to be at its original SP +
         // arity of the function. "clean up" any created locals by
