@@ -19,22 +19,25 @@ syntax.
 Running `make` in the root directory of the repository will compile
 the source code and create an executable named `a.out`.
 
+Running `make install` will compile the source code and place the
+executable at `/usr/local/bin/riff`
+
 - Run a Riff program on the command-line:
 
     ```bash
-    $ ./a.out '<program>'
+    $ riff '<program>'
     ```
 
 - Run a Riff program stored in a file:
 
     ```bash
-    $ ./a.out -f file.rf
+    $ riff -f file.rf
     ```
 
 - Print a listing of mnemonics which associate to `riff` VM
   instructions for a given program:
   
     ```bash
-    $ ./a.out -l '<program>'
-    $ ./a.out -lf file.rf
+    $ riff -l '<program>'
+    $ riff -lf file.rf
     ```

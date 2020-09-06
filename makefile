@@ -1,3 +1,5 @@
+LOC     = /usr/local/bin
+
 CFLAGS  = -O3
 
 MFLAGS  = -O0
@@ -22,12 +24,15 @@ SRC    += src/str.c
 SRC    += src/val.c
 SRC    += src/vm.c
 
-.PHONY: all compile mem warn
+.PHONY: all compile install mem warn
 
 all: compile
 
 compile:
 	$(CC) $(CFLAGS) $(SRC)
+
+install: compile
+	install a.out $(LOC)/riff
 
 mem:
 	$(CC) $(MFLAGS) $(SRC)
