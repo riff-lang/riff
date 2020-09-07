@@ -20,6 +20,7 @@ enum opcodes {
     OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
     OP_LOOP8,   // Evaluate iterator and jump (1-byte offset)
     OP_LOOP16,  // Evaluate iterator and jump (2-byte offset)
+    OP_POPL,    // Pop (destroy) current iterator
     OP_ITERV,   // Initialize an iterator with only a value
     OP_ITERKV,  // Initialize an iterator with key/value pair
     OP_TEST,    // Logical test

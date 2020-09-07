@@ -73,6 +73,7 @@ static struct {
     [OP_ORX]     = { "orx",      0 },
     [OP_OR]      = { "or",       0 },
     [OP_POPI]    = { "pop",      1 },
+    [OP_POPL]    = { "popl",     0 },
     [OP_POP]     = { "pop",      0 },
     [OP_POSTDEC] = { "pstdec",   0 },
     [OP_POSTINC] = { "pstinc",   0 },

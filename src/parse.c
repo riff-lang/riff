@@ -546,8 +546,8 @@ static void do_stmt(rf_parser *y) {
     }
     consume(y, TK_WHILE, "expected 'while' condition after 'do' block");
     y->ld--;
-    y->nlcl -= pop_locals(y, y->loop, 1);
     y->loop = old_loop;
+    y->nlcl -= pop_locals(y, y->ld, 1);
     // Patch continue stmts
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
@@ -698,9 +698,10 @@ static void for_stmt(rf_parser *y) {
     p_list *r_brk  = y->brk;
     p_list *r_cont = y->cont;
     p_list b, c;
-    uint8_t old_loop = y->loop;
-    y->loop = y->ld++;
-    enter_loop(y, &b, &c);
+
+    // Increment lexical depth once before adding locals [k,] v so
+    // they're only visible to the loop
+    y->ld++;
     if (y->x->tk.kind != TK_ID)
         err(y, "expected identifier");
     add_local(y, y->x->tk.lexeme.s);
@@ -723,6 +724,12 @@ static void for_stmt(rf_parser *y) {
     int l1 = c_prep_loop(y->c, kv);
     if (paren)
         consume(y, ')', "expected ')'");
+    uint8_t old_loop = y->loop;
+
+    // Increment the lexical depth again so break/continue statements
+    // don't pop k,v locals
+    y->loop = y->ld++;
+    enter_loop(y, &b, &c);
     if (y->x->tk.kind == '{') {
         adv;
         stmt_list(y);
@@ -730,18 +737,34 @@ static void for_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
+
     // Patch continue stmts
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
     }
     c_patch(y->c, l1);
     c_loop(y->c, l1 + 2);
+
     // Patch break stmts
     for (int i = 0; i < b.n; i++) {
         c_patch(y->c, b.l[i]);
     }
-    y->ld--;
-    y->nlcl -= pop_locals(y, y->loop, 1);
+
+    // OP_POPL cleans up iterator state in the VM. Needs to be its own
+    // instruction since break statements need to jump past the
+    // OP_LOOP instructions to prevent further iteration
+    push(OP_POPL);
+
+    // Decrement lexical depth twice
+    y->ld -= 2;
+    y->loop = old_loop;
+
+    // Pop locals with lexical depth as the argument instead of
+    // y->loop. The workaround of incrementing lexical depth twice
+    // prevents break/continue statements from otherwise popping the
+    // 'for' loop's own locals. All other loop constructs use y->loop
+    // as the argument.
+    y->nlcl -= pop_locals(y, y->ld, 1);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
@@ -875,7 +898,8 @@ static void while_stmt(rf_parser *y) {
         c_patch(y->c, b.l[i]);
     }
     y->ld--;
-    y->nlcl -= pop_locals(y, y->loop, 1);
+    y->loop = old_loop;
+    y->nlcl -= pop_locals(y, y->ld, 1);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 

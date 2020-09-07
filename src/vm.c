@@ -292,6 +292,18 @@ static inline void new_iter(rf_val *set) {
     }
 }
 
+static inline void destroy_iter(void) {
+    rf_iter *old = iter;
+    iter = iter->p;
+    if (old->t == LOOP_ARR) {
+        if (!(old->n + 1)) // Loop completed?
+            free(old->keys - old->on);
+        else
+            free(old->keys - (old->on - old->n));
+    }
+    free(old);
+}
+
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 
 // VM entry point/initialization
@@ -325,7 +337,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     rf_val *tp; // Temp pointer
     register uint8_t *ip = c->code;
     while (1) {
-        // TODO check for impending stack overflow
         switch (*ip) {
             if ((sp - stack) >= STACK_SIZE - 1)
                 err("stack limit reached");
@@ -359,11 +370,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case OP_LOOP8: case OP_LOOP16: {
             int jmp16 = *ip == OP_LOOP16;
             if (!iter->n--) {
-                rf_iter *old = iter;
-                iter = iter->p;
-                if (old->t == LOOP_ARR)
-                    free(old->keys - old->on);
-                free(old);
                 if (jmp16)
                     ip += 3;
                 else
@@ -423,6 +429,13 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 ip -= (ip[1] << 8) + ip[2];
             else
                 ip -= ip[1];
+            break;
+        }
+
+        // Destroy the current iterator struct
+        case OP_POPL: {
+            destroy_iter();
+            ++ip;
             break;
         }
 
