@@ -17,7 +17,8 @@ typedef union {
 } rf_stack;
 
 enum loops {
-    LOOP_SEQ,
+    LOOP_USEQ,  // Upward sequences [0..n]
+    LOOP_DSEQ,  // Downward sequences [0..-n]
     LOOP_STR,
     LOOP_ARR,
     LOOP_FN

@@ -255,17 +255,18 @@ static inline void new_iter(rf_val *set) {
     new->p = iter;
     iter = new;
     switch (set->type) {
-    case TYPE_INT:
-        iter->t = LOOP_SEQ;
-        iter->on = iter->n = set->u.i + 1; // Inclusive
-        iter->keys = NULL;
-        iter->set.seq = 0;
-        break;
-    // TODO - likely temporary
     case TYPE_FLT:
-        iter->t = LOOP_SEQ;
-        iter->on = iter->n = (rf_int) set->u.f + 1; // Inclusive
+        set->u.i = (rf_int) set->u.f;
+        // Fall-through
+    case TYPE_INT:
         iter->keys = NULL;
+        if (set->u.i >= 0) {
+            iter->t = LOOP_USEQ;
+            iter->on = iter->n = set->u.i + 1; // Inclusive
+        } else {
+            iter->t = LOOP_DSEQ;
+            iter->on = iter->n = -(set->u.i) + 1; // Inclusive
+        }
         iter->set.seq = 0;
         break;
     case TYPE_STR:
@@ -377,12 +378,17 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 break;
             }
             switch (iter->t) {
-            case LOOP_SEQ:
-                if (is_null(iter->v)) {
+            case LOOP_USEQ:
+                if (is_null(iter->v))
                     *iter->v = (rf_val) {TYPE_INT, .u.i = iter->set.seq};
-                } else {
-                    iter->v->u.i = iter->set.seq += 1;
-                }
+                else
+                    ++iter->v->u.i;
+                break;
+            case LOOP_DSEQ:
+                if (is_null(iter->v))
+                    *iter->v = (rf_val) {TYPE_INT, .u.i = iter->set.seq};
+                else
+                    --iter->v->u.i;
                 break;
             case LOOP_STR:
                 if (iter->k != NULL) {
