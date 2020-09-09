@@ -156,24 +156,33 @@ static inline void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
-// TODO free newly allocated strings after assigning concatenation
-// result
 static inline void z_cat(rf_val *l, rf_val *r) {
+    rf_str *lhs, *rhs;
+    int lf = !is_str(l);
+    int rf = !is_str(r);
     switch (l->type) {
-    case TYPE_NULL: l->u.s = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  l->u.s = s_int2str(l->u.i);    break;
-    case TYPE_FLT:  l->u.s = s_flt2str(l->u.f);    break;
+    case TYPE_NULL: lhs = s_newstr(NULL, 0, 0); break;
+    case TYPE_INT:  lhs = s_int2str(l->u.i);    break;
+    case TYPE_FLT:  lhs = s_flt2str(l->u.f);    break;
+    case TYPE_STR:  lhs = l->u.s;               break;
+    case TYPE_ARR: case TYPE_RFN: case TYPE_CFN:
+        err("concatenation with incompatible type(s)");
     default: break;
     }
 
     switch (r->type) {
-    case TYPE_NULL: r->u.s = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  r->u.s = s_int2str(r->u.i);    break;
-    case TYPE_FLT:  r->u.s = s_flt2str(r->u.f);    break;
+    case TYPE_NULL: rhs = s_newstr(NULL, 0, 0); break;
+    case TYPE_INT:  rhs = s_int2str(r->u.i);    break;
+    case TYPE_FLT:  rhs = s_flt2str(r->u.f);    break;
+    case TYPE_STR:  rhs = r->u.s;               break;
+    case TYPE_ARR: case TYPE_RFN: case TYPE_CFN:
+        err("concatenation with incompatible type(s)");
     default: break;
     }
 
-    assign_str(l, s_concat(l->u.s, r->u.s, 0));
+    assign_str(l, s_concat(lhs, rhs, 0));
+    if (lf) m_freestr(lhs);
+    if (rf) m_freestr(rhs);
 }
 
 // Potentially very slow for strings; allocates 2 new string objects
