@@ -834,6 +834,7 @@ static void if_stmt(rf_parser *y) {
     y->nlcl -= pop_locals(y, y->ld, 1);
     if (y->x->tk.kind == TK_ELSE) {
         adv;
+        y->ld++;
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         if (y->x->tk.kind == '{') {
