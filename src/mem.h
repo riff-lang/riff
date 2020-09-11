@@ -9,9 +9,6 @@
         a = realloc(a, sizeof(sz) * cap); \
     }
 
-#define m_freestr(s) { \
-    free(s->str); \
-    free(s); \
-}
+#define m_freestr(s) free(s->str); free(s);
 
 #endif

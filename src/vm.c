@@ -160,8 +160,6 @@ static inline void z_test(rf_val *v) {
 
 static inline void z_cat(rf_val *l, rf_val *r) {
     rf_str *lhs, *rhs;
-    int lf = !is_str(l);
-    int rf = !is_str(r);
     switch (l->type) {
     case TYPE_NULL: lhs = s_newstr(NULL, 0, 0); break;
     case TYPE_INT:  lhs = s_int2str(l->u.i);    break;
@@ -185,8 +183,8 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     }
 
     assign_str(l, s_concat(lhs, rhs, 0));
-    if (lf) m_freestr(lhs);
-    if (rf) m_freestr(rhs);
+    if (!is_str(l)) { m_freestr(lhs); }
+    if (!is_str(r)) { m_freestr(rhs); }
 }
 
 // Potentially very slow for strings; allocates 2 new string objects
