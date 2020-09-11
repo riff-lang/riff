@@ -17,8 +17,7 @@ typedef union {
 } rf_stack;
 
 enum loops {
-    LOOP_USEQ,  // Upward sequences [0..n]
-    LOOP_DSEQ,  // Downward sequences [0..-n]
+    LOOP_SEQ,
     LOOP_STR,
     LOOP_ARR,
     LOOP_FN
@@ -32,11 +31,12 @@ struct rf_iter {
     int       t;    // Loop type
     rf_int    n;    // Control var
     rf_int    on;   // Saved control var for freeing keys allocation
+    rf_int    st;   // Start (for sequences)
     rf_val   *k;    // Stack slot for `k` in `[k,]v`
     rf_val   *v;    // Stack slot for `v` in `[k,]v`
     rf_val   *keys; // Keys to look up arrays with (fixed at loop start)
     union {
-        rf_int      seq;
+        rf_int      itvl;
         const char *str;
         uint8_t    *code;
         rf_arr     *arr;

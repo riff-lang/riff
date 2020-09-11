@@ -45,8 +45,10 @@ static inline int test(rf_val *v) {
         return !!v->u.s->l;
     }
     case TYPE_ARR: return !!a_length(v->u.a);
-    case TYPE_RFN: case TYPE_CFN: return 1;
-    default:       return 0;
+    case TYPE_SEQ:
+    case TYPE_RFN: case TYPE_CFN:
+        return 1;
+    default: return 0;
     }
 }
 
@@ -146,7 +148,7 @@ static inline void z_len(rf_val *v) {
     case TYPE_STR: l = v->u.s->l;        break;
     case TYPE_ARR: l = a_length(v->u.a); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
-    case TYPE_CFN: l = 1;                break; // TODO?
+    case TYPE_SEQ: case TYPE_CFN: l = 1; break; // TODO - sequences
     default: break;
     }
     assign_int(v, l);
@@ -165,7 +167,8 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     case TYPE_INT:  lhs = s_int2str(l->u.i);    break;
     case TYPE_FLT:  lhs = s_flt2str(l->u.f);    break;
     case TYPE_STR:  lhs = l->u.s;               break;
-    case TYPE_ARR: case TYPE_RFN: case TYPE_CFN:
+    case TYPE_SEQ: case TYPE_ARR:
+    case TYPE_RFN: case TYPE_CFN:
         err("concatenation with incompatible type(s)");
     default: break;
     }
@@ -175,7 +178,8 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     case TYPE_INT:  rhs = s_int2str(r->u.i);    break;
     case TYPE_FLT:  rhs = s_flt2str(r->u.f);    break;
     case TYPE_STR:  rhs = r->u.s;               break;
-    case TYPE_ARR: case TYPE_RFN: case TYPE_CFN:
+    case TYPE_SEQ: case TYPE_ARR:
+    case TYPE_RFN: case TYPE_CFN:
         err("concatenation with incompatible type(s)");
     default: break;
     }
@@ -192,6 +196,8 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     case TYPE_INT: {
         rf_str *is = s_int2str(l->u.i);
         rf_int r1 = intval(r);
+
+        // Index out-of-bounds: assign null
         if (r1 > is->l - 1 || r1 < 0)
             assign_null(l);
         else
@@ -210,11 +216,15 @@ static inline void z_idx(rf_val *l, rf_val *r) {
         break;
     }
     case TYPE_STR: {
-        rf_int r1 = intval(r);
-        if (r1 > l->u.s->l - 1 || r1 < 0)
-            assign_null(l);
-        else
-            assign_str(l, s_newstr(&l->u.s->str[r1], 1, 0));
+        if (is_seq(r)) {
+            assign_str(l, s_substr(l->u.s, r->u.seq->from, r->u.seq->to, r->u.seq->itvl));
+        } else {
+            rf_int r1 = intval(r);
+            if (r1 > l->u.s->l - 1 || r1 < 0)
+                assign_null(l);
+            else
+                assign_str(l, s_newstr(&l->u.s->str[r1], 1, 0));
+        }
         break;
     }
     case TYPE_ARR:
@@ -241,6 +251,10 @@ static inline void z_print(rf_val *v) {
     case TYPE_INT:  printf("%lld", v->u.i);      break;
     case TYPE_FLT:  printf("%g", v->u.f);        break;
     case TYPE_STR:  printf("%s", v->u.s->str);   break;
+    case TYPE_SEQ:
+        printf("seq: %lld..%lld,%lld",
+                v->u.seq->from, v->u.seq->to, v->u.seq->itvl);
+        break;
     case TYPE_ARR:  printf("array: %p", v->u.a); break;
     case TYPE_RFN:  printf("fn: %p", v->u.fn);   break;
     case TYPE_CFN:  printf("fn: %p", v->u.cfn);  break;
@@ -269,20 +283,32 @@ static inline void new_iter(rf_val *set) {
         // Fall-through
     case TYPE_INT:
         iter->keys = NULL;
+        iter->t = LOOP_SEQ;
+        iter->st = 0;
         if (set->u.i >= 0) {
-            iter->t = LOOP_USEQ;
-            iter->on = iter->n = set->u.i + 1; // Inclusive
+            iter->n = set->u.i + 1; // Inclusive
+            iter->set.itvl = 1;
         } else {
-            iter->t = LOOP_DSEQ;
-            iter->on = iter->n = -(set->u.i) + 1; // Inclusive
+            iter->n = -(set->u.i) + 1; // Inclusive
+            iter->set.itvl = -1;
         }
-        iter->set.seq = 0;
         break;
     case TYPE_STR:
         iter->t = LOOP_STR;
-        iter->on = iter->n = set->u.s->l;
+        iter->n = set->u.s->l;
         iter->keys = NULL;
         iter->set.str = set->u.s->str;
+        break;
+    case TYPE_SEQ:
+        iter->keys = NULL;
+        iter->t = LOOP_SEQ;
+        iter->set.itvl = set->u.seq->itvl;
+        if (iter->set.itvl > 0)
+            iter->n = (set->u.seq->to - set->u.seq->from) + 1;
+        else
+            iter->n = (set->u.seq->from - set->u.seq->to) + 1;
+        iter->n = (rf_int) ceil(fabs(iter->n / (double) iter->set.itvl));
+        iter->st = set->u.seq->from;
         break;
     case TYPE_ARR:
         iter->t = LOOP_ARR;
@@ -292,7 +318,7 @@ static inline void new_iter(rf_val *set) {
         break;
     case TYPE_RFN:
         iter->t = LOOP_FN;
-        iter->on = iter->n = set->u.fn->code->n;
+        iter->n = set->u.fn->code->n;
         iter->keys = NULL;
         iter->set.code = set->u.fn->code->code;
         break;
@@ -387,17 +413,11 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 break;
             }
             switch (iter->t) {
-            case LOOP_USEQ:
+            case LOOP_SEQ:
                 if (is_null(iter->v))
-                    *iter->v = (rf_val) {TYPE_INT, .u.i = iter->set.seq};
+                    *iter->v = (rf_val) {TYPE_INT, .u.i = iter->st};
                 else
-                    ++iter->v->u.i;
-                break;
-            case LOOP_DSEQ:
-                if (is_null(iter->v))
-                    *iter->v = (rf_val) {TYPE_INT, .u.i = iter->set.seq};
-                else
-                    --iter->v->u.i;
+                    iter->v->u.i += iter->set.itvl;
                 break;
             case LOOP_STR:
                 if (iter->k != NULL) {
@@ -767,7 +787,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // Perform the lookup and leave the corresponding element's
         // rf_val address on the stack.
         case OP_IDXA:
-            if (sp[-2].t <= 64) {
+            if (sp[-2].t <= TYPE_CFN) {
                 err("invalid assignment");
             }
 
@@ -803,7 +823,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // contains a raw value (not a pointer), the high order 64
             // bits will be the type tag of the rf_val instead of a
             // memory address. When that happens, defer to z_idx().
-            if (sp[-2].t <= 64) {
+            if (sp[-2].t <= TYPE_CFN) {
                 binop(idx);
                 break;
             }
@@ -842,6 +862,100 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             ++ip;
             break;
 
+// Create a new "sequence" value.
+// There are 8 different valid forms of a sequence; each has their own
+// instruction.
+//   seq:   x..y        SP[-2]..SP[-1]
+//   seqf:  x..         SP[-1]..INT_MAX
+//   seqt:  ..y         0..SP[-1]
+//   seqe:  ..          0..INT_MAX
+//   sseq:  x..y,z      SP[-3]..SP[-2],SP[-1]
+//   sseqf: x..,z       SP[-2]..INT_MAX,SP[-1]
+//   sseqt: ..y,z       0..SP[-2],SP[-1]
+//   sseqe: ..,z        0..INT_MAX,SP[-1]
+// If `z` is not provided, the interval is set to -1 if x > y (downward
+// sequences). Otherwise, the interval is set to 1 (upward
+// sequences).
+#define z_seq(f,t,i,s) { \
+    rf_seq *seq = malloc(sizeof(rf_seq)); \
+    rf_int from = seq->from = (f); \
+    rf_int to   = seq->to = (t); \
+    rf_int itvl = (i); \
+    seq->itvl   = itvl ? itvl : from > to ? -1 : 1; \
+    s = (rf_val) {TYPE_SEQ, .u.seq = seq}; \
+}
+        // x..y
+        case OP_SEQ:
+            z_seq(intval(&sp[-2].v),
+                  intval(&sp[-1].v),
+                  0,
+                  sp[-2].v);
+            --sp;
+            ++ip;
+            break;
+        // x..
+        case OP_SEQF:
+            z_seq(intval(&sp[-1].v),
+                  INT64_MAX,
+                  0,
+                  sp[-1].v);
+            ++ip;
+            break;
+        // ..y
+        case OP_SEQT:
+            z_seq(0,
+                  intval(&sp[-1].v),
+                  0,
+                  sp[-1].v);
+            ++ip;
+            break;
+        // ..
+        case OP_SEQE:
+            ++sp;
+            z_seq(0,
+                  INT64_MAX,
+                  0,
+                  sp[-1].v);
+            ++ip;
+            break;
+        // x..y,z
+        case OP_SSEQ:
+            z_seq(intval(&sp[-3].v),
+                  intval(&sp[-2].v),
+                  intval(&sp[-1].v),
+                  sp[-3].v);
+            sp -= 2;
+            ++ip;
+            break;
+        // x..,z
+        case OP_SSEQF:
+            z_seq(intval(&sp[-2].v),
+                  INT64_MAX,
+                  intval(&sp[-1].v),
+                  sp[-2].v);
+            --sp;
+            ++ip;
+            break;
+        // ..y,z
+        case OP_SSEQT:
+            z_seq(0,
+                  intval(&sp[-2].v),
+                  intval(&sp[-1].v),
+                  sp[-2].v);
+            --sp;
+            ++ip;
+            break;
+        // ..,z
+        case OP_SSEQE:
+            z_seq(0,
+                  INT64_MAX,
+                  intval(&sp[-1].v),
+                  sp[-1].v);
+            ++ip;
+            break;
+
+        // Simple assignment
+        // copy SP[-1] to *SP[-2] and leave value on stack.
         case OP_SET:
             sp[-2].v = *sp[-2].a = sp[-1].v;
             --sp;
@@ -875,23 +989,3 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     }
     return 0;
 }
-
-#undef j8
-#undef j16
-#undef jc8
-#undef jc16
-#undef xjc8
-#undef xjc16
-#undef unop
-#undef binop
-#undef pre
-#undef post
-#undef cbinop
-#undef imm8
-#undef pushk
-#undef gbla
-#undef gblv
-#undef lcl
-#undef lcla
-#undef lclv
-#undef new_array

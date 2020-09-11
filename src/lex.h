@@ -23,6 +23,7 @@ enum tokens {
     TK_AND = 128, // &&
     TK_CAT,       // ::
     TK_DEC,       // --
+    TK_DOTS,      // ..
     TK_EQ,        // ==
     TK_GE,        // >=
     TK_INC,       // ++

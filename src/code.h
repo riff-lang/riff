@@ -100,6 +100,14 @@ enum opcodes {
     OP_IDXV,    // Index of a set, leaving value on stack
     OP_ARGA,    // Index of the argv, leaving address on stack
     OP_ARGV,    // Index of the argv, leaving value on stack
+    OP_SEQ,     // Sequence: SP[-2]..SP[-1]
+    OP_SEQF,    // Sequence: SP[-1]..INT_MAX
+    OP_SEQT,    // Sequence: 0..SP[-1]
+    OP_SEQE,    // Sequence: .. (empty/infinite)
+    OP_SSEQ,    // Sequence: SP[-3]..SP[-2] w/ interval SP[-1]
+    OP_SSEQF,   // Sequence: SP[-2]..INT_MAX w/ interval SP[-1]
+    OP_SSEQT,   // Sequence: 0..SP[-2] w/ interval SP[-1]
+    OP_SSEQE,   // Sequence: .. (empty/infinite) w/ interval SP[-1]
     OP_SET,     // Assignment
     OP_PRINT1,  // Print value at SP[-1]
     OP_PRINT,   // Print (IP+1) values from stack
@@ -136,6 +144,7 @@ void c_infix(rf_code *, int);
 void c_postfix(rf_code *, int);
 void c_jump(rf_code *, int, int);
 void c_loop(rf_code *, int);
+void c_sequence(rf_code *, int, int, int);
 void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
 int  c_prep_loop(rf_code *, int);

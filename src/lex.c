@@ -46,7 +46,7 @@ static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
 static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     uint64_t i = strtoull(start, &end, base);
-    if (*end == '.') {
+    if (*end == '.' && isdigit(end[1])) {
         if (base != 2)
             return read_flt(x, tk, start, base);
         else
@@ -381,7 +381,14 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                                   '=', TK_POWX, TK_POW, '*');
         case '+': return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
         case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
-        case '.': return isdigit(*x->p) ? read_num(x, tk) : '.';
+        case '.':
+            if (isdigit(*x->p))
+                return read_num(x, tk);
+            else if ((*x->p) == '.') {
+                adv;
+                return TK_DOTS;
+            } else
+                return '.';
         case '/':
             switch (*x->p) {
             case '/': adv; line_comment(x);  break;

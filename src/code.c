@@ -100,6 +100,34 @@ void c_loop(rf_code *c, int l) {
     }
 }
 
+void c_sequence(rf_code *c, int from, int to, int step) {
+    if (step) {
+        if (from) {
+            if (to)
+                push(OP_SSEQ);
+            else
+                push(OP_SSEQF);
+        } else {
+            if (to)
+                push(OP_SSEQT);
+            else
+                push(OP_SSEQE);
+        }
+    } else {
+        if (from) {
+            if (to)
+                push(OP_SEQ);
+            else
+                push(OP_SEQF);
+        } else {
+            if (to)
+                push(OP_SEQT);
+            else
+                push(OP_SEQE);
+        }
+    }
+}
+
 // Overwrite the bytes at location l and l+1 with the distance between
 // the code object's "current" instruction and `l`. Useful for patching
 // forward jumps.

@@ -1,0 +1,15 @@
+"Print 0,1,...,5"
+for i in 0..5 i
+
+"Print 5,4,...,0"
+for i in 5..0 i
+
+"Print 2,4,6,8"
+for i in 2..8,2 i
+
+"Print 0,1,...,5"
+for i in (0..) {
+    i
+    if i == 5
+        break
+}

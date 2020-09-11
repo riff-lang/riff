@@ -8,18 +8,19 @@
 #define TYPE_INT  2
 #define TYPE_FLT  4
 #define TYPE_STR  8
-#define TYPE_ARR  16
-#define TYPE_RFN  32
-#define TYPE_CFN  64
+#define TYPE_SEQ  16
+#define TYPE_ARR  32
+#define TYPE_RFN  64
+#define TYPE_CFN  128
 
 #define is_null(x) ((x)->type & TYPE_NULL)
 #define is_int(x)  ((x)->type & TYPE_INT)
 #define is_flt(x)  ((x)->type & TYPE_FLT)
 #define is_str(x)  ((x)->type & TYPE_STR)
+#define is_seq(x)  ((x)->type & TYPE_SEQ)
 #define is_arr(x)  ((x)->type & TYPE_ARR)
 #define is_rfn(x)  ((x)->type & TYPE_RFN)
 #define is_cfn(x)  ((x)->type & TYPE_CFN)
-
 #define is_num(x)  ((x)->type & (TYPE_INT | TYPE_FLT))
 #define is_fn(x)   ((x)->type & (TYPE_RFN | TYPE_CFN))
 
@@ -32,18 +33,27 @@ typedef struct {
     char     *str;
 } rf_str;
 
+typedef struct {
+    rf_int from;
+    rf_int to;
+    rf_int itvl;
+} rf_seq;
+
 typedef struct rf_arr rf_arr;
 typedef struct rf_fn  rf_fn;
 typedef struct c_fn   c_fn;
 
 typedef struct {
     // Type tag is aligned to the 64-bit boundary to accommodate an
-    // implicit type tag in the VM stack element union typedef.
+    // implicit type tag in the VM stack element. This is necessary
+    // for distinguishing values from addresses on the VM stack for
+    // instructions which operate on both. E.g. array subscripting.
     uint64_t type;
     union {
         rf_flt  f;
         rf_int  i;
         rf_str *s;
+        rf_seq *seq;
         rf_arr *a;
         rf_fn  *fn;
         c_fn   *cfn;
@@ -79,11 +89,12 @@ typedef struct {
         int_arith(l,r,op); \
     }
 
-rf_int    str2int(rf_str *);
-rf_flt    str2flt(rf_str *);
+rf_int     str2int(rf_str *);
+rf_flt     str2flt(rf_str *);
 
-uint32_t  s_hash(const char *);
+uint32_t   s_hash(const char *);
 rf_str    *s_newstr(const char *, size_t, int);
+rf_str    *s_substr(rf_str *, rf_int, rf_int, rf_int);
 rf_str    *s_concat(rf_str *, rf_str *, int);
 rf_str    *s_int2str(rf_int);
 rf_str    *s_flt2str(rf_flt);

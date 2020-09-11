@@ -62,20 +62,21 @@ static void consume(rf_parser *y, int tk, const char *msg) {
 static int lbp(int tk) {
     switch (tk) {
     case '(': case'[':
-    case TK_INC: case TK_DEC:     return 15;
-    case TK_POW:                  return 14;
-    case '*': case '/': case '%': return 12;
-    case '+': case '-':           return 11;
-    case TK_CAT:                  return 10;
-    case TK_SHL: case TK_SHR:     return 10;
-    case '&':                     return 9;
-    case '^':                     return 8;
-    case '|':                     return 7;
+    case TK_INC: case TK_DEC:     return 16;
+    case TK_POW:                  return 15;
+    case '*': case '/': case '%': return 13;
+    case '+': case '-':           return 12;
+    case TK_CAT:                  return 11;
+    case TK_SHL: case TK_SHR:     return 11;
+    case '&':                     return 10;
+    case '^':                     return 9;
+    case '|':                     return 8;
     case '>': case '<':      
-    case TK_GE: case TK_LE:       return 6;
-    case TK_EQ: case TK_NE:       return 5;
-    case TK_AND:                  return 4;
-    case TK_OR:                   return 3;
+    case TK_GE: case TK_LE:       return 7;
+    case TK_EQ: case TK_NE:       return 6;
+    case TK_AND:                  return 5;
+    case TK_OR:                   return 4;
+    case TK_DOTS:                 return 3;
     case '?':                     return 2;
     default:
         return is_asgmt(tk);
@@ -271,6 +272,40 @@ static void anon_fn(rf_parser *y) {
     c_fn_constant(y->c, f);
 }
 
+static int sequence(rf_parser *y, int type) {
+    int e, from, to, step;
+    e    = 0;
+    from = type;
+    to   = 0;
+    step = 0;
+
+    // No `to` bound in sequence?
+    if (y->x->tk.kind == ',') {
+        step = 1;
+        adv;
+        e = expr(y, 0);
+    } else if (y->x->tk.kind == ')' ||
+               y->x->tk.kind == '}' ||
+               y->x->tk.kind == ']') {
+        c_sequence(y->c, from, to, step);
+        return e;
+    }
+
+    // Consume next expr as `to` bound in sequence
+    else {
+        to = 1;
+        expr(y, 0);
+        if (y->x->tk.kind == ',') {
+            step = 1;
+            adv;
+            e = expr(y, 0);
+        } //else
+            //adv;
+    }
+
+    c_sequence(y->c, from, to, step);
+    return e;
+}
 
 static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
@@ -278,7 +313,7 @@ static int nud(rf_parser *y) {
     if (uop(tk)) {
         if (!y->sd) set(ox);
         adv;
-        e = expr(y, 12);
+        e = expr(y, 13);
         c_prefix(y->c, tk);
         return e;
     }
@@ -292,7 +327,7 @@ static int nud(rf_parser *y) {
         unset(rx);
         adv;
         set(argx);
-        expr(y, 16);
+        expr(y, 17);
         if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
             set(ax);
             push(OP_ARGA);
@@ -320,6 +355,12 @@ static int nud(rf_parser *y) {
     case '{':
         adv;
         array(y);
+        break;
+    case TK_DOTS:
+        unset(rx);
+        if (!y->sd) set(ox);
+        adv;
+        e = sequence(y, 0);
         break;
     case TK_INC: case TK_DEC:
         if (adv)
@@ -359,6 +400,12 @@ static int nud(rf_parser *y) {
 
 static int led(rf_parser *y, int p, int tk) {
     switch (tk) {
+    case TK_DOTS:
+        unset(rx);
+        if (!y->sd) set(ox);
+        adv;
+        p = sequence(y, 1);
+        break;
     case TK_INC: case TK_DEC:
         if (is_const(p) || y->rx)
             return p;
@@ -573,6 +620,8 @@ static void add_local(rf_parser *y, rf_str *id) {
 // Returns the arity of the parsed function
 static int compile_fn(rf_parser *y) {
     int arity = 0;
+    uint8_t old_fd = y->fd;
+    y->fd = y->ld;
     if (y->x->tk.kind == '(') {
         adv;
 
@@ -600,6 +649,7 @@ static int compile_fn(rf_parser *y) {
     if (!y->retx)
         push(OP_RET);
     consume(y, '}', "expected '}'");
+    y->fd = old_fd;
     return arity;
 }
 
@@ -854,9 +904,9 @@ static void print_stmt(rf_parser *y) {
         consume(y, ')', "expected ')'");
 }
 
-// TODO
 static void ret_stmt(rf_parser *y) {
-    set(retx); // TODO
+    if (y->ld == y->fd)
+        set(retx);
     if (y->x->tk.kind == ';' || y->x->tk.kind == '}') {
         push(OP_RET);
         return;
@@ -946,6 +996,7 @@ static void y_init(rf_parser *y) {
     y->lcl  = NULL;
 
     y->ld   = 0;
+    y->fd   = 0;
     y->sd   = 0;
     y->loop = 0;
     y->brk  = NULL;
