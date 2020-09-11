@@ -1,8 +1,5 @@
 // Popcount
-// Problem from an old homework where you calculate popcount using
-// only bitwise ops and constants <= 255 (modified for 64 bit ints);
-// Good way to test bitwise ops, compound assignment, and parentheses
-// grouping
+// Count the number of bits set in a given integer
 // x = 5 (0b101) -> 2
 // x = 7 (0b111) -> 3
 
