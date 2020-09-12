@@ -1,14 +1,14 @@
-"Print 0,1,...,5"
-for i in 0..5 i
+"Print 0..5 (standard)"
+for i in ..5 i
 
-"Print 5,4,...,0"
+"Print 5..0 (standard)"
 for i in 5..0 i
 
-"Print 2,4,6,8"
+"Print 2..8 (+2 interval)"
 for i in 2..8,2 i
 
-"Print 0,1,...,5"
-for i in (0..) {
+"Print 0..5 (infinite loop w/ break)"
+for i in (..) {
     i
     if i == 5
         break
