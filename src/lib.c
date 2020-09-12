@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -188,6 +189,25 @@ static int l_hex(rf_val *fp, int argc) {
     return 1;
 }
 
+static int allxcase(rf_val *fp, int c) {
+    size_t len = fp->u.s->l;
+    char str[len + 1];
+    for (int i = 0; i < len; ++i) {
+        str[i] = c ? toupper(fp->u.s->str[i])
+                   : tolower(fp->u.s->str[i]);
+    }
+    str[len] = '\0';
+    assign_str(fp-1, s_newstr(str, len, 0));
+    return 1;
+}
+
+// lower(s)
+static int l_lower(rf_val *fp, int argc) {
+    if (!is_str(fp))
+        return 0;
+    return allxcase(fp, 0);
+}
+
 // split(s[,d])
 // Returns an array with elements being string `s` split on delimiter
 // `d`. The delimiter can be zero or more characters. If no delimiter
@@ -223,6 +243,13 @@ static int l_split(rf_val *fp, int argc) {
     return 1;
 }
 
+// upper(s)
+static int l_upper(rf_val *fp, int argc) {
+    if (!is_str(fp))
+        return 0;
+    return allxcase(fp, 1);
+}
+
 static struct {
     const char *name;
     c_fn        fn;
@@ -245,7 +272,9 @@ static struct {
     { "byte",  { 1, l_byte }  },
     { "char",  { 0, l_char }  },
     { "hex",   { 1, l_hex }   },
+    { "lower", { 1, l_lower } },
     { "split", { 1, l_split } },
+    { "upper", { 1, l_upper } },
     { NULL,    { 0, NULL }    }
 };
 
