@@ -11,12 +11,28 @@
 
 // Arithmetic functions
 
+// abs(x)
+static int l_abs(rf_val *fp, int argc) {
+    // TODO checking for int/flt negatively affected overall performance
+    // if (is_int(fp))
+    //     assign_int(fp-1, llabs(fp->u.i));
+    // else
+        assign_flt(fp-1, fabs(fltval(fp)));
+    return 1;
+}
+
 // atan(y[,x])
 static int l_atan(rf_val *fp, int argc) {
     if (argc == 1)
         assign_flt(fp-1, atan(fltval(fp)));
     else if (argc > 1)
         assign_flt(fp-1, atan2(fltval(fp), fltval(fp+1)));
+    return 1;
+}
+
+// ceil(x)
+static int l_ceil(rf_val *fp, int argc) {
+    assign_int(fp-1, (rf_int) ceil(fltval(fp)));
     return 1;
 }
 
@@ -212,7 +228,9 @@ static struct {
     c_fn        fn;
 } lib_fn[] = {
     // Arithmetic
+    { "abs",   { 1, l_abs }   },
     { "atan",  { 1, l_atan }  },
+    { "ceil",  { 1, l_ceil }  },
     { "cos",   { 1, l_cos }   },
     { "exp",   { 1, l_exp }   },
     { "int",   { 1, l_int }   },
