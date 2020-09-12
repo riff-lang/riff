@@ -31,6 +31,11 @@ rf_str *s_substr(rf_str *s, rf_int from, rf_int to, rf_int itvl) {
     from = from > sl ? sl : from < 0 ? 0 : from;
     to   = to   > sl ? sl : to   < 0 ? 0 : to;
 
+    size_t len;
+    if (itvl > 0)
+        len = (size_t) (to - from) + 1;
+    else
+        len = (size_t) (from - to) + 1;
     // Disallow contradicting directions. E.g. negative intervals when
     // from > to. Infer the direction from the from/to range and
     // override the provided interval with its negative value.
@@ -38,7 +43,6 @@ rf_str *s_substr(rf_str *s, rf_int from, rf_int to, rf_int itvl) {
         (from > to && itvl > -1))
         itvl = -itvl;
 
-    size_t len = (size_t) llabs(to - from) + 1;
     len = (size_t) ceil(fabs(len / (double) itvl));
     char *str = malloc(len * sizeof(char) + 1);
     for (size_t i = 0; i <= len; ++i) {
