@@ -785,18 +785,21 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // Perform the lookup and leave the corresponding element's
         // rf_val address on the stack.
         case OP_IDXA:
-            if (sp[-2].t <= TYPE_CFN) {
-                err("invalid assignment");
-            }
 
-            switch (sp[-2].a->type) {
+            // Accomodate OP_IDXA calls when SP-2 is a raw value
+            if (sp[-2].t <= TYPE_CFN)
+                tp = &sp[-2].v;
+            else
+                tp = sp[-2].a;
+
+            switch (tp->type) {
 
             // Create array if sp[-2].a is an uninitialized variable
             case TYPE_NULL:
-                *sp[-2].a = *v_newarr();
+                *tp = *v_newarr();
                 // Fall-through
             case TYPE_ARR:
-                sp[-2].a = a_lookup(sp[-2].a->u.a, &sp[-1].v, 1, 0);
+                sp[-2].a = a_lookup(tp->u.a, &sp[-1].v, 1, 0);
                 break;
 
             // TODO?
