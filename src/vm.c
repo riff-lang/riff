@@ -215,7 +215,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     }
     case TYPE_STR: {
         if (is_seq(r)) {
-            assign_str(l, s_substr(l->u.s, r->u.seq->from, r->u.seq->to, r->u.seq->itvl));
+            assign_str(l, s_substr(l->u.s, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {
             rf_int r1 = intval(r);
             if (r1 > l->u.s->l - 1 || r1 < 0)
@@ -251,7 +251,7 @@ static inline void z_print(rf_val *v) {
     case TYPE_STR:  printf("%s", v->u.s->str);   break;
     case TYPE_SEQ:
         printf("seq: %lld..%lld,%lld",
-                v->u.seq->from, v->u.seq->to, v->u.seq->itvl);
+                v->u.q->from, v->u.q->to, v->u.q->itvl);
         break;
     case TYPE_ARR:  printf("array: %p", v->u.a); break;
     case TYPE_RFN:  printf("fn: %p", v->u.fn);   break;
@@ -300,13 +300,13 @@ static inline void new_iter(rf_val *set) {
     case TYPE_SEQ:
         iter->keys = NULL;
         iter->t = LOOP_SEQ;
-        iter->set.itvl = set->u.seq->itvl;
+        iter->set.itvl = set->u.q->itvl;
         if (iter->set.itvl > 0)
-            iter->n = (set->u.seq->to - set->u.seq->from) + 1;
+            iter->n = (set->u.q->to - set->u.q->from) + 1;
         else
-            iter->n = (set->u.seq->from - set->u.seq->to) + 1;
+            iter->n = (set->u.q->from - set->u.q->to) + 1;
         iter->n = (rf_int) ceil(fabs(iter->n / (double) iter->set.itvl));
-        iter->st = set->u.seq->from;
+        iter->st = set->u.q->from;
         break;
     case TYPE_ARR:
         iter->t = LOOP_ARR;
@@ -883,7 +883,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     rf_int to   = seq->to = (t); \
     rf_int itvl = (i); \
     seq->itvl   = itvl ? itvl : from > to ? -1 : 1; \
-    s = (rf_val) {TYPE_SEQ, .u.seq = seq}; \
+    s = (rf_val) {TYPE_SEQ, .u.q = seq}; \
 }
         // x..y
         case OP_SEQ:

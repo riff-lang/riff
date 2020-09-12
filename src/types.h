@@ -53,7 +53,7 @@ typedef struct {
         rf_flt  f;
         rf_int  i;
         rf_str *s;
-        rf_seq *seq;
+        rf_seq *q;
         rf_arr *a;
         rf_fn  *fn;
         c_fn   *cfn;
