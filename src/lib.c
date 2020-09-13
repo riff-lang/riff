@@ -14,10 +14,9 @@
 
 // abs(x)
 static int l_abs(rf_val *fp, int argc) {
-    // TODO checking for int/flt negatively affected overall performance
-    // if (is_int(fp))
-    //     assign_int(fp-1, llabs(fp->u.i));
-    // else
+    if (is_int(fp))
+        assign_int(fp-1, llabs(fp->u.i));
+    else
         assign_flt(fp-1, fabs(fltval(fp)));
     return 1;
 }
