@@ -29,7 +29,7 @@ typedef struct rf_iter rf_iter;
 struct rf_iter {
     rf_iter  *p;    // Previous loop iterator
     int       t;    // Loop type
-    rf_int    n;    // Control var
+    uint64_t  n;    // Control var
     rf_int    on;   // Saved control var for freeing keys allocation
     rf_int    st;   // Start (for sequences)
     rf_val   *k;    // Stack slot for `k` in `[k,]v`

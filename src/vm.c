@@ -302,10 +302,13 @@ static inline void new_iter(rf_val *set) {
         iter->t = LOOP_SEQ;
         iter->set.itvl = set->u.q->itvl;
         if (iter->set.itvl > 0)
-            iter->n = (set->u.q->to - set->u.q->from) + 1;
+            iter->on = (set->u.q->to - set->u.q->from) + 1;
         else
-            iter->n = (set->u.q->from - set->u.q->to) + 1;
-        iter->n = (rf_int) ceil(fabs(iter->n / (double) iter->set.itvl));
+            iter->on = (set->u.q->from - set->u.q->to) + 1;
+        if (iter->on <= 0)
+            iter->n = UINT64_MAX; // TODO "Infinite" loop
+        else
+            iter->n = (uint64_t) ceil(fabs(iter->on / (double) iter->set.itvl));
         iter->st = set->u.q->from;
         break;
     case TYPE_ARR:
