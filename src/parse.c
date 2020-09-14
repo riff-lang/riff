@@ -272,6 +272,8 @@ static void anon_fn(rf_parser *y) {
     c_fn_constant(y->c, f);
 }
 
+// type = 1 if called from led()
+// type = 0 if called from nud()
 static int sequence(rf_parser *y, int type) {
     int e, from, to, step;
     e    = 0;
@@ -279,8 +281,8 @@ static int sequence(rf_parser *y, int type) {
     to   = 0;
     step = 0;
 
-    // No `to` bound in sequence?
-    if (y->x->tk.kind == ',') {
+    // No upper bound provided?
+    if (y->x->tk.kind == ':') {
         step = 1;
         adv;
         e = expr(y, 0);
@@ -291,16 +293,15 @@ static int sequence(rf_parser *y, int type) {
         return e;
     }
 
-    // Consume next expr as `to` bound in sequence
+    // Consume next expr as upper bound in sequence
     else {
         to = 1;
         expr(y, 0);
-        if (y->x->tk.kind == ',') {
+        if (y->x->tk.kind == ':') {
             step = 1;
             adv;
             e = expr(y, 0);
-        } //else
-            //adv;
+        }
     }
 
     c_sequence(y->c, from, to, step);
