@@ -1,3 +1,4 @@
+# Change this to change where `make install` places the `riff` executable
 LOC     = /usr/local/bin
 
 CFLAGS  = -O3
@@ -24,18 +25,28 @@ SRC    += src/str.c
 SRC    += src/val.c
 SRC    += src/vm.c
 
-.PHONY: all compile install mem warn
+TESTS   = test/arithmetic.bats
+TESTS  += test/bitwise.bats
+
+.PHONY: all clean compile install mem test warn
 
 all: compile
 
-compile:
-	$(CC) $(CFLAGS) $(SRC)
+compile: clean
+	mkdir dist
+	$(CC) $(CFLAGS) $(SRC) -o dist/riff
+
+clean:
+	rm -rf dist
 
 install: compile
-	install a.out $(LOC)/riff
+	install dist/riff $(LOC)/riff
 
 mem:
 	$(CC) $(MFLAGS) $(SRC)
+
+test: compile
+	bats -p $(TESTS)
 
 warn:
 	$(CC) $(CFLAGS) $(WFLAGS) $(SRC)
