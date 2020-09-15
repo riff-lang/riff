@@ -210,21 +210,6 @@ static void logical(rf_parser *y, int tk) {
     c_patch(y->c, l1);
 }
 
-// Retrieve index of a set (string/array, but works for numbers as well)
-static void subscript(rf_parser *y) {
-    y->sd++;
-    int rx = y->rx; // Save flag
-    unset(rx);      // Unset
-    expr(y, 0);
-    consume(y, ']', "expected ']' following subscript expression");
-    if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind))
-        push(OP_IDXA);
-    else
-        push(OP_IDXV);
-    y->rx = rx;     // Restore flag
-    y->sd--;
-}
-
 static int expr_list(rf_parser *y, int c) {
     int n = 0;
     while (y->x->tk.kind != c) {
@@ -239,6 +224,18 @@ static int expr_list(rf_parser *y, int c) {
             break;
     }
     return n;
+}
+
+// Retrieve index of a set (string/array, but works for numbers as well)
+static void subscript(rf_parser *y) {
+    y->sd++;
+    int rx = y->rx; // Save flag
+    unset(rx);      // Unset
+    int n = expr_list(y, ']');
+    consume(y, ']', "expected ']' following subscript expression");
+    c_index(y->c, n, rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || y->x->tk.kind == '[');
+    y->rx = rx;     // Restore flag
+    y->sd--;
 }
 
 static void call(rf_parser *y) {

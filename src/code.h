@@ -96,8 +96,10 @@ enum opcodes {
     OP_ARRAY0,  // Create empty array
     OP_ARRAY,   // Create array of the top (IP+1) stack elements
     OP_ARRAYK,  // Create array of the top K[IP+1] stack elements
-    OP_IDXA,    // Index of a set, leaving address on stack
-    OP_IDXV,    // Index of a set, leaving value on stack
+    OP_IDXA,    // Index of a set, leaving address on stack (nD array)
+    OP_IDXA1,   // Index of a set, leaving address on stack
+    OP_IDXV,    // Index of a set, leaving value on stack (nD array)
+    OP_IDXV1,   // Index of a set, leaving value on stack
     OP_ARGA,    // Index of the argv, leaving address on stack
     OP_ARGV,    // Index of the argv, leaving value on stack
     OP_SEQ,     // Sequence: SP[-2]..SP[-1]
@@ -139,6 +141,7 @@ void c_constant(rf_code *, rf_token *);
 void c_global(rf_code *, rf_token *, int);
 void c_local(rf_code *, int, int);
 void c_array(rf_code *, int);
+void c_index(rf_code *, int, int);
 void c_prefix(rf_code *, int);
 void c_infix(rf_code *, int);
 void c_postfix(rf_code *, int);

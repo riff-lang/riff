@@ -784,10 +784,72 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             ip += 2;
             break;
 
+        case OP_IDXV:
+            for (int i = -ip[1] - 1; i < -1; ++i) {
+                if (sp[i].t <= TYPE_CFN) {
+                    z_idx(&sp[i].v, &sp[i+1].v);
+                    sp[i+1].v = sp[i].v;
+                    continue;
+                }
+                switch (sp[i].a->type) {
+
+                // Create array if sp[-2].a is an uninitialized variable
+                case TYPE_NULL:
+                    *sp[i+1].a = *v_newarr();
+                    // Fall-through
+                case TYPE_ARR:
+                    sp[i+1].v = *a_lookup(sp[i].a->u.a, &sp[i+1].v, 0, 0);
+                    break;
+
+                // Dereference and call z_idx().
+                case TYPE_INT: case TYPE_FLT:
+                case TYPE_STR: case TYPE_RFN:
+                    sp[i].v = *sp[-i].a;
+                    z_idx(&sp[i].v, &sp[i+1].v);
+                    sp[i+1].v = sp[i].v;
+                    break;
+                case TYPE_CFN:
+                    err("attempt to subscript a C function");
+                default:
+                    break;
+                }
+            }
+            sp -= ip[1];
+            sp[-1].v = sp[ip[1] - 1].v;
+            ip += 2;
+            break;
+
+        case OP_IDXA:
+            for (int i = -ip[1] - 1; i < -1; ++i) {
+                if (sp[i].t <= TYPE_CFN)
+                    tp = &sp[i].v;
+                else
+                    tp = sp[i].a;
+
+                switch (tp->type) {
+
+                // Create array if sp[i].a is an uninitialized variable
+                case TYPE_NULL:
+                    *tp = *v_newarr();
+                    // Fall-through
+                case TYPE_ARR:
+                    sp[i+1].a = a_lookup(tp->u.a, &sp[i+1].v, 1, 0);
+                    break;
+
+                // IDXA is invalid for all other types
+                default:
+                    err("invalid assignment");
+                }
+            }
+            sp -= ip[1];
+            sp[-1].a = sp[ip[1] - 1].a;
+            ip += 2;
+            break;
+
         // IDXA
         // Perform the lookup and leave the corresponding element's
         // rf_val address on the stack.
-        case OP_IDXA:
+        case OP_IDXA1:
 
             // Accomodate OP_IDXA calls when SP-2 is a raw value
             if (sp[-2].t <= TYPE_CFN)
@@ -805,7 +867,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 sp[-2].a = a_lookup(tp->u.a, &sp[-1].v, 1, 0);
                 break;
 
-            // TODO?
             // IDXA is invalid for all other types
             default:
                 err("invalid assignment");
@@ -817,7 +878,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // IDXV
         // Perform the lookup and leave a copy of the corresponding
         // element's value on the stack.
-        case OP_IDXV:
+        case OP_IDXV1:
 
             // All expressions e.g. x[y] are compiled to push the
             // address of the identifier being subscripted. However

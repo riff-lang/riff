@@ -346,6 +346,23 @@ void c_array(rf_code *c, int n) {
     }
 }
 
+void c_index(rf_code *c, int n, int type) {
+    if (n == 1) {
+        if (type)
+            push(OP_IDXA1);
+        else
+            push(OP_IDXV1);
+    } else {
+        if (type) {
+            push(OP_IDXA);
+            push((uint8_t) n);
+        } else {
+            push(OP_IDXV);
+            push((uint8_t) n);
+        }
+    }
+}
+
 // TODO this function will be used to evaluate infix expression
 // "nodes" and fold constants if possible.
 void c_infix(rf_code *c, int op) {

@@ -19,22 +19,22 @@ while j b[--j]      // Print the elements in b (reverse order)
 // 2D array
 m = {
     { 3, 7, 6, 8 },
-    { 0x.d, 0b1101, 0xdd, 28 }
+    { 0x.a, 0b1001, 0xdd, 28 }
 }
 
 m[0]                // prints "array: <location in memory>"
 m[1]
 m[0][3]             // prints 8
-m[1][0]             // prints 0.8125
+m[1,0]              // prints 0.625 (equivalent to m[1][0])
 
 // Array holding anonymous functions
 ops = {
-    fn () { "anonymous fn in array" },
-    fn () { r[w] = y                     ip += 3 },
-    fn () { s[si++] = x                  ip += 2 },
-    fn () { r[w] = s[si] delete(s[si--]) ip += 2 },
-    fn () { r[w] = y == z                ip += 4 },
-    fn () { r[w] = y >  z                ip += 4 }
+    fn { "anonymous fn in array" },
+    fn { r[w] = y                     ip += 3 },
+    fn { s[si++] = x                  ip += 2 },
+    fn { r[w] = s[si] delete(s[si--]) ip += 2 },
+    fn { r[w] = y == z                ip += 4 },
+    fn { r[w] = y >  z                ip += 4 }
 }
 
 ops[0]()
