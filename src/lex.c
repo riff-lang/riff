@@ -46,11 +46,10 @@ static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
 static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     uint64_t i = strtoull(start, &end, base);
-    if (*end == '.' && isdigit(end[1])) {
-        if (base != 2)
+    if (*end == '.') {
+        if ((base == 10 && isdigit(end[1])) ||
+            (base == 16 && isxdigit(end[1])))
             return read_flt(x, tk, start, base);
-        else
-            err(x, "invalid numeral");
     }
 
     // Interpret as float if base-10 int exceeds INT64_MAX, or if
