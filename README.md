@@ -17,7 +17,7 @@ syntax.
 ## Usage
 
 Running `make` in the root directory of the repository will compile
-the source code and create an executable named `a.out`.
+the source code and place the executable in `dist/riff`.
 
 Running `make install` will compile the source code and place the
 executable at `/usr/local/bin/riff`
