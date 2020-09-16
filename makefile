@@ -25,15 +25,15 @@ SRC    += src/str.c
 SRC    += src/val.c
 SRC    += src/vm.c
 
-TESTS   = test/arithmetic.bats
-TESTS  += test/bitwise.bats
+TESTS   = test/expressions.bats
+TESTS  += test/literals.bats
 
 .PHONY: all clean compile install mem test warn
 
 all: compile
 
-compile: clean
-	mkdir dist
+compile:
+	mkdir -p dist
 	$(CC) $(CFLAGS) $(SRC) -o dist/riff
 
 clean:
