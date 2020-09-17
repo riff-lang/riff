@@ -24,6 +24,7 @@
 static int  expr(rf_parser *y, int rbp);
 static void stmt_list(rf_parser *);
 static void stmt(rf_parser *);
+static void add_local(rf_parser *, rf_str *);
 static int  compile_fn(rf_parser *y);
 static void y_init(rf_parser *y);
 
@@ -265,6 +266,7 @@ static void anon_fn(rf_parser *y) {
     fy.x = y->x;
     fy.c = f->code;
     y_init(&fy);
+    add_local(&fy, name);   // Dummy reference to itself
     f->arity = compile_fn(&fy);
     c_fn_constant(y->c, f);
 }
@@ -619,7 +621,7 @@ static void add_local(rf_parser *y, rf_str *id) {
 static int compile_fn(rf_parser *y) {
     int arity = 0;
     uint8_t old_fd = y->fd;
-    y->fd = y->ld;
+    y->fd = ++y->ld;
     if (y->x->tk.kind == '(') {
         adv;
 
@@ -648,6 +650,7 @@ static int compile_fn(rf_parser *y) {
         push(OP_RET);
     consume(y, '}', "expected '}'");
     y->fd = old_fd;
+    --y->ld;
     return arity;
 }
 
