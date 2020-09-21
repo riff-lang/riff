@@ -34,6 +34,7 @@ static inline int test(rf_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
     case TYPE_FLT: return !!(v->u.f);
+
     // If entire string is a numeric value, return logical result of
     // the number. Otherwise, return whether the string is longer than
     // 0.
@@ -117,12 +118,12 @@ static inline void z_not(rf_val *v) {
     assign_int(v, ~intval(v));
 }
 
-static inline void z_eq(rf_val *l, rf_val *r) { num_arith(l,r,==); }
-static inline void z_ne(rf_val *l, rf_val *r) { num_arith(l,r,!=); }
-static inline void z_gt(rf_val *l, rf_val *r) { num_arith(l,r,>);  }
-static inline void z_ge(rf_val *l, rf_val *r) { num_arith(l,r,>=); }
-static inline void z_lt(rf_val *l, rf_val *r) { num_arith(l,r,<);  }
-static inline void z_le(rf_val *l, rf_val *r) { num_arith(l,r,<=); }
+static inline void z_eq(rf_val *l, rf_val *r) { cmp_eq(l,r,==); }
+static inline void z_ne(rf_val *l, rf_val *r) { cmp_eq(l,r,!=); }
+static inline void z_gt(rf_val *l, rf_val *r) { cmp_rel(l,r,>);  }
+static inline void z_ge(rf_val *l, rf_val *r) { cmp_rel(l,r,>=); }
+static inline void z_lt(rf_val *l, rf_val *r) { cmp_rel(l,r,<);  }
+static inline void z_le(rf_val *l, rf_val *r) { cmp_rel(l,r,<=); }
 
 static inline void z_lnot(rf_val *v) {
     assign_int(v, !test(v));
@@ -131,6 +132,7 @@ static inline void z_lnot(rf_val *v) {
 static inline void z_len(rf_val *v) {
     rf_int l = 0;
     switch (v->type) {
+
     // For integers:
     //   #x = ⌊log10(x)⌋  + 1 for x > 0
     //        ⌊log10(-x)⌋ + 2 for x < 0
@@ -138,6 +140,7 @@ static inline void z_len(rf_val *v) {
         l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
             v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
         break;
+
     // TODO? defer to TYPE_INT behavior if v->u.f == (int) v->u.f
     case TYPE_FLT: {
         rf_str *fs = s_flt2str(v->u.f);

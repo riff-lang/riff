@@ -89,6 +89,30 @@ typedef struct {
         int_arith(l,r,op); \
     }
 
+#define cmp_eq(l,r,op) \
+    if (( is_null(l) && !is_null(r)) || \
+        (!is_null(l) &&  is_null(r))) { \
+        assign_int(l, !(0 op 0)); \
+    } else if (is_str(l) && is_str(r)) { \
+        if (!l->u.s->hash) l->u.s->hash = s_hash(l->u.s->str); \
+        if (!r->u.s->hash) r->u.s->hash = s_hash(r->u.s->str); \
+        assign_int(l, (l->u.s->hash op r->u.s->hash)); \
+    } else { \
+        num_arith(l,r,op); \
+    }
+
+#define cmp_rel(l,r,op) \
+    if (( is_null(l) && !is_null(r)) || \
+        (!is_null(l) &&  is_null(r))) { \
+        assign_int(l, !(0 op 0)); \
+    } else if (is_str(l) && is_str(r)) { \
+        if (!l->u.s->hash) l->u.s->hash = s_hash(l->u.s->str); \
+        if (!r->u.s->hash) r->u.s->hash = s_hash(r->u.s->str); \
+        assign_int(l, (l->u.s->hash op r->u.s->hash)); \
+    } else { \
+        num_arith(l,r,op); \
+    }
+
 rf_int     str2int(rf_str *);
 rf_flt     str2flt(rf_str *);
 

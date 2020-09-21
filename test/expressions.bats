@@ -30,5 +30,76 @@
 @test "Logical operations" {
 }
 
-@test "Relational operations" {
+@test "null != zero" {
+    run dist/riff 'null==0'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null==0.0'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null=="0"'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null=="0.0"'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null!=0'
+    [ "$output" -eq 1 ]
+
+    run dist/riff 'null!=0.0'
+    [ "$output" -eq 1 ]
+
+    run dist/riff 'null!="0"'
+    [ "$output" -eq 1 ]
+
+    run dist/riff 'null!="0.0"'
+    [ "$output" -eq 1 ]
+}
+
+@test "null != the empty string" {
+    run dist/riff 'null==""'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null!=""'
+    [ "$output" -eq 1 ]
+}
+
+@test "Empty string != zero" {
+    run dist/riff '""==0'
+    [ "$output" -eq 0 ]
+
+    run dist/riff '""==0.0'
+    [ "$output" -eq 0 ]
+
+    run dist/riff '""=="0"'
+    [ "$output" -eq 0 ]
+
+    run dist/riff '""=="0.0"'
+    [ "$output" -eq 0 ]
+
+    run dist/riff '""!=0'
+    [ "$output" -eq 1 ]
+
+    run dist/riff '""!=0.0'
+    [ "$output" -eq 1 ]
+
+    run dist/riff '""!="0"'
+    [ "$output" -eq 1 ]
+
+    run dist/riff '""!="0.0"'
+    [ "$output" -eq 1 ]
+}
+
+@test "String equality" {
+    run dist/riff '"hello"=="world"'
+    [ "$output" -eq 0 ]
+
+    run dist/riff '"hello"=="hello"'
+    [ "$output" -eq 1 ]
+
+    run dist/riff '"hello"!="world"'
+    [ "$output" -eq 1 ]
+
+    run dist/riff '"hello"!="hello"'
+    [ "$output" -eq 0 ]
 }
