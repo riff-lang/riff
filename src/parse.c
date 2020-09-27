@@ -980,6 +980,9 @@ static void stmt(rf_parser *y) {
     case TK_WHILE:  adv; while_stmt(y); break;
     default:             expr_stmt(y);  break;
     }
+
+    // Skip token if semicolon used as a statement terminator
+    if (y->x->tk.kind == ';') adv;
 }
 
 static void stmt_list(rf_parser *y) {
