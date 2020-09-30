@@ -56,7 +56,7 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
 
 // Given a string's hash, return index of the element if it exists in the
 // table, or an index of a suitble empty slot
-static int index(entry_t **e, int cap, uint32_t hash) {
+static int h_index(entry_t **e, int cap, uint32_t hash) {
     cap -= 1;
     int i = hash & cap;
     while (e[i] && e[i]->key->hash != hash) {
@@ -68,7 +68,7 @@ static int index(entry_t **e, int cap, uint32_t hash) {
 static int exists(hash_t *h, rf_str *k) {
     if (!k->hash)
         k->hash = s_hash(k->str);
-    int i = index(h->e, h->cap, k->hash);
+    int i = h_index(h->e, h->cap, k->hash);
     return h->e[i] && h->e[i]->key->hash == k->hash;
 }
 
@@ -79,7 +79,7 @@ rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
         return h_insert(h, k, v_newnull(), set);
     if (!k->hash)
         k->hash = s_hash(k->str);
-    int i = index(h->e, h->cap, k->hash);
+    int i = h_index(h->e, h->cap, k->hash);
     if (!h->e[i])
         return h_insert(h, k, v_newnull(), set);
     return h->e[i]->val;
@@ -104,7 +104,7 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
                 if (!h->e[i]) {
                     continue;
                 } else {
-                    j = index(new_e, new_cap, h->e[i]->key->hash);
+                    j = h_index(new_e, new_cap, h->e[i]->key->hash);
                     new_e[j] = h->e[i];
                     ++new_an;
                     --old_an;
@@ -119,7 +119,7 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
         h->an  = new_an;
         h->cap = new_cap;
     }
-    int i = index(h->e, h->cap, k->hash);
+    int i = h_index(h->e, h->cap, k->hash);
     if (!exists(h, k)) {
         free(h->e[i]);
         h->e[i] = new_entry(k, v);
@@ -138,7 +138,7 @@ rf_val *h_delete(hash_t *h, rf_str *k) {
         return NULL;
     if (!k->hash)
         k->hash = s_hash(k->str);
-    int idx = index(h->e, h->cap, k->hash);
+    int idx = h_index(h->e, h->cap, k->hash);
     rf_val *v = h->e[idx]->val;
     h->an--;
     if (!is_null(v))

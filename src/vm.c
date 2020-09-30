@@ -378,8 +378,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     register uint8_t *ip = c->code;
     while (1) {
         switch (*ip) {
-            if ((sp - stack) >= STACK_SIZE - 1)
-                err("stack limit reached");
 
 // Unconditional jumps
 #define j8  (ip += (int8_t) ip[1])
