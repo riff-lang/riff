@@ -3,6 +3,8 @@ LOC     = /usr/local/bin
 
 CFLAGS  = -O3
 
+LDFLAGS = -lm
+
 MFLAGS  = -O0
 MFLAGS += -fsanitize=address
 MFLAGS += -fsanitize-address-use-after-scope
@@ -34,7 +36,7 @@ all: compile
 
 compile:
 	mkdir -p dist
-	$(CC) $(CFLAGS) $(SRC) -o dist/riff
+	$(CC) $(CFLAGS) $(SRC) -o dist/riff $(LDFLAGS)
 
 clean:
 	rm -rf dist
