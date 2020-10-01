@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,9 +72,9 @@ rf_str *s_concat(rf_str *l, rf_str *r, int h) {
 }
 
 rf_str *s_int2str(rf_int i) {
-    size_t len = snprintf(NULL, 0, "%lld", i);
+    size_t len = snprintf(NULL, 0, "%"PRId64, i);
     char buf[len + 1];
-    snprintf(buf, len + 1, "%lld", i);
+    snprintf(buf, len + 1, "%"PRId64, i);
     return s_newstr(buf, len, 0);
 }
 

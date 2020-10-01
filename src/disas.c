@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -160,7 +161,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "%g", OPND(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "%lld", OPND(i));
+                    sprintf(s, "%"PRId64, OPND(i));
                     break;
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND(s->str));
@@ -208,7 +209,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "%g", OPND0(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "%lld", OPND0(i));
+                    sprintf(s, "%"PRId64, OPND0(i));
                     break;
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND0(s->str));
@@ -227,7 +228,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "%g", OPND1(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "%lld", OPND1(i));
+                    sprintf(s, "%"PRId64, OPND1(i));
                     break;
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND1(s->str));
@@ -246,7 +247,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                     sprintf(s, "%g", OPND2(f));
                     break;
                 case TYPE_INT:
-                    sprintf(s, "%lld", OPND2(i));
+                    sprintf(s, "%"PRId64, OPND2(i));
                     break;
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND2(s->str));
@@ -347,13 +348,13 @@ static void tk2str(rf_token *tk, char *s) {
     else {
         switch(tk->kind) {
         case TK_NULL:
-            sprintf(s, "<null");
+            sprintf(s, "<null>");
             break;
         case TK_FLT:
             sprintf(s, "<Float, %f (0x%a)>", tk->lexeme.f, tk->lexeme.f);
             break;
         case TK_INT:
-            sprintf(s, "<Int, %lld (0x%llx)>", tk->lexeme.i, tk->lexeme.i);
+            sprintf(s, "<Int, %"PRId64" (0x%"PRIx64")>", tk->lexeme.i, tk->lexeme.i);
             break;
         case TK_STR:
             sprintf(s, "<String (%zu, 0x%x), %s>", tk->lexeme.s->l,

@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,9 +182,9 @@ static int l_char(rf_val *fp, int argc) {
 //   hex(255) -> "0xff"
 static int l_hex(rf_val *fp, int argc) {
     rf_int i = intval(fp);
-    size_t len = snprintf(NULL, 0, "0x%llx", i);
+    size_t len = snprintf(NULL, 0, "0x%"PRIx64, i);
     char buf[len + 1];
-    snprintf(buf, len + 1, "0x%llx", i);
+    snprintf(buf, len + 1, "0x%"PRIx64, i);
     assign_str(fp-1, s_newstr(buf, len, 0));
     return 1;
 }

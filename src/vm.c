@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -249,11 +250,11 @@ static inline void z_idx(rf_val *l, rf_val *r) {
 static inline void z_print(rf_val *v) {
     switch (v->type) {
     case TYPE_NULL: printf("null");              break;
-    case TYPE_INT:  printf("%lld", v->u.i);      break;
+    case TYPE_INT:  printf("%"PRId64, v->u.i);   break;
     case TYPE_FLT:  printf("%g", v->u.f);        break;
     case TYPE_STR:  printf("%s", v->u.s->str);   break;
     case TYPE_SEQ:
-        printf("seq: %lld..%lld,%lld",
+        printf("seq: %"PRId64"..%"PRId64":%"PRId64,
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
         break;
     case TYPE_ARR:  printf("array: %p", v->u.a); break;
