@@ -20,12 +20,12 @@ static rf_int    aos;
 static rf_iter  *iter;
 static rf_stack  stack[STACK_SIZE];
 
-rf_int str2int(rf_str *s) {
+inline rf_int str2int(rf_str *s) {
     char *end;
     return (rf_int) strtoull(s->str, &end, 0);
 }
 
-rf_flt str2flt(rf_str *s) {
+inline rf_flt str2flt(rf_str *s) {
     char *end;
     return strtod(s->str, &end);
 }

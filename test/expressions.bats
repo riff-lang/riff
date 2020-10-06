@@ -103,3 +103,23 @@
     run dist/riff '"hello"!="hello"'
     [ "$output" -eq 0 ]
 }
+
+@test "Relational ops w/ mismatched types" {
+    run dist/riff '"1.0">1'
+    [ "$output" -eq 0 ]
+
+    run dist/riff '"1.0">=1'
+    [ "$output" -eq 1 ]
+
+    run dist/riff 'null>0'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null>=0'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null>=""'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null>""'
+    [ "$output" -eq 0 ]
+}
