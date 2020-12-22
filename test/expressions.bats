@@ -115,11 +115,17 @@
     [ "$output" -eq 0 ]
 
     run dist/riff 'null>=0'
-    [ "$output" -eq 0 ]
+    [ "$output" -eq 1 ]
 
     run dist/riff 'null>=""'
-    [ "$output" -eq 0 ]
+    [ "$output" -eq 1 ]
 
     run dist/riff 'null>""'
     [ "$output" -eq 0 ]
+
+    run dist/riff 'null>1'
+    [ "$output" -eq 0 ]
+
+    run dist/riff 'null<1'
+    [ "$output" -eq 1 ]
 }
