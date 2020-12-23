@@ -91,7 +91,7 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
     }
     if (k < a->cap ||
         (potential_lf(a->an, a->cap, k) >= MIN_LOAD_FACTOR)) {
-        return a_insert_int(a, k, v_newnull(), set, 1);
+        return a_insert_int(a, k, v_newnull(), set, 0);
     } else {
         rf_str *ik = s_int2str(k);
         rf_val *v  = h_lookup(a->h, ik, set);
@@ -181,13 +181,13 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
     if (set) set(lx);
     double lf = potential_lf(a->an, a->cap, k);
     if (force || (lf >= MIN_LOAD_FACTOR)) {
-        if (a->cap <= a->an || a->cap <= k) {
+        if (a->cap <= k) {
             set(lx);
             int oc = a->cap;
             int nc = force ? k + 1 : new_size(a->an, a->cap, k);
             // TODO the hackiest hack that ever hacked - maybe keep
             // track of integer keys in the hash part instead
-            nc += !force * h_length(a->h);
+            nc += (!force * h_length(a->h)) + 1;
             a->v = realloc(a->v, sizeof(rf_val *) * nc);
 
             // Collect valid integer keys from the hash part and move
@@ -206,7 +206,7 @@ rf_val *a_insert_int(rf_arr *a, rf_int k, rf_val *v, int set, int force) {
             *nv     = *v;
             a->v[k] = nv;
             a->an++;
-            if (set || !is_null(v))
+            if (set && !is_null(v))
                 a->n++;
         } else {
             *a->v[k] = *v;

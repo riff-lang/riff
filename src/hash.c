@@ -100,7 +100,7 @@ rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
         int old_an = h->an;
         int j;
         if (old_an) {
-            for (int i = 0; old_an || i < h->cap; i++) {
+            for (int i = 0; old_an && (i < h->cap); i++) {
                 if (!h->e[i]) {
                     continue;
                 } else {
@@ -143,7 +143,7 @@ rf_val *h_delete(hash_t *h, rf_str *k) {
     h->an--;
     if (!is_null(v))
         h->n--;
-    free(h->e[idx]->key);
+    m_freestr(h->e[idx]->key);
     h->e[idx] = NULL;
     return v;
 }
