@@ -1,4 +1,7 @@
 *.out
 *.out.*
 tags
-/dist
+/bin
+*.dSYM
+*.prof
+*.profraw
