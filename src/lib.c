@@ -175,6 +175,70 @@ static int l_char(rf_val *fp, int argc) {
     return 1;
 }
 
+// fmt(...)
+// Riff's `sprintf()` implementation. Doubles as `printf()` due to the
+// implicit printing functionality of the language.
+//
+// Optional modifiers (zero or more):
+//   -              | Left-justified conversion
+//   <space>        | Space-padded conversion (ignored if left-justified)
+//   0              | Zero-padded conversion (ignored if left-justified)
+//   <integer> / *  | Minimum field width
+//   .              | Precision specifier
+//
+// Format specifiers:
+//   %              | Literal `%`
+//   a / A          | Hex float (exp notation; lowercase/uppercase)
+//   b              | Binary integer
+//   c              | Single character
+//   d / i          | Decimal integer
+//   e / E          | Decimal float (exp notation)
+//   f              | Decimal float
+//   g              | e or f conversion (whichever is shorter)
+//   o              | Octal integer
+//   s              | String
+//   x / X          | Hex integer (lowercase/uppercase)
+// static int l_fmt(rf_val *fp, int argc) {
+//     if (!is_str(fp))
+//         return 0;
+//     char *buf = NULL;
+//     int c, n, cap;
+//     n = 0;
+//     cap = 0;
+//     const char *fstr = fp->u.s->str;
+//     int left  = 0;  // Left-justified flag
+//     int space = 0;  // Space-padded flag
+//     int zero  = 0;  // Zero-padded flag
+//     int width = -1; // Field width specifier
+//     int prec  = -1; // Precision specifier
+//     while ((c = *fstr++)) {
+//         if (c != '%') {
+//             m_growarray(buf, n, cap, buf);
+//             buf[n++] = c;
+//             continue;
+//         }
+
+// flags:
+//         // Capture flags
+//         switch ((c = *fstr++)) {
+//         case '0': zero  = 1; goto flags;
+//         case ' ': space = 1; goto flags;
+//         case '-': left  = 1; goto flags;
+//         default:             break;
+//         }
+
+//         // Evaluate field width
+//         if (isdigit((c = *fstr++))) {
+//         } else if (c == '*') {
+//         }
+
+//         // Evaluate precision modifier
+//     }
+//     // Create new string
+//     // Assign formatted string to FP-1
+//     return 1;
+// }
+
 // hex(x)
 // Returns a string of `x` as an integer in hexadecimal (lowercase)
 // with the leading "0x"
@@ -271,6 +335,7 @@ static struct {
     // Strings
     { "byte",  { 1, l_byte }  },
     { "char",  { 0, l_char }  },
+    // { "fmt",   { 1, l_fmt }   },
     { "hex",   { 1, l_hex }   },
     { "lower", { 1, l_lower } },
     { "split", { 1, l_split } },
