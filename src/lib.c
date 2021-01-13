@@ -175,15 +175,81 @@ static int l_char(rf_val *fp, int argc) {
     return 1;
 }
 
+// %c
+#define fmt_char(b, n, cap, c, left, width) \
+    if (width > 1) { \
+        m_resizebuffer(buf, n + width, cap, char); \
+        if (left) { \
+            buf[n++] = c; \
+            memset(buf + n, ' ', width - 1); \
+            n += width - 1; \
+        } else { \
+            memset(buf + n, ' ', width - 1); \
+            n += width - 1; \
+            buf[n++] = c; \
+        } \
+    } else { \
+        m_resizebuffer(buf, n + 1, cap, char); \
+        buf[n++] = c; \
+    }
+
+// %d, %i
+#define fmt_int(b, n, cap, i, fmt, left, space, zero, width) \
+    size_t len = snprintf(NULL, 0, "%"fmt, i); \
+    if (len > width || width <= 0) { \
+        if (space && i >= 0) { \
+            m_resizebuffer(b, n + len + 1, cap, char); \
+            snprintf(b + n, len + 2, "% "fmt, i); \
+            n += len + 1; \
+        } else { \
+            m_resizebuffer(b, n + len, cap, char); \
+            snprintf(b + n, len + 1, "%"fmt, i); \
+            n += len; \
+        } \
+    } else { \
+        m_resizebuffer(b, n + width, cap, char); \
+        if (left) { \
+            snprintf(b + n, width + 1, "%-*"fmt, width, i); \
+        } else if (zero && space) { \
+            snprintf(b + n, width + 1, "% 0*"fmt, width, i); \
+        } else if (zero) { \
+            snprintf(b + n, width + 1, "%0*"fmt, width, i); \
+        } else if (space) { \
+            snprintf(b + n, width + 1, "% *"fmt, width, i); \
+        } else { \
+            snprintf(b + n, width + 1, "%*"fmt, width, i); \
+        } \
+        n += width; \
+    }
+
+// %o, %x, %X
+#define fmt_uint(b, n, cap, i, fmt, left, zero, width) \
+    size_t len = snprintf(NULL, 0, "%"fmt, i); \
+    if (len > width || width <= 0) { \
+        m_resizebuffer(b, n + len, cap, char); \
+        snprintf(b + n, len + 1, "%"fmt, i); \
+        n += len; \
+    } else { \
+        m_resizebuffer(b, n + width, cap, char); \
+        if (left) { \
+            snprintf(b + n, width + 1, "%-*"fmt, width, i); \
+        } else if (zero) { \
+            snprintf(b + n, width + 1, "%0*"fmt, width, i); \
+        } else { \
+            snprintf(b + n, width + 1, "%*"fmt, width, i); \
+        } \
+        n += width; \
+    }
+
 // fmt(...)
 // Riff's `sprintf()` implementation. Doubles as `printf()` due to the
 // implicit printing functionality of the language.
 //
 // Optional modifiers (zero or more):
-//   -              | Left-justified conversion
-//   <space>        | Space-padded conversion (ignored if left-justified)
-//   0              | Zero-padded conversion (ignored if left-justified)
-//   <integer> / *  | Minimum field width
+//   -              | Left-justified
+//   <space>        | Space-padded (ignored if left-justified)
+//   0              | Zero-padded (ignored if left-justified)
+//   <integer> / *  | Field width
 //   .              | Precision specifier
 //
 // Format specifiers:
@@ -194,50 +260,148 @@ static int l_char(rf_val *fp, int argc) {
 //   d / i          | Decimal integer
 //   e / E          | Decimal float (exp notation)
 //   f              | Decimal float
-//   g              | e or f conversion (whichever is shorter)
+//   g              | `e` or `f` conversion (whichever is shorter)
 //   o              | Octal integer
 //   s              | String
 //   x / X          | Hex integer (lowercase/uppercase)
-// static int l_fmt(rf_val *fp, int argc) {
-//     if (!is_str(fp))
-//         return 0;
-//     char *buf = NULL;
-//     int c, n, cap;
-//     n = 0;
-//     cap = 0;
-//     const char *fstr = fp->u.s->str;
-//     int left  = 0;  // Left-justified flag
-//     int space = 0;  // Space-padded flag
-//     int zero  = 0;  // Zero-padded flag
-//     int width = -1; // Field width specifier
-//     int prec  = -1; // Precision specifier
-//     while ((c = *fstr++)) {
-//         if (c != '%') {
-//             m_growarray(buf, n, cap, buf);
-//             buf[n++] = c;
-//             continue;
-//         }
+static int l_fmt(rf_val *fp, int argc) {
+    if (!is_str(fp))
+        return 0;
+    --argc;
+    int arg = 1;
 
-// flags:
-//         // Capture flags
-//         switch ((c = *fstr++)) {
-//         case '0': zero  = 1; goto flags;
-//         case ' ': space = 1; goto flags;
-//         case '-': left  = 1; goto flags;
-//         default:             break;
-//         }
+    const char *fstr = fp->u.s->str;
 
-//         // Evaluate field width
-//         if (isdigit((c = *fstr++))) {
-//         } else if (c == '*') {
-//         }
+    char *buf = NULL;
+    int   n   = 0;
+    int   cap = 0;
 
-//         // Evaluate precision modifier
-//     }
-//     // Create new string
-//     // Assign formatted string to FP-1
-//     return 1;
-// }
+    // Flags and specifiers
+    int left, space, zero, width, prec;
+
+    while (*fstr && argc) {
+        if (*fstr != '%') {
+            m_growarray(buf, n, cap, char);
+            buf[n++] = *fstr++;
+            continue;
+        }
+
+        // Advance pointer and check for literal '%'
+        if (*++fstr == '%') {
+            m_growarray(buf, n, cap, char);
+            buf[n++] = '%';
+            ++fstr;
+            continue;
+        }
+
+        left  = 0;
+        space = 0;
+        zero  = 0;
+        width = -1;
+        prec  = -1;
+
+flags:  // Capture flags
+        switch (*fstr) {
+        case '0': zero  = 1; ++fstr; goto flags;
+        case ' ': space = 1; ++fstr; goto flags;
+        case '-': left  = 1; ++fstr; goto flags;
+        default:             break;
+        }
+
+        // Evaluate field width
+        if (isdigit(*fstr)) {
+            char *end;
+            width = (int) strtol(fstr, &end, 10);
+            fstr = end;
+        } else if (*fstr == '*') {
+            ++fstr;
+            if (argc--) {
+                width = (int) intval(fp+arg);
+                ++arg;
+            }
+        }
+
+        // Evaluate precision modifier
+        if (*fstr == '.') {
+            ++fstr;
+            if (isdigit(*fstr)) {
+                char *end;
+                prec = (int) strtol(fstr, &end, 10);
+                fstr = end;
+            } else if (*fstr == '*') {
+                ++fstr;
+                if (argc--) {
+                    prec = (int) intval(fp+arg);
+                    ++arg;
+                }
+            } else {
+                prec = 0;
+            }
+        }
+
+        // Evaluate format specifier
+        switch (*fstr++) {
+        // case 'a':
+        // case 'A':
+        // case 'b':
+        case 'c': {
+            // Write corresponding ASCII OR first letter of string
+            if (argc--) {
+                int c;
+                if (is_num(fp+arg)) {
+                    c = (int) intval(fp+arg);
+                } else if (is_str(fp+arg)) {
+                    c = (int) fp[arg].u.s->str[0];
+                }
+                fmt_char(buf, n, cap, c, left, width);
+                ++arg;
+            }
+            break;
+        }
+        case 'd': case 'i': {
+            if (argc--) {
+                rf_int i = intval(fp+arg);
+                fmt_int(buf, n, cap, i, PRId64, left, space, zero, width);
+                ++arg;
+            }
+            break;
+        }
+        case 'o':
+            if (argc--) {
+                rf_int i = intval(fp+arg);
+                fmt_uint(buf, n, cap, i, PRIo64, left, zero, width);
+                ++arg;
+            }
+            break;
+        case 'x':
+            if (argc--) {
+                rf_int i = intval(fp+arg);
+                fmt_uint(buf, n, cap, i, PRIx64, left, zero, width);
+                ++arg;
+            }
+            break;
+        case 'X':
+            if (argc--) {
+                rf_int i = intval(fp+arg);
+                fmt_uint(buf, n, cap, i, PRIX64, left, zero, width);
+                ++arg;
+            }
+            break;
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'g':
+        case 's':
+        default: // Throw error
+                  break;
+        }
+    }
+    // Copy rest of string after exhausting user-provided args
+    // Create new string
+    // Assign formatted string to FP-1
+    assign_str(fp-1, s_newstr(buf, n, 0));
+    return 1;
+}
 
 // hex(x)
 // Returns a string of `x` as an integer in hexadecimal (lowercase)
@@ -275,7 +439,7 @@ static int l_lower(rf_val *fp, int argc) {
 // split(s[,d])
 // Returns an array with elements being string `s` split on delimiter
 // `d`. The delimiter can be zero or more characters. If no delimiter
-// is provided, the default is " ". If the delimiter is the empty
+// is provided, the default is " \t". If the delimiter is the empty
 // string (""), the string is split into an array of individual
 // characters.
 static int l_split(rf_val *fp, int argc) {
