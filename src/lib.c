@@ -177,69 +177,88 @@ static int l_char(rf_val *fp, int argc) {
 
 // %c
 #define fmt_char(b, n, cap, c, left, width) \
-    if (width > 1) { \
-        m_resizebuffer(buf, n + width, cap, char); \
-        if (left) { \
-            buf[n++] = c; \
-            memset(buf + n, ' ', width - 1); \
-            n += width - 1; \
-        } else { \
-            memset(buf + n, ' ', width - 1); \
-            n += width - 1; \
-            buf[n++] = c; \
-        } \
+    size_t len; \
+    if (left) { \
+        len = snprintf(NULL, 0, "%-*c", width, c); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%-*c", width, c); \
     } else { \
-        m_resizebuffer(buf, n + 1, cap, char); \
-        buf[n++] = c; \
-    }
+        len = snprintf(NULL, 0, "%*c", width, c); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%*c", width, c); \
+    } \
+    n += len;
 
-// %d, %i
-#define fmt_int(b, n, cap, i, fmt, left, space, zero, width) \
-    size_t len = snprintf(NULL, 0, "%"fmt, i); \
-    if (len > width || width <= 0) { \
-        if (space && i >= 0) { \
+// %s
+#define fmt_str(b, n, cap, s, left, width, prec) \
+    size_t len; \
+    if (left) { \
+        len = snprintf(NULL, 0, "%-*.*s", width, prec, s); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%-*.*s", width, prec, s); \
+    } else { \
+        len = snprintf(NULL, 0, "%*.*s", width, prec, s); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%*.*s", width, prec, s); \
+    } \
+    n += len;
+
+// Signed fmt conversions: floats, decimal integers
+#define fmt_signed(b, n, cap, i, fmt, left, space, zero, width, prec) \
+    size_t len; \
+    if (left) { \
+        if (space) { \
+            len = snprintf(NULL, 0, "%- *.*"fmt, width, prec, i); \
             m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 2, "% "fmt, i); \
-            n += len + 1; \
+            snprintf(b + n, len + 1, "%- *.*"fmt, width, prec, i); \
         } else { \
-            m_resizebuffer(b, n + len, cap, char); \
-            snprintf(b + n, len + 1, "%"fmt, i); \
-            n += len; \
+            len = snprintf(NULL, 0, "%-*.*"fmt, width, prec, i); \
+            m_resizebuffer(b, n + len + 1, cap, char); \
+            snprintf(b + n, len + 1, "%-*.*"fmt, width, prec, i); \
         } \
+    } else if (zero) { \
+        if (space) { \
+            len = snprintf(NULL, 0, "% 0*.*"fmt, width, prec, i); \
+            m_resizebuffer(b, n + len + 1, cap, char); \
+            snprintf(b + n, len + 1, "% 0*.*"fmt, width, prec, i); \
+        } else { \
+            len = snprintf(NULL, 0, "%0*.*"fmt, width, prec, i); \
+            m_resizebuffer(b, n + len + 1, cap, char); \
+            snprintf(b + n, len + 1, "%0*.*"fmt, width, prec, i); \
+        } \
+    } else if (space) { \
+        len = snprintf(NULL, 0, "% *.*"fmt, width, prec, i); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "% *.*"fmt, width, prec, i); \
     } else { \
-        m_resizebuffer(b, n + width, cap, char); \
-        if (left) { \
-            snprintf(b + n, width + 1, "%-*"fmt, width, i); \
-        } else if (zero && space) { \
-            snprintf(b + n, width + 1, "% 0*"fmt, width, i); \
-        } else if (zero) { \
-            snprintf(b + n, width + 1, "%0*"fmt, width, i); \
-        } else if (space) { \
-            snprintf(b + n, width + 1, "% *"fmt, width, i); \
-        } else { \
-            snprintf(b + n, width + 1, "%*"fmt, width, i); \
-        } \
-        n += width; \
-    }
+        len = snprintf(NULL, 0, "%*.*"fmt, width, prec, i); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%*.*"fmt, width, prec, i); \
+    } \
+    n += len;
 
-// %o, %x, %X
-#define fmt_uint(b, n, cap, i, fmt, left, zero, width) \
-    size_t len = snprintf(NULL, 0, "%"fmt, i); \
-    if (len > width || width <= 0) { \
-        m_resizebuffer(b, n + len, cap, char); \
-        snprintf(b + n, len + 1, "%"fmt, i); \
-        n += len; \
+// Unsigned fmt conversions: hex and octal integers
+// Only difference is absence of space flag, since numbers are
+// converted to unsigned anyway. clang also throws a warning
+// about UB for octal/hex conversions with the space flag.
+#define fmt_unsigned(b, n, cap, i, fmt, left, zero, width, prec) \
+    size_t len; \
+    if (left) { \
+        len = snprintf(NULL, 0, "%-*.*"fmt, width, prec, i); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%-*.*"fmt, width, prec, i); \
+    } else if (zero) { \
+        len = snprintf(NULL, 0, "%0*.*"fmt, width, prec, i); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%0*.*"fmt, width, prec, i); \
     } else { \
-        m_resizebuffer(b, n + width, cap, char); \
-        if (left) { \
-            snprintf(b + n, width + 1, "%-*"fmt, width, i); \
-        } else if (zero) { \
-            snprintf(b + n, width + 1, "%0*"fmt, width, i); \
-        } else { \
-            snprintf(b + n, width + 1, "%*"fmt, width, i); \
-        } \
-        n += width; \
-    }
+        len = snprintf(NULL, 0, "%*.*"fmt, width, prec, i); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%*.*"fmt, width, prec, i); \
+    } \
+    n += len;
+
+#define DEFAULT_FLT_PREC 6
 
 // fmt(...)
 // Riff's `sprintf()` implementation. Doubles as `printf()` due to the
@@ -297,15 +316,20 @@ static int l_fmt(rf_val *fp, int argc) {
         left  = 0;
         space = 0;
         zero  = 0;
+
         width = -1;
-        prec  = -1;
+
+        // Both clang and gcc seem to allow -1 to be used as a
+        // precision modifier without throwing warnings, so this is a
+        // useful default
+        prec = -1;
 
 flags:  // Capture flags
         switch (*fstr) {
         case '0': zero  = 1; ++fstr; goto flags;
         case ' ': space = 1; ++fstr; goto flags;
         case '-': left  = 1; ++fstr; goto flags;
-        default:             break;
+        default:  break;
         }
 
         // Evaluate field width
@@ -339,20 +363,16 @@ flags:  // Capture flags
             }
         }
 
+        rf_int i;
+        rf_flt f;
+
         // Evaluate format specifier
         switch (*fstr++) {
-        // case 'a':
-        // case 'A':
+        // TODO
         // case 'b':
         case 'c': {
-            // Write corresponding ASCII OR first letter of string
             if (argc--) {
-                int c;
-                if (is_num(fp+arg)) {
-                    c = (int) intval(fp+arg);
-                } else if (is_str(fp+arg)) {
-                    c = (int) fp[arg].u.s->str[0];
-                }
+                int c = (int) intval(fp+arg);
                 fmt_char(buf, n, cap, c, left, width);
                 ++arg;
             }
@@ -360,46 +380,111 @@ flags:  // Capture flags
         }
         case 'd': case 'i': {
             if (argc--) {
-                rf_int i = intval(fp+arg);
-                fmt_int(buf, n, cap, i, PRId64, left, space, zero, width);
+redir_int:
+                i = intval(fp+arg);
+                fmt_signed(buf, n, cap, i, PRId64, left, space, zero, width, prec);
                 ++arg;
             }
             break;
         }
         case 'o':
             if (argc--) {
-                rf_int i = intval(fp+arg);
-                fmt_uint(buf, n, cap, i, PRIo64, left, zero, width);
+                i = intval(fp+arg);
+                fmt_unsigned(buf, n, cap, i, PRIo64, left, zero, width, prec);
                 ++arg;
             }
             break;
         case 'x':
             if (argc--) {
-                rf_int i = intval(fp+arg);
-                fmt_uint(buf, n, cap, i, PRIx64, left, zero, width);
+                i = intval(fp+arg);
+                fmt_unsigned(buf, n, cap, i, PRIx64, left, zero, width, prec);
                 ++arg;
             }
             break;
         case 'X':
             if (argc--) {
-                rf_int i = intval(fp+arg);
-                fmt_uint(buf, n, cap, i, PRIX64, left, zero, width);
+                i = intval(fp+arg);
+                fmt_unsigned(buf, n, cap, i, PRIX64, left, zero, width, prec);
+                ++arg;
+            }
+            break;
+        case 'a':
+            if (argc--) {
+                f = fltval(fp+arg);
+                // Default precision left as -1 for `a`
+                fmt_signed(buf, n, cap, f, "a", left, space, zero, width, prec);
+                ++arg;
+            }
+            break;
+        case 'A':
+            if (argc--) {
+                f = fltval(fp+arg);
+                // Default precision left as -1 for `A`
+                fmt_signed(buf, n, cap, f, "A", left, space, zero, width, prec);
                 ++arg;
             }
             break;
         case 'e':
+            if (argc--) {
+                f = fltval(fp+arg);
+                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
+                fmt_signed(buf, n, cap, f, "e", left, space, zero, width, prec);
+                ++arg;
+            }
+            break;
         case 'E':
+            if (argc--) {
+                f = fltval(fp+arg);
+                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
+                fmt_signed(buf, n, cap, f, "E", left, space, zero, width, prec);
+                ++arg;
+            }
+            break;
         case 'f':
+            if (argc--) {
+                f = fltval(fp+arg);
+                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
+                fmt_signed(buf, n, cap, f, "f", left, space, zero, width, prec);
+                ++arg;
+            }
+            break;
         case 'g':
+            if (argc--) {
+redir_flt:
+                f = fltval(fp+arg);
+                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
+                fmt_signed(buf, n, cap, f, "g", left, space, zero, width, prec);
+                ++arg;
+            }
+            break;
+
+        // %s should accept any type; redirect as needed
         case 's':
+            if (argc--) {
+                if (is_str(fp+arg)) {
+                    fmt_str(buf, n, cap, fp[arg].u.s->str, left, width, prec);
+                } else if (is_int(fp+arg)) {
+                    goto redir_int;
+                } else if (is_flt(fp+arg)) {
+                    goto redir_flt;
+                }
+                ++arg;
+            }
+            break;
         default: // Throw error
                   break;
         }
     }
+
     // Copy rest of string after exhausting user-provided args
-    // Create new string
-    // Assign formatted string to FP-1
+    while (*fstr) {
+        m_growarray(buf, n, cap, char);
+        buf[n++] = *fstr++;
+    }
+
     assign_str(fp-1, s_newstr(buf, n, 0));
+    if (buf)
+        free(buf);
     return 1;
 }
 
@@ -499,7 +584,7 @@ static struct {
     // Strings
     { "byte",  { 1, l_byte }  },
     { "char",  { 0, l_char }  },
-    // { "fmt",   { 1, l_fmt }   },
+    { "fmt",   { 1, l_fmt }   },
     { "hex",   { 1, l_hex }   },
     { "lower", { 1, l_lower } },
     { "split", { 1, l_split } },
