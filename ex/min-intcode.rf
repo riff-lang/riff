@@ -1,1 +1,0 @@
-while o<99{o=$+p a=o/100%10|0 b=o/1000%10|0w=$++p+!!a*r x=--a?$w:$p y=$++p+!!b*r y=--b?$y:$p z=$++p+!(o<10**4)*r o%=100if o==3$w=v[j++]if o==4x if o<3||o>6&&o<9{p++$z=o<2?x+y:o<3?x*y:o<8?x<y:x==y}else p=o==5?x?y:p:o==6?!x?y:p:p-1r+=o>8?x:0}

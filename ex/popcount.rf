@@ -31,6 +31,5 @@ fn popcount(x) {
     return x & 0x7f
 }
 
-for x in { 5, 7, 0x7fffffffffffffff } {
-    "Popcount(" :: x :: ") =", popcount(x)
-}
+for x in { 5, 7, 0x7fffffffffffffff }
+    fmt("popcount(%d) = %d", x, popcount(x))
