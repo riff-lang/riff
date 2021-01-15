@@ -87,12 +87,11 @@ w[42] = num(k11[16..23], 16)
 w[43] = num(k11[24..31], 16)
 
 // Calculate the key scheduling in reverse order
-i = 10
-while i > 0 {
+for i in 10..1 {
     w[4*i-1] = w[4*i+3] ^ w[4*i+2]
     w[4*i-2] = w[4*i+2] ^ w[4*i+1]
     w[4*i-3] = w[4*i+1] ^ w[4*i]
-    w[4*i-4] = w[4*i]   ^ g(w[4*i-1], i--)
+    w[4*i-4] = w[4*i]   ^ g(w[4*i-1], i)
 }
 
 fmt("%08X%08X%08X%08X", w[0], w[1], w[2], w[3])
