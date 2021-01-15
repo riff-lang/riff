@@ -78,12 +78,13 @@ rcon = {
     0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb
 }
 
-// Place word-sized (32 bits) chunks of the known key into the `w`
-// array
-w[40] = 0xE593B292
-w[41] = 0xD82CE2C4
-w[42] = 0x8539C08C
-w[43] = 0x2EFB24EF
+// The known key: k_11
+k11 ="E593B292D82CE2C48539C08C2EFB24EF"
+
+w[40] = num(k11[ 0.. 7], 16)
+w[41] = num(k11[ 8..15], 16)
+w[42] = num(k11[16..23], 16)
+w[43] = num(k11[24..31], 16)
 
 // Calculate the key scheduling in reverse order
 i = 10

@@ -177,7 +177,6 @@ static int l_char(rf_val *fp, int argc) {
 
 // %c
 #define fmt_char(b, n, cap, c, left, width) \
-    size_t len; \
     if (left) { \
         len = snprintf(NULL, 0, "%-*c", width, c); \
         m_resizebuffer(b, n + len + 1, cap, char); \
@@ -186,12 +185,10 @@ static int l_char(rf_val *fp, int argc) {
         len = snprintf(NULL, 0, "%*c", width, c); \
         m_resizebuffer(b, n + len + 1, cap, char); \
         snprintf(b + n, len + 1, "%*c", width, c); \
-    } \
-    n += len;
+    }
 
 // %s
 #define fmt_str(b, n, cap, s, left, width, prec) \
-    size_t len; \
     if (left) { \
         len = snprintf(NULL, 0, "%-*.*s", width, prec, s); \
         m_resizebuffer(b, n + len + 1, cap, char); \
@@ -200,12 +197,10 @@ static int l_char(rf_val *fp, int argc) {
         len = snprintf(NULL, 0, "%*.*s", width, prec, s); \
         m_resizebuffer(b, n + len + 1, cap, char); \
         snprintf(b + n, len + 1, "%*.*s", width, prec, s); \
-    } \
-    n += len;
+    }
 
 // Signed fmt conversions: floats, decimal integers
 #define fmt_signed(b, n, cap, i, fmt, left, space, zero, width, prec) \
-    size_t len; \
     if (left) { \
         if (space) { \
             len = snprintf(NULL, 0, "%- *.*"fmt, width, prec, i); \
@@ -234,15 +229,13 @@ static int l_char(rf_val *fp, int argc) {
         len = snprintf(NULL, 0, "%*.*"fmt, width, prec, i); \
         m_resizebuffer(b, n + len + 1, cap, char); \
         snprintf(b + n, len + 1, "%*.*"fmt, width, prec, i); \
-    } \
-    n += len;
+    }
 
 // Unsigned fmt conversions: hex and octal integers
 // Only difference is absence of space flag, since numbers are
 // converted to unsigned anyway. clang also throws a warning
 // about UB for octal/hex conversions with the space flag.
 #define fmt_unsigned(b, n, cap, i, fmt, left, zero, width, prec) \
-    size_t len; \
     if (left) { \
         len = snprintf(NULL, 0, "%-*.*"fmt, width, prec, i); \
         m_resizebuffer(b, n + len + 1, cap, char); \
@@ -255,8 +248,7 @@ static int l_char(rf_val *fp, int argc) {
         len = snprintf(NULL, 0, "%*.*"fmt, width, prec, i); \
         m_resizebuffer(b, n + len + 1, cap, char); \
         snprintf(b + n, len + 1, "%*.*"fmt, width, prec, i); \
-    } \
-    n += len;
+    }
 
 #define DEFAULT_FLT_PREC 6
 
@@ -274,7 +266,6 @@ static int l_char(rf_val *fp, int argc) {
 // Format specifiers:
 //   %              | Literal `%`
 //   a / A          | Hex float (exp notation; lowercase/uppercase)
-//   b              | Binary integer
 //   c              | Single character
 //   d / i          | Decimal integer
 //   e / E          | Decimal float (exp notation)
@@ -363,13 +354,13 @@ flags:  // Capture flags
             }
         }
 
+        size_t len;
         rf_int i;
         rf_flt f;
 
+        // TODO binary/%b?
         // Evaluate format specifier
         switch (*fstr++) {
-        // TODO
-        // case 'b':
         case 'c': {
             if (argc--) {
                 int c = (int) intval(fp+arg);
@@ -471,9 +462,12 @@ redir_flt:
                 ++arg;
             }
             break;
-        default: // Throw error
-                  break;
+        default:
+            // Throw error
+            fprintf(stderr, "riff: [fmt] invalid format specifier: %c\n", fstr[-1]);
+            exit(1);
         }
+        n += len;
     }
 
     // Copy rest of string after exhausting user-provided args
@@ -519,6 +513,38 @@ static int l_lower(rf_val *fp, int argc) {
     if (!is_str(fp))
         return 0;
     return allxcase(fp, 0);
+}
+
+// num(s[,b])
+// Takes a string `s` and an optional base `b` and returns the
+// interpreted num. The base can be 0 or an integer in the range
+// {2..36}. The default base is 0. This function is more or less a
+// direct interface to `strtoll()`.
+//
+// TODO num() should be able to read any type of numerical constants
+// defined by the language itself, such as floats or binary integers
+// with the leading `0b`.
+static int l_num(rf_val *fp, int argc) {
+    if (!is_str(fp)) {
+        if (is_int(fp)) {
+            assign_int(fp-1, fp->u.i);
+        } else if (is_flt(fp)) {
+            assign_flt(fp-1, fp->u.f);
+        } else {
+            assign_int(fp-1, 0);
+        }
+        return 1;
+    }
+    int base = 0;
+    if (argc > 1)
+        base = intval(fp+1);
+
+    // If the provided base is outside the range, default back to 0
+    if (base < 2 || base > 36)
+        base = 0;
+    char *end;
+    assign_int(fp-1, (rf_int) strtoll(fp->u.s->str, &end, base));
+    return 1;
 }
 
 // split(s[,d])
@@ -587,6 +613,7 @@ static struct {
     { "fmt",   { 1, l_fmt }   },
     { "hex",   { 1, l_hex }   },
     { "lower", { 1, l_lower } },
+    { "num",   { 1, l_num }   },
     { "split", { 1, l_split } },
     { "upper", { 1, l_upper } },
     { NULL,    { 0, NULL }    }
