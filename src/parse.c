@@ -434,12 +434,12 @@ static int led(rf_parser *y, int p, int tk) {
     case '[':
         adv;
         subscript(y);
-        break;
+        return ']';
     case '(':
         if (!y->sd) set(ox);
         adv;
         call(y);
-        break;
+        return ')';
     default:
         if (lbop(tk) || rbop(tk)) {
             if (!y->sd && !y->ax && !y->ox) {
@@ -480,6 +480,11 @@ static int expr(rf_parser *y, int rbp) {
         // invalid operation; this allows the ++/-- to be parsed as
         // a prefix op for the following expression.
         if (y->rx && is_incdec(tk))
+            return p;
+
+        // Prevent post-increments from being associated with function
+        // calls
+        if (p == ')' && is_incdec(tk))
             return p;
 
         p  = led(y, p, tk);
