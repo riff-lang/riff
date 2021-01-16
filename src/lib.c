@@ -200,9 +200,13 @@ static int l_char(rf_val *fp, int argc) {
     }
 
 // Signed fmt conversions: floats, decimal integers
-#define fmt_signed(b, n, cap, i, fmt, left, space, zero, width, prec) \
+#define fmt_signed(b, n, cap, i, fmt, left, sign, space, zero, width, prec) \
     if (left) { \
-        if (space) { \
+        if (sign) { \
+            len = snprintf(NULL, 0, "%-+*.*"fmt, width, prec, i); \
+            m_resizebuffer(b, n + len + 1, cap, char); \
+            snprintf(b + n, len + 1, "%-+*.*"fmt, width, prec, i); \
+        } else if (space) { \
             len = snprintf(NULL, 0, "%- *.*"fmt, width, prec, i); \
             m_resizebuffer(b, n + len + 1, cap, char); \
             snprintf(b + n, len + 1, "%- *.*"fmt, width, prec, i); \
@@ -212,7 +216,11 @@ static int l_char(rf_val *fp, int argc) {
             snprintf(b + n, len + 1, "%-*.*"fmt, width, prec, i); \
         } \
     } else if (zero) { \
-        if (space) { \
+        if (sign) { \
+            len = snprintf(NULL, 0, "%+0*.*"fmt, width, prec, i); \
+            m_resizebuffer(b, n + len + 1, cap, char); \
+            snprintf(b + n, len + 1, "%+0*.*"fmt, width, prec, i); \
+        } else if (space) { \
             len = snprintf(NULL, 0, "% 0*.*"fmt, width, prec, i); \
             m_resizebuffer(b, n + len + 1, cap, char); \
             snprintf(b + n, len + 1, "% 0*.*"fmt, width, prec, i); \
@@ -221,6 +229,10 @@ static int l_char(rf_val *fp, int argc) {
             m_resizebuffer(b, n + len + 1, cap, char); \
             snprintf(b + n, len + 1, "%0*.*"fmt, width, prec, i); \
         } \
+    } else if (sign) { \
+        len = snprintf(NULL, 0, "%+*.*"fmt, width, prec, i); \
+        m_resizebuffer(b, n + len + 1, cap, char); \
+        snprintf(b + n, len + 1, "%+*.*"fmt, width, prec, i); \
     } else if (space) { \
         len = snprintf(NULL, 0, "% *.*"fmt, width, prec, i); \
         m_resizebuffer(b, n + len + 1, cap, char); \
@@ -287,7 +299,7 @@ static int l_fmt(rf_val *fp, int argc) {
     int   cap = 0;
 
     // Flags and specifiers
-    int left, space, zero, width, prec;
+    int left, sign, space, zero, width, prec;
 
     while (*fstr && argc) {
         if (*fstr != '%') {
@@ -305,6 +317,7 @@ static int l_fmt(rf_val *fp, int argc) {
         }
 
         left  = 0;
+        sign  = 0;
         space = 0;
         zero  = 0;
 
@@ -318,6 +331,7 @@ static int l_fmt(rf_val *fp, int argc) {
 flags:  // Capture flags
         switch (*fstr) {
         case '0': zero  = 1; ++fstr; goto flags;
+        case '+': sign  = 1; ++fstr; goto flags;
         case ' ': space = 1; ++fstr; goto flags;
         case '-': left  = 1; ++fstr; goto flags;
         default:  break;
@@ -373,7 +387,7 @@ flags:  // Capture flags
             if (argc--) {
 redir_int:
                 i = intval(fp+arg);
-                fmt_signed(buf, n, cap, i, PRId64, left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, i, PRId64, left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -403,7 +417,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 // Default precision left as -1 for `a`
-                fmt_signed(buf, n, cap, f, "a", left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, f, "a", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -411,7 +425,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 // Default precision left as -1 for `A`
-                fmt_signed(buf, n, cap, f, "A", left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, f, "A", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -419,7 +433,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "e", left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, f, "e", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -427,7 +441,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "E", left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, f, "E", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -435,7 +449,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "f", left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, f, "f", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -444,7 +458,7 @@ redir_int:
 redir_flt:
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "g", left, space, zero, width, prec);
+                fmt_signed(buf, n, cap, f, "g", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
