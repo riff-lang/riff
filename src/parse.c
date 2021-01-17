@@ -897,6 +897,7 @@ static void local_stmt(rf_parser *y) {
 }
 
 static void print_stmt(rf_parser *y) {
+    unset_all;
     int paren = 0;
     if (y->x->tk.kind == '(') { // Parenthesized expr list?
         adv;
