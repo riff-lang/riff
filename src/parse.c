@@ -495,7 +495,6 @@ static int expr(rf_parser *y, int rbp) {
 
 // Standalone expressions
 static void expr_stmt(rf_parser *y) {
-    unset_all;
     int n = expr_list(y, 0);
 
     // Implicit printing conditions
@@ -897,7 +896,6 @@ static void local_stmt(rf_parser *y) {
 }
 
 static void print_stmt(rf_parser *y) {
-    unset_all;
     int paren = 0;
     if (y->x->tk.kind == '(') { // Parenthesized expr list?
         adv;
@@ -962,7 +960,7 @@ static void while_stmt(rf_parser *y) {
 }
 
 static void stmt(rf_parser *y) {
-    unset(retx);
+    unset_all;
     switch (y->x->tk.kind) {
     case ';':       adv;                break;
     case TK_BREAK:  adv; break_stmt(y); break;
