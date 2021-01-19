@@ -154,7 +154,7 @@ static void c_pushk(rf_code *c, int i) {
 void c_fn_constant(rf_code *c, rf_fn *fn) {
     m_growarray(c->k, c->nk, c->kcap, rf_val);
     c->k[c->nk++] = (rf_val) {TYPE_RFN, .u.fn = fn};
-    if (c->nk > 255)
+    if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     c_pushk(c, c->nk - 1);
 }
@@ -212,8 +212,13 @@ void c_constant(rf_code *c, rf_token *tk) {
         case 1: push(OP_IMM1); return;
         case 2: push(OP_IMM2); return;
         default:
-            if (i >= 3 && i <= 255) {
+            if (i >= 3 && i <= UINT8_MAX) {
                 push(OP_IMM8);
+                push((uint8_t) i);
+                return;
+            } else if (i >= 256 && i <= UINT16_MAX) {
+                push(OP_IMM16);
+                push((uint8_t) ((i >> 8) & 0xff));
                 push((uint8_t) i);
                 return;
             } else {
@@ -233,7 +238,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     default: break;
     }
 
-    if (c->nk > 255)
+    if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     c_pushk(c, c->nk - 1);
 }
@@ -280,7 +285,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
     rf_str *s = s_newstr(tk->lexeme.s->str, tk->lexeme.s->l, 1);
     m_growarray(c->k, c->nk, c->kcap, rf_val);
     c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
-    if (c->nk > 255)
+    if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     if (mode) push_global_addr(c, c->nk - 1);
     else      push_global_val(c, c->nk - 1);

@@ -614,12 +614,13 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
 // Push immediate
 // Assign integer value x to the top of the stack.
-#define imm8(x) assign_int(&sp++->v, x);
+#define imm(x) assign_int(&sp++->v, x);
 
-        case OP_IMM8: imm8(ip[1]); ip += 2; break;
-        case OP_IMM0: imm8(0);     ++ip;    break;
-        case OP_IMM1: imm8(1);     ++ip;    break;
-        case OP_IMM2: imm8(2);     ++ip;    break;
+        case OP_IMM8:  imm(ip[1]);              ip += 2; break;
+        case OP_IMM16: imm((ip[1]<<8) + ip[2]); ip += 3; break;
+        case OP_IMM0:  imm(0);                  ++ip;    break;
+        case OP_IMM1:  imm(1);                  ++ip;    break;
+        case OP_IMM2:  imm(2);                  ++ip;    break;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the

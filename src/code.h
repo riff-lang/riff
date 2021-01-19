@@ -67,6 +67,7 @@ enum opcodes {
     OP_POPI,    // Pop IP+1 values from stack (SP -= (IP+1))
     OP_NULL,    // Push null value on stack
     OP_IMM8,    // Push (IP+1) as literal value on stack
+    OP_IMM16,   // Push ((IP+1)<<8) + (IP+2) as literal on stack
     OP_IMM0,    // Push literal `0` on stack
     OP_IMM1,    // Push literal `1` on stack
     OP_IMM2,    // Push literal `2` on stack

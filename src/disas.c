@@ -39,6 +39,7 @@ static struct {
     [OP_IDXV1]   = { "idxv",     0 },
     [OP_IDXV]    = { "idxv",     1 },
     [OP_IMM0]    = { "imm    0", 0 },
+    [OP_IMM16]   = { "imm",      2 },
     [OP_IMM1]    = { "imm    1", 0 },
     [OP_IMM2]    = { "imm    2", 0 },
     [OP_IMM8]    = { "imm",      1 },
@@ -124,6 +125,7 @@ static struct {
 #define INST1       "%*d: %02x %02x    %-6s %d\n"
 #define INST1DEREF  "%*d: %02x %02x    %-6s %-6d // %s\n"
 #define INST1ADDR   "%*d: %02x %02x    %-6s %-6d // %d\n"
+#define INST2       "%*d: %02x %02x %02x %-6s %d\n"
 #define INST2ADDR   "%*d: %02x %02x %02x %-6s %-6d // %d\n"
 
 #define OPND(x)     (c->k[b1].u.x)
@@ -195,6 +197,12 @@ static void d_code_obj(rf_code *c, int ipw) {
                     printf(INST2ADDR, ipw, ip, b0, b1, b2, OP_MNEMONIC,
                             -a, ip - a);
                     ip += 1;
+                } else if (b0 == OP_IMM16) {
+                    int b2 = c->code[ip+2];
+                    int a = (b1 << 8) + b2;
+                    printf(INST2, ipw, ip, b0, b1, b2, OP_MNEMONIC, a);
+                    ip += 1;
+
                 } else {
                     printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
                 }
@@ -283,19 +291,6 @@ static void d_code_obj(rf_code *c, int ipw) {
     }
 }
 
-#undef OP_ARITY
-#undef OP_MNEMONIC
-#undef INST0
-#undef INST0DEREF
-#undef INST1
-#undef INST1DEREF
-#undef INST1ADDR
-#undef INST2ADDR
-#undef OPND
-#undef OPND0
-#undef OPND1
-#undef OPND2
-
 void d_prog(rf_env *e) {
     // Calculate width for the IP in the disassembly
     int w = (int) log10(e->main.code->n) + 1;
@@ -370,9 +365,6 @@ static void tk2str(rf_token *tk, char *s) {
         }
     }
 }
-
-#undef OPTR_STR
-#undef KW_STR
 
 void d_tk_stream(const char *src) {
     rf_lexer x;
