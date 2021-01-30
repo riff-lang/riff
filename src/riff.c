@@ -8,6 +8,7 @@
 #include "env.h"
 #include "parse.h"
 #include "types.h"
+#include "util.h"
 #include "vm.h"
 
 #define VERSION "0.1a"
@@ -16,22 +17,6 @@ static void version(void) {
     printf("riff %s Copyright 2020, Darryl Abbate\n", VERSION);
     exit(0);
 }
-
-static char *stringify_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "file not found: %s\n", path);
-        exit(1);
-    }
-    fseek(file, 0L, SEEK_END);
-    size_t s = ftell(file);
-    rewind(file);
-    char *buf  = malloc(s + 1);
-    size_t end = fread(buf, sizeof(char), s, file);
-    buf[end]   = '\0';
-    return buf;
-}
-
 
 // TODO handle piped input (stdin)
 int main(int argc, char **argv) {
@@ -79,7 +64,7 @@ int main(int argc, char **argv) {
     // -f: Open file and convert contents to null-terminated string
     if (ff) {
         e.pname = argv[optind];
-        e.src   = stringify_file(argv[optind]);
+        e.src   = u_file2str(argv[optind]);
     } else {
         e.pname = "<command-line>";
         e.src   = argv[optind];

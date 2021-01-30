@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
@@ -534,10 +535,6 @@ static int l_lower(rf_val *fp, int argc) {
 // interpreted num. The base can be 0 or an integer in the range
 // {2..36}. The default base is 0. This function is more or less a
 // direct interface to `strtoll()`.
-//
-// TODO num() should be able to read any type of numerical constants
-// defined by the language itself, such as floats or binary integers
-// with the leading `0b`.
 static int l_num(rf_val *fp, int argc) {
     if (!is_str(fp)) {
         if (is_int(fp)) {
@@ -552,12 +549,24 @@ static int l_num(rf_val *fp, int argc) {
     int base = 0;
     if (argc > 1)
         base = intval(fp+1);
-
-    // If the provided base is outside the range, default back to 0
-    if (base < 2 || base > 36)
-        base = 0;
     char *end;
-    assign_int(fp-1, (rf_int) strtoll(fp->u.s->str, &end, base));
+    errno = 0;
+    rf_int i = u_str2i64(fp->u.s->str, &end, base);
+    if (errno == ERANGE || isdigit(*end))
+        goto ret_flt;
+    if (*end == '.') {
+        if ((base == 10 && isdigit(end[1])) ||
+            (base == 16 && isxdigit(end[1])))
+            goto ret_flt;
+    } else if (base == 10 && (*end == 'e' || *end == 'E')) {
+        goto ret_flt;
+    } else if (base == 16 && (*end == 'p' || *end == 'P')) {
+        goto ret_flt;
+    }
+    assign_int(fp-1, i);
+    return 1;
+ret_flt:
+    assign_flt(fp-1, u_str2d(fp->u.s->str, &end, base));
     return 1;
 }
 

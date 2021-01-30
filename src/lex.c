@@ -7,6 +7,7 @@
 
 #include "lex.h"
 #include "mem.h"
+#include "util.h"
 
 #define adv (++x->p)
 
@@ -25,64 +26,52 @@ static int valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
-static int dec_value(char c) {
-    return c - '0';
-}
-
-static int hex_value(char c) {
-    return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
-}
-
 static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
-    if (base == 16)
-        start -= 2;
-    double d = strtod(start, &end);
+    tk->lexeme.f = u_str2d(start, &end, base);
     x->p = end;
-    tk->lexeme.f = d;
     return TK_FLT;
 }
 
 static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
-    uint64_t i = strtoull(start, &end, base);
+    errno = 0;
+    int64_t i = u_str2i64(start, &end, base);
+    // Interpret as float in the event of overflow
+    if (errno == ERANGE || isdigit(*end))
+        return read_flt(x, tk, start, base);
     if (*end == '.') {
         if ((base == 10 && isdigit(end[1])) ||
             (base == 16 && isxdigit(end[1])))
             return read_flt(x, tk, start, base);
+    } else if (base == 10 && (*end == 'e' || *end == 'E')) {
+        return read_flt(x, tk, start, base);
+    } else if (base == 16 && (*end == 'p' || *end == 'P')) {
+        return read_flt(x, tk, start, base);
     }
 
-    // Interpret as float if base-10 int exceeds INT64_MAX, or if
-    // there's overflow in general.
-    // This is a hacky way of handling the base-10 INT64_MIN with a
-    // leading unary minus sign, i.e. `-9223372036854775808`
-    if ((base == 10 && i > INT64_MAX) || (errno == ERANGE))
-        return read_flt(x, tk, start, base);
     x->p = end;
     tk->lexeme.i = i;
     return TK_INT;
 }
 
-// TODO Allow underscores in numeric literals e.g. 123_456_789
 static int read_num(rf_lexer *x, rf_token *tk) {
     const char *start = x->p - 1;
 
     // Quickly evaluate floating-point numbers with no integer part
     // before the decimal mark, e.g. `.12`
     if (*start == '.')
-        return read_flt(x, tk, start, 10);
+        return read_flt(x, tk, start, 0);
 
     int base = 10;
     if (*start == '0') {
         if (*x->p == 'x' || *x->p == 'X') {
-            base   = 16;
-            start += 2;
-        }
-        else if (*x->p == 'b' || *x->p == 'B') {
-            base   = 2;
-            start += 2;
+            base = 16;
+        } else if (*x->p == 'b' || *x->p == 'B') {
+            base = 2;
         }
     }
+
     return read_int(x, tk, start, base);
 }
 
@@ -92,10 +81,10 @@ static int read_num(rf_lexer *x, rf_token *tk) {
 static int hex_esc(rf_lexer *x) {
     if (!isxdigit(*x->p))
         err(x, "expected hexadecimal digit");
-    int e = hex_value(*x->p++);
+    int e = u_hexval(*x->p++);
     if (isxdigit(*x->p)) {
         e <<= 4;
-        e += hex_value(*x->p++);
+        e += u_hexval(*x->p++);
     }
     return e;
 }
@@ -103,12 +92,12 @@ static int hex_esc(rf_lexer *x) {
 // Reads a maximum of three decimal digits. Throws an error if
 // resulting number > 255.
 static int dec_esc(rf_lexer *x) {
-    int e = dec_value(*x->p++);
+    int e = u_decval(*x->p++);
     for (int i = 0; i < 2; ++i) {
         if (!isdigit(*x->p))
             break;
         e *= 10;
-        e += dec_value(*x->p++);
+        e += u_decval(*x->p++);
     }
     if (e > UCHAR_MAX)
         err(x, "invalid decimal escape");
@@ -378,8 +367,26 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case '&': return test3(x, '=', TK_ANDX, '&', TK_AND, '&');
         case '*': return test4(x, '=', TK_MULX, '*', 
                                   '=', TK_POWX, TK_POW, '*');
-        case '+': return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
-        case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
+        case '+':
+            if (x->mode)
+                return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
+            else {
+                if (isdigit(*x->p) || *x->p == '.')
+                    return read_num(x, tk);
+                else
+                    return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
+            }
+            break;
+        case '-':
+            if (x->mode)
+                return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
+            else {
+                if (isdigit(*x->p) || *x->p == '.')
+                    return read_num(x, tk);
+                else
+                    return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
+            }
+            break;
         case '.':
             if (isdigit(*x->p))
                 return read_num(x, tk);
@@ -392,7 +399,13 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
             switch (*x->p) {
             case '/': adv; line_comment(x);  break;
             case '*': adv; block_comment(x); break;
-            default:  return test2(x, '=', TK_DIVX, '/');
+            default: 
+                if (x->mode)
+                    return test2(x, '=', TK_DIVX, '/');
+                else
+                    // TODO regex literals - read as strings for now
+                    return read_str(x, tk, c);
+                break;
             }
             break;
         case '0': case '1': case '2': case '3': case '4':
@@ -414,7 +427,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case '\'': return read_charint(x, tk);
         case '#': case '$': case '(': case ')': case ',':
         case ';': case '?': case ']': case '[': case '{':
-        case '}': case '~': 
+        case '}': case '~':
             return c;
         default:
             if (valid_alpha(c)) {
@@ -427,6 +440,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
 }
 
 int x_init(rf_lexer *x, const char *src) {
+    x->mode    = 0;
     x->ln      = 1;
     x->p       = src;
     x->tk.kind = 0;

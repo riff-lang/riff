@@ -103,14 +103,6 @@ static int rbop(int tk) {
     return is_asgmt(tk) || tk == TK_POW;
 }
 
-static void literal(rf_parser *y) {
-    c_constant(y->c, &y->x->tk);
-    adv;
-    // Assert no assignment appears following a constant literal
-    if (!y->argx && is_asgmt(y->x->tk.kind))
-        err(y, "attempt to assign to constant value");
-}
-
 static int resolve_local(rf_parser *y, rf_str *s) {
     if (!y->nlcl)
         return -1;
@@ -145,6 +137,7 @@ static int resolve_local(rf_parser *y, rf_str *s) {
 
 static void identifier(rf_parser *y) {
     int scope = resolve_local(y, y->x->tk.lexeme.s);
+    y->x->mode = 1;
 
     // If symbol succeeds a prefix ++/-- operation, signal codegen
     // to push the address of the symbol
@@ -154,6 +147,7 @@ static void identifier(rf_parser *y) {
         else
             c_global(y->c, &y->x->tk, 1);
         adv;
+        y->x->mode = 0;
         return;
     }
 
@@ -161,6 +155,7 @@ static void identifier(rf_parser *y) {
     // assignment, ++/--, or '[', signal codegen to push the address
     // of the symbol. Otherwise, push the value itself.
     peek;
+    y->x->mode = 0;
     if (!y->argx &&
             (is_incdec(y->x->la.kind) ||
              is_asgmt(y->x->la.kind)  ||
@@ -176,6 +171,16 @@ static void identifier(rf_parser *y) {
             c_global(y->c, &y->x->tk, 0);
     }
     adv;
+}
+
+static void literal(rf_parser *y) {
+    c_constant(y->c, &y->x->tk);
+    y->x->mode = 1;
+    adv;
+    y->x->mode = 0;
+    // Assert no assignment appears following a constant literal
+    if (!y->argx && is_asgmt(y->x->tk.kind))
+        err(y, "attempt to assign to constant value");
 }
 
 static int conditional(rf_parser *y) {

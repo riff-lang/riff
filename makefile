@@ -28,6 +28,7 @@ SRC    += src/lex.c
 SRC    += src/lib.c
 SRC    += src/parse.c
 SRC    += src/str.c
+SRC    += src/util.c
 SRC    += src/val.c
 SRC    += src/vm.c
 

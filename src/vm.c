@@ -22,12 +22,12 @@ static rf_stack  stack[STACK_SIZE];
 
 inline rf_int str2int(rf_str *s) {
     char *end;
-    return (rf_int) strtoull(s->str, &end, 0);
+    return u_str2i64(s->str, &end, 0);
 }
 
 inline rf_flt str2flt(rf_str *s) {
     char *end;
-    return strtod(s->str, &end);
+    return u_str2d(s->str, &end, 0);
 }
 
 // Return logical result of value
@@ -41,7 +41,7 @@ static inline int test(rf_val *v) {
     // 0.
     case TYPE_STR: {
         char *end;
-        rf_flt f = strtod(v->u.s->str, &end);
+        rf_flt f = u_str2d(v->u.s->str, &end, 0);
         if (*end == '\0')
             return !!f;
         return !!v->u.s->l;
@@ -101,10 +101,10 @@ static inline void z_num(rf_val *v) {
 static inline void z_neg(rf_val *v) {
     switch (v->type) {
     case TYPE_INT:
-        assign_int(v, -intval(v));
+        assign_int(v, -v->u.i);
         break;
     case TYPE_FLT:
-        assign_flt(v, -fltval(v));
+        assign_flt(v, -v->u.f);
         break;
     case TYPE_STR:
         assign_flt(v, -str2flt(v->u.s));

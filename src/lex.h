@@ -75,6 +75,7 @@ enum tokens {
 };
 
 typedef struct {
+    int         mode;
     int         ln; // Current line of the source
     rf_token    tk; // Current token
     rf_token    la; // Lookahead token

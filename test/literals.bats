@@ -24,6 +24,36 @@
     [ "$output" = "26997" ]
 }
 
+@test "Decimal INT64_MAX" {
+    run bin/riff '9223372036854775807'
+    [ "$output" = "9223372036854775807" ]
+}
+
+@test "Decimal INT64_MIN" {
+    run bin/riff '-9223372036854775808'
+    [ "$output" = "-9223372036854775808" ]
+}
+
+@test "Decimal INT64_MAX+1" {
+    run bin/riff '9223372036854775808'
+    [ "$output" = "9.22337e+18" ]
+}
+
+@test "Decimal INT64_MIN-1" {
+    run bin/riff '-9223372036854775809'
+    [ "$output" = "-9.22337e+18" ]
+}
+
+@test "Hexadecimal INT64_MAX" {
+    run bin/riff '0x7fffffffffffffff'
+    [ "$output" = "9223372036854775807" ]
+}
+
+@test "Hexadecimal INT64_MIN" {
+    run bin/riff '0x8000000000000000'
+    [ "$output" = "-9223372036854775808" ]
+}
+
 @test "Character literals" {
     run bin/riff "'A'"
     [ "$output" -eq 65 ]

@@ -1,6 +1,7 @@
 #include "mem.h"
 #include "hash.h"
 #include "types.h"
+#include "util.h"
 
 #include <stdio.h> // Debug purposes
 
@@ -67,7 +68,7 @@ static int h_index(entry_t **e, int cap, uint32_t hash) {
 
 static int exists(hash_t *h, rf_str *k) {
     if (!k->hash)
-        k->hash = s_hash(k->str);
+        k->hash = u_strhash(k->str);
     int i = h_index(h->e, h->cap, k->hash);
     return h->e[i] && h->e[i]->key->hash == k->hash;
 }
@@ -78,7 +79,7 @@ rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
     if (!h->e)
         return h_insert(h, k, v_newnull(), set);
     if (!k->hash)
-        k->hash = s_hash(k->str);
+        k->hash = u_strhash(k->str);
     int i = h_index(h->e, h->cap, k->hash);
     if (!h->e[i])
         return h_insert(h, k, v_newnull(), set);
@@ -88,7 +89,7 @@ rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
 rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
     if (set) set(lx);
     if (!k->hash)
-        k->hash = s_hash(k->str);
+        k->hash = u_strhash(k->str);
     // Evaluate hash table size
     if ((h->cap * LOAD_FACTOR) <= h->an + 1) {
         int new_cap = h->cap < 8 ? 8 : h->cap * 2;
@@ -137,7 +138,7 @@ rf_val *h_delete(hash_t *h, rf_str *k) {
     if (!h->e || !exists(h, k))
         return NULL;
     if (!k->hash)
-        k->hash = s_hash(k->str);
+        k->hash = u_strhash(k->str);
     int idx = h_index(h->e, h->cap, k->hash);
     rf_val *v = h->e[idx]->val;
     h->an--;

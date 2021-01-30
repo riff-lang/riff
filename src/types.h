@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "util.h"
+
 #define TYPE_NULL 1
 #define TYPE_INT  2
 #define TYPE_FLT  4
@@ -94,8 +96,8 @@ typedef struct {
     if (is_null(l) ^ is_null(r)) { \
         assign_int(l, !(0 op 0)); \
     } else if (is_str(l) && is_str(r)) { \
-        if (!l->u.s->hash) l->u.s->hash = s_hash(l->u.s->str); \
-        if (!r->u.s->hash) r->u.s->hash = s_hash(r->u.s->str); \
+        if (!l->u.s->hash) l->u.s->hash = u_strhash(l->u.s->str); \
+        if (!r->u.s->hash) r->u.s->hash = u_strhash(r->u.s->str); \
         assign_int(l, (l->u.s->hash op r->u.s->hash)); \
     } else if (is_str(l) && !is_str(r)) { \
         if (!l->u.s->l) { \
@@ -103,7 +105,7 @@ typedef struct {
             return; \
         } \
         char *end; \
-        rf_flt f = strtod(l->u.s->str, &end); \
+        rf_flt f = u_str2d(l->u.s->str, &end, 0); \
         if (*end != '\0') \
             assign_int(l, 0); \
         else \
@@ -114,7 +116,7 @@ typedef struct {
             return; \
         } \
         char *end; \
-        rf_flt f = strtod(r->u.s->str, &end); \
+        rf_flt f = u_str2d(r->u.s->str, &end, 0); \
         if (*end != '\0') \
             assign_int(l, 0); \
         else \
@@ -126,18 +128,17 @@ typedef struct {
 // >, <, >= and <= operators
 #define cmp_rel(l,r,op) num_arith(l,r,op);
 
-rf_int    str2int(rf_str *);
-rf_flt    str2flt(rf_str *);
-uint32_t  s_hash(const char *);
-rf_str   *s_newstr(const char *, size_t, int);
-rf_str   *s_substr(rf_str *, rf_int, rf_int, rf_int);
-rf_str   *s_concat(rf_str *, rf_str *, int);
-rf_str   *s_int2str(rf_int);
-rf_str   *s_flt2str(rf_flt);
-rf_val   *v_newnull(void);
-rf_val   *v_newint(rf_int);
-rf_val   *v_newflt(rf_flt);
-rf_val   *v_newstr(rf_str *);
-rf_val   *v_newarr(void);
+rf_int  str2int(rf_str *);
+rf_flt  str2flt(rf_str *);
+rf_str *s_newstr(const char *, size_t, int);
+rf_str *s_substr(rf_str *, rf_int, rf_int, rf_int);
+rf_str *s_concat(rf_str *, rf_str *, int);
+rf_str *s_int2str(rf_int);
+rf_str *s_flt2str(rf_flt);
+rf_val *v_newnull(void);
+rf_val *v_newint(rf_int);
+rf_val *v_newflt(rf_flt);
+rf_val *v_newstr(rf_str *);
+rf_val *v_newarr(void);
 
 #endif

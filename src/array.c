@@ -104,7 +104,7 @@ static rf_val *a_lookup_int(rf_arr *a, rf_int k, int set) {
 // offset.
 static rf_int str2intidx(rf_str *s, int offset) {
     char *end;
-    rf_flt f = strtod(s->str, &end);
+    rf_flt f = u_str2d(s->str, &end, 0);
     rf_int i = (rf_int) f;
     if (f == i && *end == '\0')
         return i + offset;

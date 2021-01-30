@@ -5,15 +5,7 @@
 #include <string.h>
 
 #include "types.h"
-
-// djb2; source: http://www.cse.yorku.ca/~oz/hash.html
-uint32_t s_hash(const char *str) {
-    uint32_t h = 5381;
-    unsigned int c;
-    while ((c = *str++))
-        h = ((h << 5) + h) + c;
-    return h;
-}
+#include "util.h"
 
 rf_str *s_newstr(const char *start, size_t l, int h) {
     char *str = malloc(l * sizeof(char) + 1);
@@ -21,7 +13,7 @@ rf_str *s_newstr(const char *start, size_t l, int h) {
     str[l] = '\0';
     rf_str *s = malloc(sizeof(rf_str));
     s->l = l;
-    s->hash = h ? s_hash(str) : 0;
+    s->hash = h ? u_strhash(str) : 0;
     s->str = str;
     return s;
 }
@@ -66,7 +58,7 @@ rf_str *s_concat(rf_str *l, rf_str *r, int h) {
     new[nl] = '\0';
     rf_str *s = malloc(sizeof(rf_str));
     s->l = nl;
-    s->hash = h ? s_hash(new) : 0;
+    s->hash = h ? u_strhash(new) : 0;
     s->str = new;
     return s;
 }
