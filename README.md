@@ -10,14 +10,13 @@ This repository contains source code for the Riff interpreter.
 ## Status
 
 Riff is still in the design/prototype phase. Documentation and
-language specification is currently non-existent. Feel free to browse
-through the [examples](ex) to get a general idea of the language and
-syntax.
+language specification can be found on [Riff's
+website](https://riff.cx/doc).
 
 ## Usage
 
 Running `make` in the root directory of the repository will compile
-the source code and place the executable in `dist/riff`.
+the source code and place the executable in `bin/riff`.
 
 Running `make install` will compile the source code and place the
 executable at `/usr/local/bin/riff`
