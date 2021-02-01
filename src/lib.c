@@ -282,8 +282,9 @@ static int l_char(rf_val *fp, int argc) {
 //   c              | Single character
 //   d / i          | Decimal integer
 //   e / E          | Decimal float (exp notation)
-//   f              | Decimal float
+//   f / F          | Decimal float
 //   g              | `e` or `f` conversion (whichever is shorter)
+//   G              | `E` or `F` conversion (whichever is shorter)
 //   o              | Octal integer
 //   s              | String
 //   x / X          | Hex integer (lowercase/uppercase)
@@ -446,7 +447,7 @@ redir_int:
                 ++arg;
             }
             break;
-        case 'f':
+        case 'f': case 'F':
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
@@ -460,6 +461,14 @@ redir_flt:
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
                 fmt_signed(buf, n, cap, f, "g", left, sign, space, zero, width, prec);
+                ++arg;
+            }
+            break;
+        case 'G':
+            if (argc--) {
+                f = fltval(fp+arg);
+                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
+                fmt_signed(buf, n, cap, f, "G", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
