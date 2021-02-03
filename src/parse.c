@@ -238,7 +238,9 @@ static void subscript(rf_parser *y) {
     int rx = y->rx; // Save flag
     unset(rx);      // Unset
     int n = expr_list(y, ']');
+    y->x->mode = 1;
     consume(y, ']', "expected ']' following subscript expression");
+    y->x->mode = 0;
     c_index(y->c, n, rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || y->x->tk.kind == '[');
     y->rx = rx;     // Restore flag
     y->sd--;
@@ -246,7 +248,9 @@ static void subscript(rf_parser *y) {
 
 static void call(rf_parser *y) {
     int n = expr_list(y, ')');
+    y->x->mode = 1;
     consume(y, ')', "expected ')'");
+    y->x->mode = 0;
     push(OP_CALL);
     push((uint8_t) n);
 }
@@ -254,7 +258,9 @@ static void call(rf_parser *y) {
 // TODO Support arbitrary indexing a la C99 designators
 static void array(rf_parser *y) {
     int n = expr_list(y, '}');
+    y->x->mode = 1;
     consume(y, '}', "expected '}'");
+    y->x->mode = 0;
     c_array(y->c, n);
 }
 
@@ -347,7 +353,9 @@ static int nud(rf_parser *y) {
     case '(':
         adv;
         expr(y, 0);
+        y->x->mode = 1;
         consume(y, ')', "expected ')'");
+        y->x->mode = 0;
         if (!y->argx) { 
             if (is_asgmt(y->x->tk.kind))
                 err(y, "invalid operator following expr");
