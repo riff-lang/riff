@@ -427,7 +427,9 @@ static int led(rf_parser *y, int p, int tk) {
             set(lhs);
         }
         c_postfix(y->c, tk);
+        y->x->mode = 1;
         adv;
+        y->x->mode = 0;
         p = y->x->tk.kind;
         unset(rx);
         break;
