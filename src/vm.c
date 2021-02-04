@@ -141,14 +141,9 @@ static inline void z_len(rf_val *v) {
         l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
             v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
         break;
-
-    // TODO? defer to TYPE_INT behavior if v->u.f == (int) v->u.f
-    case TYPE_FLT: {
-        rf_str *fs = s_flt2str(v->u.f);
-        l = fs->l;
-        m_freestr(fs);
+    case TYPE_FLT:
+        l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;
-    }
     case TYPE_STR: l = v->u.s->l;        break;
     case TYPE_ARR: l = a_length(v->u.a); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
