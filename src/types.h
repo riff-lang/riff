@@ -85,10 +85,10 @@ typedef struct {
     assign_flt(l, (numval(l) op numval(r)));
 
 #define num_arith(l,r,op) \
-    if (is_flt(l) || is_flt(r)) { \
-        flt_arith(l,r,op); \
+    if (is_int(l) && is_int(r)) { \
+        l->u.i = (l->u.i op r->u.i); \
     } else { \
-        int_arith(l,r,op); \
+        flt_arith(l,r,op); \
     }
 
 // == and != operators
