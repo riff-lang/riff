@@ -483,6 +483,11 @@ redir_flt:
                 } else if (is_flt(fp+arg)) {
                     goto redir_flt;
                 }
+
+                // TODO handle other types
+                else {
+                    fmt_str(buf, n, cap, "", left, width, prec);
+                }
                 ++arg;
             }
             break;
