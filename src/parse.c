@@ -852,7 +852,19 @@ static void if_stmt(rf_parser *y) {
     }
     y->ld--;
     y->nlcl -= pop_locals(y, y->ld, 1);
-    if (y->x->tk.kind == TK_ELSE) {
+    if (y->x->tk.kind == TK_ELIF) {
+        adv;
+        l2 = c_prep_jump(y->c, JMP);
+        c_patch(y->c, l1);
+        if_stmt(y);
+        c_patch(y->c, l2);
+    }
+
+    // TODO/NOTE: lexical depth (y->ld) gets unintentionally double
+    // incremented for `else if` statements (once below for `else`,
+    // and again when stmt() calls if_stmt()). This doesn't really
+    // affect scoping/visibility rules; it's just superfluous.
+    else if (y->x->tk.kind == TK_ELSE) {
         adv;
         y->ld++;
         l2 = c_prep_jump(y->c, JMP);

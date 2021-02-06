@@ -50,6 +50,7 @@ enum tokens {
     TK_BREAK,
     TK_CONT,
     TK_DO,
+    TK_ELIF,
     TK_ELSE,
     TK_EXIT,
     TK_FN,

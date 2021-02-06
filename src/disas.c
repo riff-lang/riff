@@ -326,8 +326,8 @@ static const char *tokenstr[] = {
     "&&", "::", "--", "..", "==", ">=", "++", "<=", "!=", "||", "**",
     "<<", ">>", "+=", "&=", "::=", "/=", "%=", "*=", "|=", "**=",
     "<<=", ">>=", "-=", "^=",
-    "break", "continue", "do", "else", "exit", "fn", "for", "if", "in",
-    "local", "print", "return", "while"
+    "break", "continue", "do", "elif", "else", "exit", "fn", "for",
+    "if", "in", "local", "print", "return", "while"
 };
 
 #define OPTR_STR "<Operator, %s >"

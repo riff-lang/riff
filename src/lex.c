@@ -221,10 +221,14 @@ static int read_id(rf_lexer *x, rf_token *tk) {
     case 'e':
         switch (*x->p) {
         case 'l':
-            if (check_kw(x, "lse", 3)) {
+            if (check_kw(x, "lif", 3)) {
+                x->p += 3;
+                return TK_ELIF;
+            } else if (check_kw(x, "lse", 3)) {
                 x->p += 3;
                 return TK_ELSE;
-            } else break;
+            } else
+                break;
         case 'x':
             if (check_kw(x, "xit", 3)) {
                 x->p += 3;
