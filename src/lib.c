@@ -12,6 +12,11 @@
 #include "mem.h"
 #include "lib.h"
 
+static void err(const char *msg) {
+    fprintf(stderr, "riff: %s\n", msg);
+    exit(1);
+}
+
 // Arithmetic functions
 
 // abs(x)
@@ -169,7 +174,7 @@ static int l_char(rf_val *fp, int argc) {
     if (!argc) return 0;
     char buf[argc + 1];
     for (int i = 0; i < argc; ++i) {
-        buf[i] = intval(fp+i);
+        buf[i] = (unsigned char) intval(fp+i);
     }
     buf[argc] = '\0';
     assign_str(fp-1, s_newstr(buf, argc, 0));
@@ -177,92 +182,61 @@ static int l_char(rf_val *fp, int argc) {
 }
 
 // %c
-#define fmt_char(b, n, cap, c, left, width) \
+#define fmt_char(b, n, c, left, width) \
     if (left) { \
-        len = snprintf(NULL, 0, "%-*c", width, c); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%-*c", width, c); \
+        n += sprintf(b + n, "%-*c", width, c); \
     } else { \
-        len = snprintf(NULL, 0, "%*c", width, c); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%*c", width, c); \
+        n += sprintf(b + n, "%*c", width, c); \
     }
 
 // %s
-#define fmt_str(b, n, cap, s, left, width, prec) \
+#define fmt_str(b, n, s, left, width, prec) \
     if (left) { \
-        len = snprintf(NULL, 0, "%-*.*s", width, prec, s); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%-*.*s", width, prec, s); \
+        n += sprintf(b + n, "%-*.*s", width, prec, s); \
     } else { \
-        len = snprintf(NULL, 0, "%*.*s", width, prec, s); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%*.*s", width, prec, s); \
+        n += sprintf(b + n, "%*.*s", width, prec, s); \
     }
 
 // Signed fmt conversions: floats, decimal integers
-#define fmt_signed(b, n, cap, i, fmt, left, sign, space, zero, width, prec) \
+#define fmt_signed(b, n, i, fmt, left, sign, space, zero, width, prec) \
     if (left) { \
         if (sign) { \
-            len = snprintf(NULL, 0, "%-+*.*"fmt, width, prec, i); \
-            m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 1, "%-+*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%-+*.*"fmt, width, prec, i); \
         } else if (space) { \
-            len = snprintf(NULL, 0, "%- *.*"fmt, width, prec, i); \
-            m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 1, "%- *.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%- *.*"fmt, width, prec, i); \
         } else { \
-            len = snprintf(NULL, 0, "%-*.*"fmt, width, prec, i); \
-            m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 1, "%-*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%-*.*"fmt, width, prec, i); \
         } \
     } else if (zero) { \
         if (sign) { \
-            len = snprintf(NULL, 0, "%+0*.*"fmt, width, prec, i); \
-            m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 1, "%+0*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%+0*.*"fmt, width, prec, i); \
         } else if (space) { \
-            len = snprintf(NULL, 0, "% 0*.*"fmt, width, prec, i); \
-            m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 1, "% 0*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "% 0*.*"fmt, width, prec, i); \
         } else { \
-            len = snprintf(NULL, 0, "%0*.*"fmt, width, prec, i); \
-            m_resizebuffer(b, n + len + 1, cap, char); \
-            snprintf(b + n, len + 1, "%0*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%0*.*"fmt, width, prec, i); \
         } \
     } else if (sign) { \
-        len = snprintf(NULL, 0, "%+*.*"fmt, width, prec, i); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%+*.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "%+*.*"fmt, width, prec, i); \
     } else if (space) { \
-        len = snprintf(NULL, 0, "% *.*"fmt, width, prec, i); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "% *.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "% *.*"fmt, width, prec, i); \
     } else { \
-        len = snprintf(NULL, 0, "%*.*"fmt, width, prec, i); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%*.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
     }
 
 // Unsigned fmt conversions: hex and octal integers
 // Only difference is absence of space flag, since numbers are
 // converted to unsigned anyway. clang also throws a warning
 // about UB for octal/hex conversions with the space flag.
-#define fmt_unsigned(b, n, cap, i, fmt, left, zero, width, prec) \
+#define fmt_unsigned(b, n, i, fmt, left, zero, width, prec) \
     if (left) { \
-        len = snprintf(NULL, 0, "%-*.*"fmt, width, prec, i); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%-*.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "%-*.*"fmt, width, prec, i); \
     } else if (zero) { \
-        len = snprintf(NULL, 0, "%0*.*"fmt, width, prec, i); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%0*.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "%0*.*"fmt, width, prec, i); \
     } else { \
-        len = snprintf(NULL, 0, "%*.*"fmt, width, prec, i); \
-        m_resizebuffer(b, n + len + 1, cap, char); \
-        snprintf(b + n, len + 1, "%*.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
     }
 
+#define FMT_BUF_SZ       0x1000
 #define DEFAULT_FLT_PREC 6
 
 // fmt(...)
@@ -296,23 +270,20 @@ static int l_fmt(rf_val *fp, int argc) {
 
     const char *fstr = fp->u.s->str;
 
-    char *buf = NULL;
-    int   n   = 0;
-    int   cap = 0;
+    char buf[FMT_BUF_SZ];
+    int  n = 0;
 
     // Flags and specifiers
     int left, sign, space, zero, width, prec;
 
-    while (*fstr && argc) {
+    while (*fstr && argc && n <= FMT_BUF_SZ) {
         if (*fstr != '%') {
-            m_growarray(buf, n, cap, char);
             buf[n++] = *fstr++;
             continue;
         }
 
         // Advance pointer and check for literal '%'
         if (*++fstr == '%') {
-            m_growarray(buf, n, cap, char);
             buf[n++] = '%';
             ++fstr;
             continue;
@@ -370,7 +341,6 @@ flags:  // Capture flags
             }
         }
 
-        size_t len;
         rf_int i;
         rf_flt f;
 
@@ -380,7 +350,7 @@ flags:  // Capture flags
         case 'c': {
             if (argc--) {
                 int c = (int) intval(fp+arg);
-                fmt_char(buf, n, cap, c, left, width);
+                fmt_char(buf, n, c, left, width);
                 ++arg;
             }
             break;
@@ -389,7 +359,7 @@ flags:  // Capture flags
             if (argc--) {
 redir_int:
                 i = intval(fp+arg);
-                fmt_signed(buf, n, cap, i, PRId64, left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, i, PRId64, left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -397,21 +367,21 @@ redir_int:
         case 'o':
             if (argc--) {
                 i = intval(fp+arg);
-                fmt_unsigned(buf, n, cap, i, PRIo64, left, zero, width, prec);
+                fmt_unsigned(buf, n, i, PRIo64, left, zero, width, prec);
                 ++arg;
             }
             break;
         case 'x':
             if (argc--) {
                 i = intval(fp+arg);
-                fmt_unsigned(buf, n, cap, i, PRIx64, left, zero, width, prec);
+                fmt_unsigned(buf, n, i, PRIx64, left, zero, width, prec);
                 ++arg;
             }
             break;
         case 'X':
             if (argc--) {
                 i = intval(fp+arg);
-                fmt_unsigned(buf, n, cap, i, PRIX64, left, zero, width, prec);
+                fmt_unsigned(buf, n, i, PRIX64, left, zero, width, prec);
                 ++arg;
             }
             break;
@@ -419,7 +389,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 // Default precision left as -1 for `a`
-                fmt_signed(buf, n, cap, f, "a", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "a", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -427,7 +397,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 // Default precision left as -1 for `A`
-                fmt_signed(buf, n, cap, f, "A", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "A", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -435,7 +405,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "e", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "e", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -443,7 +413,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "E", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "E", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -451,7 +421,7 @@ redir_int:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "f", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "f", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -460,7 +430,7 @@ redir_int:
 redir_flt:
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "g", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "g", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -468,7 +438,7 @@ redir_flt:
             if (argc--) {
                 f = fltval(fp+arg);
                 prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, cap, f, "G", left, sign, space, zero, width, prec);
+                fmt_signed(buf, n, f, "G", left, sign, space, zero, width, prec);
                 ++arg;
             }
             break;
@@ -477,7 +447,7 @@ redir_flt:
         case 's':
             if (argc--) {
                 if (is_str(fp+arg)) {
-                    fmt_str(buf, n, cap, fp[arg].u.s->str, left, width, prec);
+                    fmt_str(buf, n, fp[arg].u.s->str, left, width, prec);
                 } else if (is_int(fp+arg)) {
                     goto redir_int;
                 } else if (is_flt(fp+arg)) {
@@ -486,28 +456,26 @@ redir_flt:
 
                 // TODO handle other types
                 else {
-                    fmt_str(buf, n, cap, "", left, width, prec);
+                    fmt_str(buf, n, "", left, width, prec);
                 }
                 ++arg;
             }
             break;
         default:
             // Throw error
-            fprintf(stderr, "riff: [fmt] invalid format specifier: %c\n", fstr[-1]);
-            exit(1);
+            err("[fmt] invalid format specifier");
         }
-        n += len;
+
+        if (n >= FMT_BUF_SZ)
+            err("[fmt] string length exceeds maximum buffer size");
     }
 
     // Copy rest of string after exhausting user-provided args
-    while (*fstr) {
-        m_growarray(buf, n, cap, char);
+    while (*fstr && n <= FMT_BUF_SZ) {
         buf[n++] = *fstr++;
     }
 
     assign_str(fp-1, s_newstr(buf, n, 0));
-    if (buf)
-        free(buf);
     return 1;
 }
 
@@ -518,9 +486,8 @@ redir_flt:
 //   hex(255) -> "0xff"
 static int l_hex(rf_val *fp, int argc) {
     rf_int i = intval(fp);
-    size_t len = snprintf(NULL, 0, "0x%"PRIx64, i);
-    char buf[len + 1];
-    snprintf(buf, len + 1, "0x%"PRIx64, i);
+    char buf[20];
+    int len = sprintf(buf, "0x%"PRIx64, i);
     assign_str(fp-1, s_newstr(buf, len, 0));
     return 1;
 }
