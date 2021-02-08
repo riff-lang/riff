@@ -79,7 +79,11 @@ typedef struct {
                    is_str(x) ? str2flt((x)->u.s) : 0)
 
 #define int_arith(l,r,op) \
-    assign_int(l, (intval(l) op intval(r)));
+    if (is_int(l) && is_int(r)) { \
+        l->u.i = (l->u.i op r->u.i); \
+    } else { \
+        assign_int(l, (intval(l) op intval(r))); \
+    }
 
 #define flt_arith(l,r,op) \
     assign_flt(l, (numval(l) op numval(r)));
@@ -106,10 +110,11 @@ typedef struct {
         } \
         char *end; \
         rf_flt f = u_str2d(l->u.s->str, &end, 0); \
-        if (*end != '\0') \
+        if (*end != '\0') { \
             assign_int(l, 0); \
-        else \
+        } else { \
             assign_int(l, (f op numval(r))); \
+        } \
     } else if (!is_str(l) && is_str(r)) { \
         if (!r->u.s->l) { \
             assign_int(l, !(0 op 0)); \
@@ -117,10 +122,11 @@ typedef struct {
         } \
         char *end; \
         rf_flt f = u_str2d(r->u.s->str, &end, 0); \
-        if (*end != '\0') \
+        if (*end != '\0') { \
             assign_int(l, 0); \
-        else \
+        } else { \
             assign_int(l, (numval(l) op f)); \
+        } \
     } else { \
         num_arith(l,r,op); \
     }
