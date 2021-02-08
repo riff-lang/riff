@@ -154,7 +154,7 @@ static int l_byte(rf_val *fp, int argc) {
     if (is_str(fp)) {
         if (idx > fp->u.s->l)
             idx = fp->u.s->l;
-        assign_int(fp-1, fp->u.s->str[idx]);
+        assign_int(fp-1, (uint8_t) fp->u.s->str[idx]);
     } else if (is_rfn(fp)) {
         if (idx > fp->u.fn->code->n)
             idx = fp->u.fn->code->n;
