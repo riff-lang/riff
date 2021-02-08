@@ -124,7 +124,17 @@ static int read_charint(rf_lexer *x, rf_token *tk) {
         default:        c = dec_esc(x); break;
         }
         break;
-    default: adv; break;
+    default:
+        if (c & 0x80) {
+            char *end;
+            c = u_utf82unicode(x->p, &end);
+            x->p = end;
+            if (c < 0)
+                err(x, "invalid unicode character");
+        } else {
+            adv;
+        }
+        break;
     }
     if (*x->p++ != '\'')
         err(x, "expected `'` following character literal");

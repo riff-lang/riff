@@ -204,8 +204,39 @@ int64_t u_str2i64(const char *str, char **end, int base) {
                       : (int64_t) strtoull(buf, &dummy, base);
 }
 
-// Size of buf should be >= 8
-// Algo source: Lua (luaO_utf8esc())
+// Decodes a UTF-8 sequence, returning the unicode code point as a
+// Riff integer.
+// Source: Lua's utf8_decode()
+int64_t u_utf82unicode(const char *str, char **end) {
+    unsigned int c0 = (unsigned int) *str++;
+    int64_t r = 0;
+    if (c0 <= 0x7f)
+        r = c0;
+    else {
+        int n = 0;
+        unsigned int c = 0;
+        for (; *str && (c0 & 0x40); ++n, c0 <<= 1) {
+            c = (unsigned int) *str++;
+            if ((c & 0xc0) != 0x80) {
+                r = -1;
+                goto ret;
+            }
+            r = (r << 6) | (c & 0x3f);
+        }
+        r |= (c0 & 0x7f) << (n * 5);
+        if (n > 5 || r > 0x7fffffff) {
+            r = -1;
+            goto ret;
+        }
+    }
+ret:
+    *end = (char *) str;
+    return r;
+}
+
+// Encodes a unicode codepoint to UTF-8 sequence. Fills the buffer
+// backwards. Size of buf should be >= 8.
+// Source: Lua's luaO_utf8esc()
 int u_unicode2utf8(char *buf, uint32_t c) {
     int n = 1;
     if (c <= 0x7f)
