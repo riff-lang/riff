@@ -132,6 +132,20 @@ static int read_charint(rf_lexer *x, rf_token *tk) {
     return TK_INT;
 }
 
+static void unicode_esc(rf_lexer *x, int len) {
+    uint32_t c = 0;
+    for (int i = 0; i < len && isxdigit(*x->p); ++i) {
+        c <<= 4;
+        c += u_hexval(*x->p++);
+    }
+    char buf[8];
+    int n = 8 - u_unicode2utf8(buf, c);
+    for (; n < 8; ++n) {
+        m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
+        x->buf.c[x->buf.n++] = buf[n];
+    }
+}
+
 // TODO handling of multi-line string literals
 static int read_str(rf_lexer *x, rf_token *tk, int d) {
     x->buf.n = 0;
@@ -152,12 +166,14 @@ str_start:
             case 'v': adv; c = '\v';       break;
             case 'x': adv; c = hex_esc(x); break;
 
+            case 'u': adv; unicode_esc(x, 4); goto str_start;
+            case 'U': adv; unicode_esc(x, 8); goto str_start;
+
             // Ignore newlines following `\`
             case '\n': case '\r':
                 ++x->ln;
                 adv;
                 goto str_start;
-                break;
             case '\\': case '\'': case '"':
                 c = *x->p;
                 adv;

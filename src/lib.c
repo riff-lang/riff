@@ -165,19 +165,30 @@ static int l_byte(rf_val *fp, int argc) {
     return 1;
 }
 
+#define STR_BUF_SZ 0x1000
+
 // char(...)
 // Takes zero or more integers and returns a string composed of the
-// ASCII codes of each respective argument in order
+// character codes of each respective argument in order
 // Ex:
 //   char(114, 105, 102, 102) -> "riff"
 static int l_char(rf_val *fp, int argc) {
     if (!argc) return 0;
-    char buf[argc + 1];
+    char buf[STR_BUF_SZ];
+    int n = 0;
     for (int i = 0; i < argc; ++i) {
-        buf[i] = (unsigned char) intval(fp+i);
+        uint32_t c = (uint32_t) intval(fp+i);
+        if (c <= 0x7f)
+            buf[n++] = (char) c;
+        else {
+            char ubuf[8];
+            int j = 8 - u_unicode2utf8(ubuf, c);
+            for (; j < 8; ++j) {
+                buf[n++] = ubuf[j];
+            }
+        }
     }
-    buf[argc] = '\0';
-    assign_str(fp-1, s_newstr(buf, argc, 0));
+    assign_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
 
@@ -236,7 +247,6 @@ static int l_char(rf_val *fp, int argc) {
         n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
     }
 
-#define FMT_BUF_SZ       0x1000
 #define DEFAULT_FLT_PREC 6
 
 // fmt(...)
@@ -270,13 +280,13 @@ static int l_fmt(rf_val *fp, int argc) {
 
     const char *fstr = fp->u.s->str;
 
-    char buf[FMT_BUF_SZ];
+    char buf[STR_BUF_SZ];
     int  n = 0;
 
     // Flags and specifiers
     int left, sign, space, zero, width, prec;
 
-    while (*fstr && argc && n <= FMT_BUF_SZ) {
+    while (*fstr && argc && n <= STR_BUF_SZ) {
         if (*fstr != '%') {
             buf[n++] = *fstr++;
             continue;
@@ -466,12 +476,12 @@ redir_flt:
             err("[fmt] invalid format specifier");
         }
 
-        if (n >= FMT_BUF_SZ)
+        if (n >= STR_BUF_SZ)
             err("[fmt] string length exceeds maximum buffer size");
     }
 
     // Copy rest of string after exhausting user-provided args
-    while (*fstr && n <= FMT_BUF_SZ) {
+    while (*fstr && n <= STR_BUF_SZ) {
         buf[n++] = *fstr++;
     }
 

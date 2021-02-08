@@ -203,3 +203,21 @@ int64_t u_str2i64(const char *str, char **end, int base) {
     return base == 10 ? strtoll(buf, &dummy, base)
                       : (int64_t) strtoull(buf, &dummy, base);
 }
+
+// Size of buf should be >= 8
+// Algo source: Lua (luaO_utf8esc())
+int u_unicode2utf8(char *buf, uint32_t c) {
+    int n = 1;
+    if (c <= 0x7f)
+        buf[7] = (char) c;
+    else {
+        uint8_t f = 0x3f;
+        do {
+            buf[8-(n++)] = (char) (0x80 | (c & 0x3f));
+            c >>= 6;
+            f >>= 1;
+        } while (c > f);
+        buf[8-n] = (char) ((~f << 1) | c);
+    }
+    return n;
+}

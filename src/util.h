@@ -10,5 +10,6 @@ int       u_hexval(int);
 int       u_baseval(int, int);
 double    u_str2d(const char *, char **, int);
 int64_t   u_str2i64(const char *, char **, int);
+int       u_unicode2utf8(char *, uint32_t);
 
 #endif
