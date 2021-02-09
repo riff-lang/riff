@@ -367,20 +367,28 @@ int z_exec(rf_env *e) {
     return exec(e->main.code, stack, stack);
 }
 
+#if !defined(COMPUTED_GOTO)
+#if defined(__GNUC__)
 #define COMPUTED_GOTO 1
+#else
+#define COMPUTED_GOTO 0
+#endif
+#endif
 
 // VM interpreter loop
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     rf_stack *retp = sp; // Save original SP
     rf_val *tp; // Temp pointer
     register uint8_t *ip = c->code;
+
 #if !defined(COMPUTED_GOTO)
+// Use standard while loop with switch/case if computed goto is
+// disabled or unavailable
 #define z_case(l) case OP_##l:
 #define z_break   break
-    while (1) {
-        switch (*ip) {
+    while (1) { switch (*ip) {
 #else
-#include "dispatch.h"
+#include "labels.h"
     dispatch();
 #endif
 
@@ -1056,7 +1064,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     z_case(EXIT)
         exit(0);
 #if !defined(COMPUTED_GOTO)
-    }}
+    } }
 #endif
     return 0;
 }

@@ -1,3 +1,5 @@
+// VM labels for computed goto
+
 #define z_case(l)   L_##l:
 #define z_break     dispatch()
 #define dispatch()  goto *dispatch_labels[*ip]
