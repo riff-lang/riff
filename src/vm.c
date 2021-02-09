@@ -377,6 +377,8 @@ int z_exec(rf_env *e) {
 
 // VM interpreter loop
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
+    if (sp - stack >= STACK_SIZE)
+        err("stack overflow");
     rf_stack *retp = sp; // Save original SP
     rf_val *tp; // Temp pointer
     register uint8_t *ip = c->code;
