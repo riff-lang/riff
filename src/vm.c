@@ -101,10 +101,10 @@ static inline void z_num(rf_val *v) {
 static inline void z_neg(rf_val *v) {
     switch (v->type) {
     case TYPE_INT:
-        assign_int(v, -v->u.i);
+        v->u.i = -v->u.i;
         break;
     case TYPE_FLT:
-        assign_flt(v, -v->u.f);
+        v->u.f = -v->u.f;
         break;
     case TYPE_STR:
         assign_flt(v, -str2flt(v->u.s));

@@ -86,13 +86,18 @@ typedef struct {
     }
 
 #define flt_arith(l,r,op) \
-    assign_flt(l, (numval(l) op numval(r)));
+    assign_flt(l, (numval(l) op numval(r)))
 
 #define num_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
         l->u.i = (l->u.i op r->u.i); \
     } else { \
-        flt_arith(l,r,op); \
+        rf_flt f = (numval(l) op numval(r)); \
+        if (f == (rf_int) f) { \
+            assign_int(l, ((rf_int) f)); \
+        } else { \
+            assign_flt(l, (f)); \
+        } \
     }
 
 // == and != operators
