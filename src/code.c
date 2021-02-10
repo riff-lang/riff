@@ -376,6 +376,7 @@ void c_infix(rf_code *c, int op) {
     case '-':     push(OP_SUB);  break;
     case '*':     push(OP_MUL);  break;
     case '/':     push(OP_DIV);  break;
+    case '#':     push(OP_CAT);  break;
     case '%':     push(OP_MOD);  break;
     case '>':     push(OP_GT);   break;
     case '<':     push(OP_LT);   break;
@@ -386,7 +387,6 @@ void c_infix(rf_code *c, int op) {
     case TK_SHL:  push(OP_SHL);  break;
     case TK_SHR:  push(OP_SHR);  break;
     case TK_POW:  push(OP_POW);  break;
-    case TK_CAT:  push(OP_CAT);  break;
     case TK_GE:   push(OP_GE);   break;
     case TK_LE:   push(OP_LE);   break;
     case TK_EQ:   push(OP_EQ);   break;

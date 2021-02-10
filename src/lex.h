@@ -21,7 +21,6 @@ enum tokens {
     // NOTE: Single character tokens are implicitly enumerated
 
     TK_AND = 128, // &&
-    TK_CAT,       // ::
     TK_DEC,       // --
     TK_DOTS,      // ..
     TK_EQ,        // ==
@@ -35,7 +34,7 @@ enum tokens {
     TK_SHR,       // >>
     TK_ADDX,      // +=
     TK_ANDX,      // &=
-    TK_CATX,      // ::=
+    TK_CATX,      // #=
     TK_DIVX,      // /=
     TK_MODX,      // %=
     TK_MULX,      // *=

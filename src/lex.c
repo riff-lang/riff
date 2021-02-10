@@ -393,6 +393,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case ' ': case '\t': break;
         case '!': return test2(x, '=', TK_NE, '!');
         case '"': return read_str(x, tk, c);
+        case '#': return test2(x, '=', TK_CATX, '#');
         case '%': return test2(x, '=', TK_MODX, '%');
         case '&': return test3(x, '=', TK_ANDX, '&', TK_AND, '&');
         case '*': return test4(x, '=', TK_MULX, '*', 
@@ -448,14 +449,8 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                                   '=', TK_SHRX, TK_SHR, '>');
         case '^': return test2(x, '=', TK_XORX, '^');
         case '|': return test3(x, '=', TK_ORX, '|', TK_OR, '|');
-        case ':':
-            if (*x->p == ':') {
-                adv;
-                return test2(x, '=', TK_CATX, TK_CAT);
-            } else
-                return ':';
         case '\'': return read_charint(x, tk);
-        case '#': case '$': case '(': case ')': case ',':
+        case '$': case '(': case ')': case ',': case ':':
         case ';': case '?': case ']': case '[': case '{':
         case '}': case '~':
             return c;

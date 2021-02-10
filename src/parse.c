@@ -67,7 +67,7 @@ static int lbp(int tk) {
     case TK_POW:                  return 15;
     case '*': case '/': case '%': return 13;
     case '+': case '-':           return 12;
-    case TK_CAT:                  return 11;
+    case '#':                     return 11;
     case TK_SHL: case TK_SHR:     return 11;
     case '&':                     return 10;
     case '^':                     return 9;
@@ -91,12 +91,13 @@ static int uop(int tk) {
 }
 
 static int lbop(int tk) {
-    return tk == '%' || tk == '&' || tk == '(' || tk == '*' ||
-           tk == '+' || tk == '-' || tk == '/' || tk == '<' ||
-           tk == '>' || tk == '^' || tk == '|' || tk == '[' ||
+    return tk == '#' || tk == '%' || tk == '&' || tk == '(' ||
+           tk == '*' || tk == '+' || tk == '-' || tk == '/' ||
+           tk == '<' || tk == '>' || tk == '^' || tk == '|' ||
+           tk == '[' ||
            tk == TK_AND || tk == TK_EQ  || tk == TK_NE ||
            tk == TK_GE  || tk == TK_LE  || tk == TK_OR ||
-           tk == TK_SHL || tk == TK_SHR || tk == TK_CAT;
+           tk == TK_SHL || tk == TK_SHR;
 }
 
 static int rbop(int tk) {
