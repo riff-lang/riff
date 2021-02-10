@@ -14,7 +14,7 @@
 #define VERSION "0.1a"
 
 static void version(void) {
-    printf("riff %s Copyright 2020, Darryl Abbate\n", VERSION);
+    printf("riff %s Copyright 2020-2021, Darryl Abbate\n", VERSION);
     exit(0);
 }
 

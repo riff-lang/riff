@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "array.h"
+#include "conf.h"
 #include "lib.h"
 #include "mem.h"
 #include "vm.h"
@@ -18,7 +19,7 @@ static hash_t    globals;
 static rf_arr    argv;
 static rf_int    aos;
 static rf_iter  *iter;
-static rf_stack  stack[STACK_SIZE];
+static rf_stack  stack[VM_STACK_SIZE];
 
 inline rf_int str2int(rf_str *s) {
     char *end;
@@ -367,23 +368,21 @@ int z_exec(rf_env *e) {
     return exec(e->main.code, stack, stack);
 }
 
-#if !defined(COMPUTED_GOTO)
-#if defined(__GNUC__)
-#define COMPUTED_GOTO 1
-#else
-#define COMPUTED_GOTO 0
+#ifndef COMPUTED_GOTO
+#ifdef __GNUC__
+#define COMPUTED_GOTO
 #endif
 #endif
 
 // VM interpreter loop
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
-    if (sp - stack >= STACK_SIZE)
+    if (sp - stack >= VM_STACK_SIZE)
         err("stack overflow");
     rf_stack *retp = sp; // Save original SP
     rf_val *tp; // Temp pointer
     register uint8_t *ip = c->code;
 
-#if !defined(COMPUTED_GOTO)
+#ifndef COMPUTED_GOTO
 // Use standard while loop with switch/case if computed goto is
 // disabled or unavailable
 #define z_case(l) case OP_##l:
@@ -1065,7 +1064,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         z_break;
     z_case(EXIT)
         exit(0);
-#if !defined(COMPUTED_GOTO)
+#ifndef COMPUTED_GOTO
     } }
 #endif
     return 0;

@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "array.h"
+#include "conf.h"
 #include "fn.h"
 #include "mem.h"
 #include "lib.h"
@@ -165,8 +166,6 @@ static int l_byte(rf_val *fp, int argc) {
     return 1;
 }
 
-#define STR_BUF_SZ 0x1000
-
 // char(...)
 // Takes zero or more integers and returns a string composed of the
 // character codes of each respective argument in order
@@ -246,8 +245,6 @@ static int l_char(rf_val *fp, int argc) {
     } else { \
         n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
     }
-
-#define DEFAULT_FLT_PREC 6
 
 // fmt(...)
 // Riff's `sprintf()` implementation. Doubles as `printf()` due to the

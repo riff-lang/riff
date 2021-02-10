@@ -6,9 +6,6 @@
 #include "hash.h"
 #include "types.h"
 
-// TODO dynamic stack allocation
-#define STACK_SIZE 0x1000
-
 // VM stack element
 typedef union {
     uint64_t  t; // Implicit type tag
