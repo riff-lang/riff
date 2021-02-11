@@ -41,7 +41,7 @@ local e++           // Local declaration w/ postfix increment
 d, e                // Should print "1 1"
 local f[1] = "arr"  // Local declaration of array f
 f                   // Should print "array: <addr>"
-local g = {}        // Local declaration w/ assignment of empty array
+local g = {};       // Local declaration w/ assignment of empty array
 #g                  // Should print 0
-local h[3] = 1
+local h[3] = 1;
 #h                  // Should print 1
