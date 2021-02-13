@@ -21,15 +21,56 @@ static rf_int    aos;
 static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
 
+// Coerce string to int unconditionally
 inline rf_int str2int(rf_str *s) {
     char *end;
     return u_str2i64(s->str, &end, 0);
 }
 
+// Coerce string to float unconditionally
 inline rf_flt str2flt(rf_str *s) {
     char *end;
     return u_str2d(s->str, &end, 0);
 }
+
+// Return character pointed to by `end`, signaling whether the entire
+// string was consumed or not.
+static int str2num(rf_val *v) {
+    char *end;
+    rf_flt f = u_str2d(v->u.s->str, &end, 0);
+    rf_int i = (rf_int) f;
+    if (f == i) {
+        assign_int(v, i);
+    } else {
+        assign_flt(v, f);
+    }
+    return *end;
+}
+
+// Integer arithmetic (Bitwise ops)
+#define int_arith(l,r,op) \
+    if (is_int(l) && is_int(r)) { \
+        l->u.i = (l->u.i op r->u.i); \
+    } else { \
+        assign_int(l, (intval(l) op intval(r))); \
+    }
+
+// Floating-point arithmetic
+#define flt_arith(l,r,op) \
+    assign_flt(l, (numval(l) op numval(r)))
+
+// "Polymorphic" arithmetic
+#define num_arith(l,r,op) \
+    if (is_int(l) && is_int(r)) { \
+        l->u.i = (l->u.i op r->u.i); \
+    } else { \
+        rf_flt f = (numval(l) op numval(r)); \
+        if (f == (rf_int) f) { \
+            assign_int(l, ((rf_int) f)); \
+        } else { \
+            assign_flt(l, (f)); \
+        } \
+    }
 
 // Return logical result of value
 static inline int test(rf_val *v) {
@@ -260,17 +301,6 @@ static inline void z_print(rf_val *v) {
     }
 }
 
-// TODO
-#include <string.h>
-static inline void init_argv(rf_arr *a, int argc, char **argv) {
-    a_init(a);
-    for (int i = 0; i < argc; ++i) {
-        rf_str *s = s_newstr(argv[i], strlen(argv[i]), 1);
-        a_insert_int(a, i, v_newstr(s), 1, 1);
-        m_freestr(s);
-    }
-}
-
 static inline void new_iter(rf_val *set) {
     rf_iter *new = malloc(sizeof(rf_iter));
     new->p = iter;
@@ -341,6 +371,17 @@ static inline void destroy_iter(void) {
     free(old);
 }
 
+// TODO
+#include <string.h>
+static inline void init_argv(rf_arr *a, int rf_argc, char **rf_argv) {
+    a_init(a);
+    for (int i = 0; i < rf_argc; ++i) {
+        rf_str *s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 1);
+        a_insert_int(a, i, v_newstr(s), 1, 1);
+        m_freestr(s);
+    }
+}
+
 static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 
 // VM entry point/initialization
@@ -349,8 +390,8 @@ int z_exec(rf_env *e) {
     iter = NULL;
     init_argv(&argv, e->argc, e->argv);
 
-    // Offset for the argv; $0 should be the first user-provided arg
-    aos = e->ff ? 3 : 2;
+    // Offset for the argv; $1 should be the first user-provided arg
+    aos = e->ff ? 2 : 1;
 
     l_register(&globals);
 

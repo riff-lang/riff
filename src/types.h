@@ -78,28 +78,6 @@ typedef struct {
                    is_int(x) ? (rf_flt) (x)->u.i : \
                    is_str(x) ? str2flt((x)->u.s) : 0)
 
-#define int_arith(l,r,op) \
-    if (is_int(l) && is_int(r)) { \
-        l->u.i = (l->u.i op r->u.i); \
-    } else { \
-        assign_int(l, (intval(l) op intval(r))); \
-    }
-
-#define flt_arith(l,r,op) \
-    assign_flt(l, (numval(l) op numval(r)))
-
-#define num_arith(l,r,op) \
-    if (is_int(l) && is_int(r)) { \
-        l->u.i = (l->u.i op r->u.i); \
-    } else { \
-        rf_flt f = (numval(l) op numval(r)); \
-        if (f == (rf_int) f) { \
-            assign_int(l, ((rf_int) f)); \
-        } else { \
-            assign_flt(l, (f)); \
-        } \
-    }
-
 // == and != operators
 #define cmp_eq(l,r,op) \
     if (is_null(l) ^ is_null(r)) { \

@@ -1,6 +1,6 @@
 // Recursive Fibonacci number program
 
-f($0 ?: 20)
+f($1 ?: 20)
 
 fn f(n) {
     return n < 2 ? n : f(n-1) + f(n-2)
