@@ -286,17 +286,17 @@ static inline void z_idx(rf_val *l, rf_val *r) {
 // OP_PRINT functionality
 static inline void z_print(rf_val *v) {
     switch (v->type) {
-    case TYPE_NULL: printf("null");              break;
-    case TYPE_INT:  printf("%"PRId64, v->u.i);   break;
-    case TYPE_FLT:  printf("%g", v->u.f);        break;
-    case TYPE_STR:  printf("%s", v->u.s->str);   break;
+    case TYPE_NULL: printf("null");                 break;
+    case TYPE_INT:  printf("%"PRId64, v->u.i);      break;
+    case TYPE_FLT:  printf(FLT_PRINT_FMT, v->u.f);  break;
+    case TYPE_STR:  printf("%s", v->u.s->str);      break;
     case TYPE_SEQ:
         printf("seq: %"PRId64"..%"PRId64":%"PRId64,
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
         break;
-    case TYPE_ARR:  printf("array: %p", v->u.a); break;
-    case TYPE_RFN:  printf("fn: %p", v->u.fn);   break;
-    case TYPE_CFN:  printf("fn: %p", v->u.cfn);  break;
+    case TYPE_ARR:  printf("array: %p", v->u.a);    break;
+    case TYPE_RFN:  printf("fn: %p", v->u.fn);      break;
+    case TYPE_CFN:  printf("fn: %p", v->u.cfn);     break;
     default: break;
     }
 }
