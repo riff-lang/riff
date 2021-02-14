@@ -21,7 +21,7 @@ void t_init(rf_tbl *t) {
     t->cap   = 0;
     t->nullv = v_newnull();
     t->v     = NULL;
-    t->h     = malloc(sizeof(hash_t));
+    t->h     = malloc(sizeof(rf_htbl));
     h_init(t->h);
 }
 
@@ -56,10 +56,10 @@ rf_val *t_collect_keys(rf_tbl *t) {
             keys[n++] = (rf_val) {TYPE_INT, .u.i = i};
         }
     }
-    hash_t *h = t->h;
+    rf_htbl *h = t->h;
     for (int i = 0; i < h->cap && n <= len; ++i) {
-        if (h->e[i] && !is_null(h->e[i]->val)) {
-            keys[n++] = (rf_val) {TYPE_STR, .u.s = h->e[i]->key};
+        if (h->nodes[i] && !is_null(h->nodes[i]->val)) {
+            keys[n++] = (rf_val) {TYPE_STR, .u.s = h->nodes[i]->key};
         }
     }
     if (t->nullx)

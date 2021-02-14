@@ -10,20 +10,20 @@
 #define set(f)   h->f = 1
 #define unset(f) h->f = 0
 
-void h_init(hash_t *h) {
-    h->n   = 0;
-    h->an  = 0;
-    h->cap = 0;
-    h->lx  = 0;
-    h->e   = NULL;
+void h_init(rf_htbl *h) {
+    h->n     = 0;
+    h->an    = 0;
+    h->cap   = 0;
+    h->lx    = 0;
+    h->nodes = NULL;
 }
 
-uint32_t h_length(hash_t *h) {
+uint32_t h_length(rf_htbl *h) {
     if (!h->lx)
         return h->n;
     uint32_t l = 0;
     for (int i = 0; i < h->cap; ++i) {
-        if (h->e[i] && !is_null(h->e[i]->val))
+        if (h->nodes[i] && !is_null(h->nodes[i]->val))
             ++l;
     }
     h->n = l;
@@ -31,7 +31,7 @@ uint32_t h_length(hash_t *h) {
     return l;
 }
 
-static entry_t *new_entry(rf_str *k, rf_val *v) {
+static ht_node *new_node(rf_str *k, rf_val *v) {
     rf_str *nk = s_newstr(k->str, k->l, 0);
     nk->hash = k->hash;
     rf_val *nv;
@@ -49,7 +49,7 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
         break;
     default: break;
     }
-    entry_t *e = malloc(sizeof(entry_t));
+    ht_node *e = malloc(sizeof(ht_node));
     e->key = nk;
     e->val = nv;
     return e;
@@ -57,94 +57,94 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
 
 // Given a string's hash, return index of the element if it exists in the
 // table, or an index of a suitble empty slot
-static int h_index(entry_t **e, int cap, uint32_t hash) {
+static uint32_t node_slot(ht_node **e, uint32_t cap, uint32_t hash) {
     cap -= 1;
-    int i = hash & cap;
+    uint32_t i = hash & cap;
     while (e[i] && e[i]->key->hash != hash) {
         i = (i + 1) & cap; // Linear probing
     }
     return i;
 }
 
-static int exists(hash_t *h, rf_str *k) {
+static int exists(rf_htbl *h, rf_str *k) {
     if (!k->hash)
         k->hash = u_strhash(k->str);
-    int i = h_index(h->e, h->cap, k->hash);
-    return h->e[i] && h->e[i]->key->hash == k->hash;
+    int i = node_slot(h->nodes, h->cap, k->hash);
+    return h->nodes[i] && h->nodes[i]->key->hash == k->hash;
 }
 
-rf_val *h_lookup(hash_t *h, rf_str *k, int set) {
+rf_val *h_lookup(rf_htbl *h, rf_str *k, int set) {
     if (set) set(lx);
     // If the table is empty, call h_insert, which allocates memory
-    if (!h->e)
+    if (!h->nodes)
         return h_insert(h, k, v_newnull(), set);
     if (!k->hash)
         k->hash = u_strhash(k->str);
-    int i = h_index(h->e, h->cap, k->hash);
-    if (!h->e[i])
+    int i = node_slot(h->nodes, h->cap, k->hash);
+    if (!h->nodes[i])
         return h_insert(h, k, v_newnull(), set);
-    return h->e[i]->val;
+    return h->nodes[i]->val;
 }
 
-rf_val *h_insert(hash_t *h, rf_str *k, rf_val *v, int set) {
+rf_val *h_insert(rf_htbl *h, rf_str *k, rf_val *v, int set) {
     if (set) set(lx);
     if (!k->hash)
         k->hash = u_strhash(k->str);
     // Evaluate hash table size
     if ((h->cap * LOAD_FACTOR) <= h->an + 1) {
         int new_cap = h->cap < 8 ? 8 : h->cap * 2;
-        entry_t **new_e = malloc(new_cap * sizeof(entry_t *));
+        ht_node **new_nodes = malloc(new_cap * sizeof(ht_node *));
         for (int i = 0; i < new_cap; ++i)
-            new_e[i] = NULL;
+            new_nodes[i] = NULL;
         int new_n  = 0;
         int new_an = 0;
         int old_an = h->an;
         int j;
         if (old_an) {
             for (int i = 0; old_an && (i < h->cap); i++) {
-                if (!h->e[i]) {
+                if (!h->nodes[i]) {
                     continue;
                 } else {
-                    j = h_index(new_e, new_cap, h->e[i]->key->hash);
-                    new_e[j] = h->e[i];
+                    j = node_slot(new_nodes, new_cap, h->nodes[i]->key->hash);
+                    new_nodes[j] = h->nodes[i];
                     ++new_an;
                     --old_an;
-                    if (!is_null(h->e[i]->val))
+                    if (!is_null(h->nodes[i]->val))
                         ++new_n;
                 }
             }
         }
-        free(h->e);
-        h->e   = new_e;
-        h->n   = new_n;
-        h->an  = new_an;
-        h->cap = new_cap;
+        free(h->nodes);
+        h->nodes = new_nodes;
+        h->n     = new_n;
+        h->an    = new_an;
+        h->cap   = new_cap;
     }
-    int i = h_index(h->e, h->cap, k->hash);
+    int i = node_slot(h->nodes, h->cap, k->hash);
     if (!exists(h, k)) {
-        free(h->e[i]);
-        h->e[i] = new_entry(k, v);
+        free(h->nodes[i]);
+        h->nodes[i] = new_node(k, v);
         h->an++;
         if (set || !is_null(v))
             h->n++;
     } else {
-        *h->e[i]->val = *v;
+        *h->nodes[i]->val = *v;
     }
-    return h->e[i]->val;
+    return h->nodes[i]->val;
 }
 
 // Remove the key/value pair by nullifying its slot
-rf_val *h_delete(hash_t *h, rf_str *k) {
-    if (!h->e || !exists(h, k))
+rf_val *h_delete(rf_htbl *h, rf_str *k) {
+    if (!h->nodes || !exists(h, k))
         return NULL;
     if (!k->hash)
         k->hash = u_strhash(k->str);
-    int idx = h_index(h->e, h->cap, k->hash);
-    rf_val *v = h->e[idx]->val;
+    int slot = node_slot(h->nodes, h->cap, k->hash);
+    rf_val *v = h->nodes[slot]->val;
     h->an--;
     if (!is_null(v))
         h->n--;
-    m_freestr(h->e[idx]->key);
-    h->e[idx] = NULL;
+    m_freestr(h->nodes[slot]->key);
+    h->nodes[slot] = NULL;
     return v;
 }

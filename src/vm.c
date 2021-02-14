@@ -15,7 +15,7 @@ static void err(const char *msg) {
     exit(1);
 }
 
-static hash_t    globals;
+static rf_htbl   globals;
 static rf_tbl    argv;
 static rf_int    aos;
 static rf_iter  *iter;

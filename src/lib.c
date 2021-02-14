@@ -630,7 +630,7 @@ static struct {
     { NULL,    { 0, NULL }    }
 };
 
-void l_register(hash_t *g) {
+void l_register(rf_htbl *g) {
     // Initialize the PRNG with the current time
     srand48(time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
