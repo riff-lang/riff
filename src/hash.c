@@ -18,10 +18,10 @@ void h_init(hash_t *h) {
     h->e   = NULL;
 }
 
-rf_int h_length(hash_t *h) {
+uint32_t h_length(hash_t *h) {
     if (!h->lx)
         return h->n;
-    rf_int l = 0;
+    uint32_t l = 0;
     for (int i = 0; i < h->cap; ++i) {
         if (h->e[i] && !is_null(h->e[i]->val))
             ++l;
@@ -40,9 +40,9 @@ static entry_t *new_entry(rf_str *k, rf_val *v) {
     case TYPE_INT:  nv = v_newint(v->u.i); break;
     case TYPE_FLT:  nv = v_newflt(v->u.f); break;
     case TYPE_STR:  nv = v_newstr(v->u.s); break;
-    case TYPE_ARR:
-        nv      = v_newarr();
-        nv->u.a = v->u.a;
+    case TYPE_TBL:
+        nv      = v_newtbl();
+        nv->u.t = v->u.t;
         break;
     case TYPE_RFN: case TYPE_CFN:
         nv = v; // Don't allocate new functions
@@ -148,7 +148,3 @@ rf_val *h_delete(hash_t *h, rf_str *k) {
     h->e[idx] = NULL;
     return v;
 }
-
-#undef LOAD_FACTOR
-#undef set
-#undef unset

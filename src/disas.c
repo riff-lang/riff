@@ -14,9 +14,6 @@ static struct {
     [OP_AND]     = { "and",      0 },
     [OP_ARGA]    = { "arga",     0 },
     [OP_ARGV]    = { "argv",     0 },
-    [OP_ARRAY0]  = { "array  0", 0 },
-    [OP_ARRAYK]  = { "array",    1 },
-    [OP_ARRAY]   = { "array",    1 },
     [OP_CALL]    = { "call",     1 },
     [OP_CATX]    = { "catx",     0 },
     [OP_CAT]     = { "cat",      0 },
@@ -108,6 +105,9 @@ static struct {
     [OP_SSEQ]    = { "sseq",     0 },
     [OP_SUBX]    = { "subx",     0 },
     [OP_SUB]     = { "sub",      0 },
+    [OP_TBL0]    = { "tbl    0", 0 },
+    [OP_TBLK]    = { "tbl",      1 },
+    [OP_TBL]     = { "tbl",      1 },
     [OP_TEST]    = { "test",     0 },
     [OP_XJNZ16]  = { "xjnz",     2 },
     [OP_XJNZ8]   = { "xjnz",     1 },
@@ -157,7 +157,7 @@ static void d_code_obj(rf_code *c, int ipw) {
             b1 = c->code[ip+1];
             switch (b0) {
             case OP_PUSHK:
-            case OP_ARRAYK:
+            case OP_TBLK:
                 switch (c->k[b1].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND(f));

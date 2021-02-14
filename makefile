@@ -19,7 +19,6 @@ WFLAGS += -Wpedantic
 WFLAGS += -Weverything
 
 SRC     = src/riff.c
-SRC    += src/array.c
 SRC    += src/code.c
 SRC    += src/disas.c
 SRC    += src/fn.c
@@ -28,6 +27,7 @@ SRC    += src/lex.c
 SRC    += src/lib.c
 SRC    += src/parse.c
 SRC    += src/str.c
+SRC    += src/table.c
 SRC    += src/util.c
 SRC    += src/val.c
 SRC    += src/vm.c

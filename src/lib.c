@@ -7,11 +7,11 @@
 #include <string.h>
 #include <time.h>
 
-#include "array.h"
 #include "conf.h"
 #include "fn.h"
-#include "mem.h"
 #include "lib.h"
+#include "mem.h"
+#include "table.h"
 
 static void err(const char *msg) {
     fprintf(stderr, "riff: %s\n", msg);
@@ -559,10 +559,10 @@ ret_flt:
 }
 
 // split(s[,d])
-// Returns an array with elements being string `s` split on delimiter
+// Returns a table with elements being string `s` split on delimiter
 // `d`. The delimiter can be zero or more characters. If no delimiter
 // is provided, the default is " \t". If the delimiter is the empty
-// string (""), the string is split into an array of individual
+// string (""), the string is split into a table of individual
 // characters.
 static int l_split(rf_val *fp, int argc) {
     if (!is_str(fp))
@@ -571,25 +571,25 @@ static int l_split(rf_val *fp, int argc) {
     char str[len];
     memcpy(str, fp->u.s->str, len);
     const char *delim = (argc < 2 || !is_str(fp+1)) ? " \t" : fp[1].u.s->str;
-    rf_val *arr = v_newarr();
+    rf_val *tbl = v_newtbl();
     rf_str *s;
     rf_val v;
     if (!strlen(delim)) {
         for (rf_int i = 0; i < len - 1; ++i) {
             s = s_newstr(str + i, 1, 0);
             v = (rf_val) {TYPE_STR, .u.s = s};
-            a_insert_int(arr->u.a, i, &v, 1, 1);
+            t_insert_int(tbl->u.t, i, &v, 1, 1);
         }
     } else {
         char *tk = strtok(str, delim);
         for (rf_int i = 0; tk; ++i) {
             s = s_newstr(tk, strlen(tk), 0);
             v = (rf_val) {TYPE_STR, .u.s = s};
-            a_insert_int(arr->u.a, i, &v, 1, 1);
+            t_insert_int(tbl->u.t, i, &v, 1, 1);
             tk = strtok(NULL, delim);
         }
     }
-    fp[-1] = *arr;
+    fp[-1] = *tbl;
     return 1;
 }
 

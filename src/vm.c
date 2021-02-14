@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "array.h"
 #include "conf.h"
 #include "lib.h"
 #include "mem.h"
+#include "table.h"
 #include "vm.h"
 
 static void err(const char *msg) {
@@ -16,7 +16,7 @@ static void err(const char *msg) {
 }
 
 static hash_t    globals;
-static rf_arr    argv;
+static rf_tbl    argv;
 static rf_int    aos;
 static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
@@ -88,7 +88,7 @@ static inline int test(rf_val *v) {
             return !!f;
         return !!v->u.s->l;
     }
-    case TYPE_ARR: return !!a_length(v->u.a);
+    case TYPE_TBL: return !!t_length(v->u.t);
     case TYPE_SEQ:
     case TYPE_RFN: case TYPE_CFN:
         return 1;
@@ -131,7 +131,7 @@ static inline void z_num(rf_val *v) {
     case TYPE_STR:
         assign_flt(v, str2flt(v->u.s));
         break;
-    case TYPE_NULL: case TYPE_ARR:
+    case TYPE_NULL: case TYPE_TBL:
     case TYPE_RFN: case TYPE_CFN:
         assign_int(v, 0);
         break;
@@ -187,7 +187,7 @@ static inline void z_len(rf_val *v) {
         l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;
     case TYPE_STR: l = v->u.s->l;        break;
-    case TYPE_ARR: l = a_length(v->u.a); break;
+    case TYPE_TBL: l = t_length(v->u.t); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
     case TYPE_SEQ: case TYPE_CFN: l = 1; break; // TODO - sequences
     default: break;
@@ -206,7 +206,7 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     case TYPE_INT:  lhs = s_int2str(l->u.i);    break;
     case TYPE_FLT:  lhs = s_flt2str(l->u.f);    break;
     case TYPE_STR:  lhs = l->u.s;               break;
-    case TYPE_SEQ: case TYPE_ARR:
+    case TYPE_SEQ: case TYPE_TBL:
     case TYPE_RFN: case TYPE_CFN:
         err("concatenation with incompatible type(s)");
     default: break;
@@ -217,7 +217,7 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     case TYPE_INT:  rhs = s_int2str(r->u.i);    break;
     case TYPE_FLT:  rhs = s_flt2str(r->u.f);    break;
     case TYPE_STR:  rhs = r->u.s;               break;
-    case TYPE_SEQ: case TYPE_ARR:
+    case TYPE_SEQ: case TYPE_TBL:
     case TYPE_RFN: case TYPE_CFN:
         err("concatenation with incompatible type(s)");
     default: break;
@@ -266,8 +266,8 @@ static inline void z_idx(rf_val *l, rf_val *r) {
         }
         break;
     }
-    case TYPE_ARR:
-        *l = *a_lookup(l->u.a, r, 0, 0);
+    case TYPE_TBL:
+        *l = *t_lookup(l->u.t, r, 0, 0);
         break;
     case TYPE_RFN: {
         rf_int r1 = intval(r);
@@ -294,7 +294,7 @@ static inline void z_print(rf_val *v) {
         printf("seq: %"PRId64"..%"PRId64":%"PRId64,
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
         break;
-    case TYPE_ARR:  printf("array: %p", v->u.a);    break;
+    case TYPE_TBL:  printf("table: %p", v->u.t);    break;
     case TYPE_RFN:  printf("fn: %p", v->u.fn);      break;
     case TYPE_CFN:  printf("fn: %p", v->u.cfn);     break;
     default: break;
@@ -341,11 +341,11 @@ static inline void new_iter(rf_val *set) {
             iter->n = (uint64_t) ceil(fabs(iter->on / (double) iter->set.itvl));
         iter->st = set->u.q->from;
         break;
-    case TYPE_ARR:
-        iter->t = LOOP_ARR;
-        iter->on = iter->n = a_length(set->u.a);
-        iter->keys = a_collect_keys(set->u.a);
-        iter->set.arr = set->u.a;
+    case TYPE_TBL:
+        iter->t = LOOP_TBL;
+        iter->on = iter->n = t_length(set->u.t);
+        iter->keys = t_collect_keys(set->u.t);
+        iter->set.tbl = set->u.t;
         break;
     case TYPE_RFN:
         iter->t = LOOP_FN;
@@ -362,7 +362,7 @@ static inline void new_iter(rf_val *set) {
 static inline void destroy_iter(void) {
     rf_iter *old = iter;
     iter = iter->p;
-    if (old->t == LOOP_ARR) {
+    if (old->t == LOOP_TBL) {
         if (!(old->n + 1)) // Loop completed?
             free(old->keys - old->on);
         else
@@ -373,11 +373,11 @@ static inline void destroy_iter(void) {
 
 // TODO
 #include <string.h>
-static inline void init_argv(rf_arr *a, int rf_argc, char **rf_argv) {
-    a_init(a);
+static inline void init_argv(rf_tbl *t, int rf_argc, char **rf_argv) {
+    t_init(t);
     for (int i = 0; i < rf_argc; ++i) {
         rf_str *s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 1);
-        a_insert_int(a, i, v_newstr(s), 1, 1);
+        t_insert_int(t, i, v_newstr(s), 1, 1);
         m_freestr(s);
     }
 }
@@ -491,11 +491,11 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 *iter->v = (rf_val) {TYPE_STR, .u.s = s_newstr(iter->set.str++, 1, 0)};
             }
             break;
-        case LOOP_ARR:
+        case LOOP_TBL:
             if (iter->k != NULL) {
                 *iter->k = *iter->keys;
             }
-            *iter->v = *a_lookup(iter->set.arr, iter->keys, 0, 0);
+            *iter->v = *t_lookup(iter->set.tbl, iter->keys, 0, 0);
             iter->keys++;
             break;
         case LOOP_FN:
@@ -823,21 +823,21 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         retp->v = sp[-1].v;
         return 1;
 
-// Create a sequential array of x elements from the top
-// of the stack. Leave the array rf_val on the stack.
-// Arrays index at 0 by default.
-#define new_array(x) \
-    tp = v_newarr(); \
+// Create a sequential table of x elements from the top
+// of the stack. Leave the table rf_val on the stack.
+// Tables index at 0 by default.
+#define new_tbl(x) \
+    tp = v_newtbl(); \
     for (int i = (x) - 1; i >= 0; --i) { \
         --sp; \
-        a_insert_int(tp->u.a, i, &sp->v, 1, 1); \
+        t_insert_int(tp->u.t, i, &sp->v, 1, 1); \
     } \
     sp++->v = *tp;
 
-    z_case(ARRAY0) new_array(0);    ++ip;    z_break;
-    z_case(ARRAY)  new_array(ip[1]) ip += 2; z_break;
-    z_case(ARRAYK)
-        new_array(c->k[ip[1]].u.i);
+    z_case(TBL0) new_tbl(0);    ++ip;    z_break;
+    z_case(TBL)  new_tbl(ip[1]) ip += 2; z_break;
+    z_case(TBLK)
+        new_tbl(c->k[ip[1]].u.i);
         ip += 2;
         z_break;
 
@@ -852,10 +852,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
             // Create array if sp[-2].a is an uninitialized variable
             case TYPE_NULL:
-                *sp[i+1].a = *v_newarr();
+                *sp[i+1].a = *v_newtbl();
                 // Fall-through
-            case TYPE_ARR:
-                sp[i+1].v = *a_lookup(sp[i].a->u.a, &sp[i+1].v, 0, 0);
+            case TYPE_TBL:
+                sp[i+1].v = *t_lookup(sp[i].a->u.t, &sp[i+1].v, 0, 0);
                 break;
 
             // Dereference and call z_idx().
@@ -887,10 +887,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
             // Create array if sp[i].a is an uninitialized variable
             case TYPE_NULL:
-                *tp = *v_newarr();
+                *tp = *v_newtbl();
                 // Fall-through
-            case TYPE_ARR:
-                sp[i+1].a = a_lookup(tp->u.a, &sp[i+1].v, 1, 0);
+            case TYPE_TBL:
+                sp[i+1].a = t_lookup(tp->u.t, &sp[i+1].v, 1, 0);
                 break;
 
             // IDXA is invalid for all other types
@@ -918,10 +918,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
         // Create array if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *tp = *v_newarr();
+            *tp = *v_newtbl();
             // Fall-through
-        case TYPE_ARR:
-            sp[-2].a = a_lookup(tp->u.a, &sp[-1].v, 1, 0);
+        case TYPE_TBL:
+            sp[-2].a = t_lookup(tp->u.t, &sp[-1].v, 1, 0);
             break;
 
         // IDXA is invalid for all other types
@@ -954,10 +954,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
         // Create array if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *sp[-2].a = *v_newarr();
+            *sp[-2].a = *v_newtbl();
             // Fall-through
-        case TYPE_ARR:
-            sp[-2].v = *a_lookup(sp[-2].a->u.a, &sp[-1].v, 0, 0);
+        case TYPE_TBL:
+            sp[-2].v = *t_lookup(sp[-2].a->u.t, &sp[-1].v, 0, 0);
             --sp;
             ++ip;
             break;
@@ -975,12 +975,12 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         z_break;
 
     z_case(ARGA)
-        sp[-1].a = a_lookup(&argv, &sp[-1].v, 1, aos);
+        sp[-1].a = t_lookup(&argv, &sp[-1].v, 1, aos);
         ++ip;
         z_break;
 
     z_case(ARGV)
-        sp[-1].v = *a_lookup(&argv, &sp[-1].v, 0, aos);
+        sp[-1].v = *t_lookup(&argv, &sp[-1].v, 0, aos);
         ++ip;
         z_break;
 

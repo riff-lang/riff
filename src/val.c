@@ -1,4 +1,4 @@
-#include "array.h"
+#include "table.h"
 #include "types.h"
 
 rf_val *v_newnull(void) {
@@ -27,10 +27,10 @@ rf_val *v_newstr(rf_str *s) {
     return v;
 }
 
-rf_val *v_newarr(void) {
+rf_val *v_newtbl(void) {
     rf_val *v = malloc(sizeof(rf_val));
-    rf_arr *a = malloc(sizeof(rf_arr));
-    a_init(a);
-    *v = (rf_val) {TYPE_ARR, .u.a = a};
+    rf_tbl *t = malloc(sizeof(rf_tbl));
+    t_init(t);
+    *v = (rf_val) {TYPE_TBL, .u.t = t};
     return v;
 }

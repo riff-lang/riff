@@ -94,9 +94,9 @@ enum opcodes {
     OP_CALL,    // Function call
     OP_RET,     // Return from call (void)
     OP_RET1,    // Return from call 1 value
-    OP_ARRAY0,  // Create empty array
-    OP_ARRAY,   // Create array of the top (IP+1) stack elements
-    OP_ARRAYK,  // Create array of the top K[IP+1] stack elements
+    OP_TBL0,    // Create empty table
+    OP_TBL,     // Create table of the top (IP+1) stack elements
+    OP_TBLK,    // Create table of the top K[IP+1] stack elements
     OP_IDXA,    // Index of a set, leaving address on stack (nD array)
     OP_IDXA1,   // Index of a set, leaving address on stack
     OP_IDXV,    // Index of a set, leaving value on stack (nD array)
@@ -141,7 +141,7 @@ void c_fn_constant(rf_code *, rf_fn *);
 void c_constant(rf_code *, rf_token *);
 void c_global(rf_code *, rf_token *, int);
 void c_local(rf_code *, int, int);
-void c_array(rf_code *, int);
+void c_table(rf_code *, int);
 void c_index(rf_code *, int, int);
 void c_prefix(rf_code *, int);
 void c_infix(rf_code *, int);

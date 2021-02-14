@@ -325,14 +325,14 @@ void c_local(rf_code *c, int i, int mode) {
         push_local_val(c, i);
 }
 
-void c_array(rf_code *c, int n) {
+void c_table(rf_code *c, int n) {
     if (!n)
-        push(OP_ARRAY0);
+        push(OP_TBL0);
     else if (n <= 0xff) {
-        push(OP_ARRAY);
+        push(OP_TBL);
         push((uint8_t) n);
     } else {
-        push(OP_ARRAYK);
+        push(OP_TBLK);
 
         // Search for exisitng `n` in the constants pool
         for (int i = 0; i < c->nk; ++i) {

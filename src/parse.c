@@ -233,7 +233,7 @@ static int expr_list(rf_parser *y, int c) {
     return n;
 }
 
-// Retrieve index of a set (string/array, but works for numbers as well)
+// Retrieve index of a set (string/table, but works for numbers as well)
 static void subscript(rf_parser *y) {
     y->sd++;
     int rx = y->rx; // Save flag
@@ -257,12 +257,12 @@ static void call(rf_parser *y) {
 }
 
 // TODO Support arbitrary indexing a la C99 designators
-static void array(rf_parser *y) {
+static void table(rf_parser *y) {
     int n = expr_list(y, '}');
     y->x->mode = 1;
     consume(y, '}', "expected '}'");
     y->x->mode = 0;
-    c_array(y->c, n);
+    c_table(y->c, n);
 }
 
 // Anonymous functions in expressions, e.g.
@@ -368,7 +368,7 @@ static int nud(rf_parser *y) {
         return ')';
     case '{':
         adv;
-        array(y);
+        table(y);
         break;
     case TK_DOTS:
         unset(rx);

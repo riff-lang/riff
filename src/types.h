@@ -11,7 +11,7 @@
 #define TYPE_FLT  4
 #define TYPE_STR  8
 #define TYPE_SEQ  16
-#define TYPE_ARR  32
+#define TYPE_TBL  32
 #define TYPE_RFN  64
 #define TYPE_CFN  128
 
@@ -20,7 +20,7 @@
 #define is_flt(x)  ((x)->type & TYPE_FLT)
 #define is_str(x)  ((x)->type & TYPE_STR)
 #define is_seq(x)  ((x)->type & TYPE_SEQ)
-#define is_arr(x)  ((x)->type & TYPE_ARR)
+#define is_tbl(x)  ((x)->type & TYPE_TBL)
 #define is_rfn(x)  ((x)->type & TYPE_RFN)
 #define is_cfn(x)  ((x)->type & TYPE_CFN)
 #define is_num(x)  ((x)->type & (TYPE_INT | TYPE_FLT))
@@ -41,7 +41,7 @@ typedef struct {
     rf_int itvl;
 } rf_seq;
 
-typedef struct rf_arr rf_arr;
+typedef struct rf_tbl rf_tbl;
 typedef struct rf_fn  rf_fn;
 typedef struct c_fn   c_fn;
 
@@ -56,7 +56,7 @@ typedef struct {
         rf_int  i;
         rf_str *s;
         rf_seq *q;
-        rf_arr *a;
+        rf_tbl *t;
         rf_fn  *fn;
         c_fn   *cfn;
     } u;
@@ -128,6 +128,6 @@ rf_val *v_newnull(void);
 rf_val *v_newint(rf_int);
 rf_val *v_newflt(rf_flt);
 rf_val *v_newstr(rf_str *);
-rf_val *v_newarr(void);
+rf_val *v_newtbl(void);
 
 #endif
