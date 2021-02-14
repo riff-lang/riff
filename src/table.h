@@ -14,7 +14,7 @@ struct rf_tbl {
 
     rf_val  *nullv; // Special slot for the "null" index in an array
     rf_val **v;
-    hash_t  *h;
+    rf_htbl *h;
 };
 
 void    t_init(rf_tbl *);
