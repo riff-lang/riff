@@ -17,7 +17,6 @@ static void err(const char *msg) {
 
 static rf_htbl   globals;
 static rf_tbl    argv;
-static rf_int    aos;
 static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
 
@@ -267,7 +266,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
         break;
     }
     case TYPE_TBL:
-        *l = *t_lookup(l->u.t, r, 0, 0);
+        *l = *t_lookup(l->u.t, r, 0);
         break;
     case TYPE_RFN: {
         rf_int r1 = intval(r);
@@ -373,11 +372,17 @@ static inline void destroy_iter(void) {
 
 // TODO
 #include <string.h>
-static inline void init_argv(rf_tbl *t, int rf_argc, char **rf_argv) {
+static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) {
     t_init(t);
-    for (int i = 0; i < rf_argc; ++i) {
+    for (rf_int i = 0; i < rf_argc; ++i) {
         rf_str *s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 1);
-        t_insert_int(t, i, v_newstr(s), 1, 1);
+        // TODO - this doesn't work correctly without directly
+        // deferring to h_insert for negative indices NOR without
+        // forcing insertion for non-negeative indices.
+        if (i-os-1 < 0)
+            h_insert(t->h, s_int2str(i-os-1), v_newstr(s), 1);
+        else
+            t_insert_int(t, (rf_int)i-os-1, v_newstr(s), 1, 1);
         m_freestr(s);
     }
 }
@@ -388,10 +393,8 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 int z_exec(rf_env *e) {
     h_init(&globals);
     iter = NULL;
-    init_argv(&argv, e->argc, e->argv);
-
-    // Offset for the argv; $1 should be the first user-provided arg
-    aos = e->ff ? 2 : 1;
+    init_argv(&argv, e->ff, e->argc, e->argv);
+    h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1); 
 
     l_register(&globals);
 
@@ -495,7 +498,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             if (iter->k != NULL) {
                 *iter->k = *iter->keys;
             }
-            *iter->v = *t_lookup(iter->set.tbl, iter->keys, 0, 0);
+            *iter->v = *t_lookup(iter->set.tbl, iter->keys, 0);
             iter->keys++;
             break;
         case LOOP_FN:
@@ -855,7 +858,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 *sp[i+1].a = *v_newtbl();
                 // Fall-through
             case TYPE_TBL:
-                sp[i+1].v = *t_lookup(sp[i].a->u.t, &sp[i+1].v, 0, 0);
+                sp[i+1].v = *t_lookup(sp[i].a->u.t, &sp[i+1].v, 0);
                 break;
 
             // Dereference and call z_idx().
@@ -890,7 +893,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 *tp = *v_newtbl();
                 // Fall-through
             case TYPE_TBL:
-                sp[i+1].a = t_lookup(tp->u.t, &sp[i+1].v, 1, 0);
+                sp[i+1].a = t_lookup(tp->u.t, &sp[i+1].v, 1);
                 break;
 
             // IDXA is invalid for all other types
@@ -921,7 +924,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             *tp = *v_newtbl();
             // Fall-through
         case TYPE_TBL:
-            sp[-2].a = t_lookup(tp->u.t, &sp[-1].v, 1, 0);
+            sp[-2].a = t_lookup(tp->u.t, &sp[-1].v, 1);
             break;
 
         // IDXA is invalid for all other types
@@ -957,7 +960,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             *sp[-2].a = *v_newtbl();
             // Fall-through
         case TYPE_TBL:
-            sp[-2].v = *t_lookup(sp[-2].a->u.t, &sp[-1].v, 0, 0);
+            sp[-2].v = *t_lookup(sp[-2].a->u.t, &sp[-1].v, 0);
             --sp;
             ++ip;
             break;
@@ -975,12 +978,12 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         z_break;
 
     z_case(ARGA)
-        sp[-1].a = t_lookup(&argv, &sp[-1].v, 1, aos);
+        sp[-1].a = t_lookup(&argv, &sp[-1].v, 1);
         ++ip;
         z_break;
 
     z_case(ARGV)
-        sp[-1].v = *t_lookup(&argv, &sp[-1].v, 0, aos);
+        sp[-1].v = *t_lookup(&argv, &sp[-1].v, 0);
         ++ip;
         z_break;
 

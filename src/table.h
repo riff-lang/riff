@@ -20,7 +20,7 @@ struct rf_tbl {
 void    t_init(rf_tbl *);
 rf_int  t_length(rf_tbl *);
 rf_val *t_collect_keys(rf_tbl *);
-rf_val *t_lookup(rf_tbl *, rf_val *, int, int);
+rf_val *t_lookup(rf_tbl *, rf_val *, int);
 rf_val *t_insert_int(rf_tbl *, rf_int, rf_val *, int, int);
 rf_val *t_insert(rf_tbl *, rf_val *, rf_val *, int);
 

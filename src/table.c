@@ -44,7 +44,7 @@ rf_int t_length(rf_tbl *t) {
 }
 
 static int exists(rf_tbl *t, rf_int k) {
-    return k < t->cap && t->v[k] != NULL;
+    return k >= 0 && k < t->cap && t->v[k] != NULL;
 }
 
 rf_val *t_collect_keys(rf_tbl *t) {
@@ -89,8 +89,8 @@ static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
     if (!t->cap) {
         return t_insert_int(t, k, v_newnull(), set, 0);
     }
-    if (k < t->cap ||
-        (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR)) {
+    if (k >= 0 && (k < t->cap ||
+        (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
         return t_insert_int(t, k, v_newnull(), set, 0);
     } else {
         rf_str *ik = s_int2str(k);
@@ -102,12 +102,12 @@ static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
 
 // If the entire string is is a valid integer, return the number +
 // offset.
-static rf_int str2intidx(rf_str *s, int offset) {
+static rf_int str2intidx(rf_str *s) {
     char *end;
     rf_flt f = u_str2d(s->str, &end, 0);
     rf_int i = (rf_int) f;
     if (f == i && *end == '\0')
-        return i + offset;
+        return i;
     return -1;
 }
 
@@ -115,7 +115,7 @@ static rf_int str2intidx(rf_str *s, int offset) {
 // offset parameter used for utilizing negative indices with the
 // default array/argv without advancing the raw pointer (realloc
 // issues) or converting the indices to strings.
-rf_val *t_lookup(rf_tbl *t, rf_val *k, int set, int offset) {
+rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
     if (set) set(lx);
     switch (k->type) {
     case TYPE_NULL:
@@ -125,26 +125,26 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set, int offset) {
         }
         return t->nullv;
     case TYPE_INT:
-        if ((k->u.i + offset) < 0) {
-            rf_str *ik = s_int2str(k->u.i + offset);
+        if (k->u.i < 0) {
+            rf_str *ik = s_int2str(k->u.i);
             rf_val *v  = h_lookup(t->h, ik, set);
             m_freestr(ik);
             return v;
         }
         else
-            return t_lookup_int(t, k->u.i + offset, set);
+            return t_lookup_int(t, k->u.i, set);
     case TYPE_FLT:
         if ((k->u.f == (rf_int) k->u.f) &&
-            (((rf_int) k->u.f + offset) >= 0))
-            return t_lookup_int(t, (rf_int) k->u.f + offset, set);
+            ((rf_int) k->u.f >= 0))
+            return t_lookup_int(t, (rf_int) k->u.f, set);
         else {
-            rf_str *fk = s_flt2str(k->u.f + offset);
+            rf_str *fk = s_flt2str(k->u.f);
             rf_val *v  = h_lookup(t->h, fk, set);
             m_freestr(fk);
             return v;
         }
     case TYPE_STR: {
-        rf_int si = str2intidx(k->u.s, offset);
+        rf_int si = str2intidx(k->u.s);
         return si >= 0 ? t_lookup_int(t, si, set)
                        : h_lookup(t->h, k->u.s, set);
 
@@ -179,8 +179,7 @@ static int new_size(int n, int cap, rf_int k) {
 // part to be too sparsely populated.
 rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
     if (set) set(lx);
-    double lf = potential_lf(t->an, t->cap, k);
-    if (force || (lf >= MIN_LOAD_FACTOR)) {
+    if (k >= 0 && (force || (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
         if (t->cap <= k) {
             set(lx);
             int oc = t->cap;

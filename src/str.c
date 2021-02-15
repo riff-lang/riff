@@ -64,15 +64,13 @@ rf_str *s_concat(rf_str *l, rf_str *r, int h) {
 }
 
 rf_str *s_int2str(rf_int i) {
-    size_t len = snprintf(NULL, 0, "%"PRId64, i);
-    char buf[len + 1];
-    snprintf(buf, len + 1, "%"PRId64, i);
-    return s_newstr(buf, len, 0);
+    char str[32];
+    size_t len = sprintf(str, "%"PRId64, i);
+    return s_newstr(str, len, 0);
 }
 
 rf_str *s_flt2str(rf_flt f) {
-    size_t len = snprintf(NULL, 0, "%g", f);
-    char buf[len + 1];
-    snprintf(buf, len + 1, "%g", f);
-    return s_newstr(buf, len, 0);
+    char str[32];
+    size_t len = sprintf(str, "%g", f);
+    return s_newstr(str, len, 0);
 }
