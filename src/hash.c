@@ -5,7 +5,7 @@
 
 #include <stdio.h> // Debug purposes
 
-#define LOAD_FACTOR 0.7
+#define LOAD_FACTOR 0.6
 
 #define set(f)   h->f = 1
 #define unset(f) h->f = 0
