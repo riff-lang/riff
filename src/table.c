@@ -100,8 +100,7 @@ static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
     }
 }
 
-// If the entire string is is a valid integer, return the number +
-// offset.
+// If the entire string is is a valid integer, return the number
 static rf_int str2intidx(rf_str *s) {
     char *end;
     rf_flt f = u_str2d(s->str, &end, 0);
@@ -112,9 +111,6 @@ static rf_int str2intidx(rf_str *s) {
 }
 
 // TODO flt lookup is slow with string conversion
-// offset parameter used for utilizing negative indices with the
-// default array/argv without advancing the raw pointer (realloc
-// issues) or converting the indices to strings.
 rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
     if (set) set(lx);
     switch (k->type) {
