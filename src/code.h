@@ -91,6 +91,7 @@ enum opcodes {
     OP_LCLV0,   // Copy value of stack[FP+0] onto stack
     OP_LCLV1,   // Copy value of stack[FP+1] onto stack
     OP_LCLV2,   // Copy value of stack[FP+2] onto stack
+    OP_TCALL,   // Function call (tailcall)
     OP_CALL,    // Function call
     OP_RET,     // Return from call (void)
     OP_RET1,    // Return from call 1 value
@@ -153,5 +154,6 @@ void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
 int  c_prep_loop(rf_code *, int);
 void c_print(rf_code *, int);
+void c_return(rf_code *, int);
 
 #endif

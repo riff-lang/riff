@@ -88,6 +88,7 @@ static void *dispatch_labels[] = {
     &&L_LCLV0,
     &&L_LCLV1,
     &&L_LCLV2,
+    &&L_TCALL,
     &&L_CALL,
     &&L_RET,
     &&L_RET1,

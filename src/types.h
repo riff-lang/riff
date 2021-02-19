@@ -7,7 +7,7 @@
 #include "util.h"
 
 enum types {
-    TYPE_NULL = 1,
+    TYPE_NULL,
     TYPE_INT,
     TYPE_FLT,
     TYPE_STR,
@@ -17,7 +17,7 @@ enum types {
     TYPE_CFN
 };
 
-#define is_null(x) ((x)->type == TYPE_NULL)
+#define is_null(x) (!(x)->type)
 #define is_int(x)  ((x)->type == TYPE_INT)
 #define is_flt(x)  ((x)->type == TYPE_FLT)
 #define is_str(x)  ((x)->type == TYPE_STR)

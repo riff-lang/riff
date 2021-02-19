@@ -437,4 +437,18 @@ void c_print(rf_code *c, int n) {
     }
 }
 
-#undef push
+// t = 0 => void return
+// t = 1 => return one value
+void c_return(rf_code *c, int t) {
+    if (!t)
+        push(OP_RET);
+    else {
+
+        // Patch OP_CALLs immediately preceding OP_RET1 to be tailcall
+        // optimized
+        if (c->n > 1 && c->code[c->n-2] == OP_CALL) {
+            c->code[c->n-2] = OP_TCALL;
+        }
+        push(OP_RET1);
+    }
+}

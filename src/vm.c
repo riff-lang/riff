@@ -255,13 +255,13 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     }
     case TYPE_STR: {
         if (is_seq(r)) {
-            assign_str(l, s_substr(l->u.s, r->u.q->from, r->u.q->to, r->u.q->itvl));
+            l->u.s =  s_substr(l->u.s, r->u.q->from, r->u.q->to, r->u.q->itvl);
         } else {
             rf_int r1 = intval(r);
             if (r1 > l->u.s->l - 1 || r1 < 0)
                 assign_null(l);
             else
-                assign_str(l, s_newstr(&l->u.s->str[r1], 1, 0));
+                l->u.s = s_newstr(&l->u.s->str[r1], 1, 0);
         }
         break;
     }
@@ -733,6 +733,60 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     z_case(LCLV1) lclv(1);    ++ip;    z_break;
     z_case(LCLV2) lclv(2);    ++ip;    z_break;
 
+
+    // Tailcalls
+    // Recycle current call frame
+    z_case(TCALL) {
+        int nargs = ip[1] + 1;
+        if (!is_fn(&sp[-nargs].v))
+            err("attempt to call non-function value");
+        if (is_rfn(&sp[-nargs].v)) {
+            sp -= nargs;
+            rf_fn *fn = sp->v.u.fn;
+            int ar1 = sp - fp - 1;  // Current frame's "arity"
+            int ar2 = fn->arity;    // Callee's arity
+
+            // Recycle call frame
+            for (int i = 0; i <= ar2; ++i) {
+                fp[i].v = sp[i].v;
+            }
+
+            // In the case of direct recursion and no call frame
+            // adjustments needed, quickly reset IP and dispatch
+            // control
+            if (c == fn->code && ar1 == ar2) {
+                ip = c->code;
+                z_break;
+            }
+
+            // If callee's arity is larger than the current frame,
+            // create stack space and nullify slots
+            if (ar2 > ar1) {
+                while (ar1++ < ar2)
+                    assign_null(&sp++->v);
+            }
+
+            // Else, if the current frame is too large for the next
+            // call, decrement SP
+            else if (ar2 < ar1) {
+                sp -= ar1 - ar2;
+            }
+
+            // Else else, if the size of the call frame is fine, but
+            // the user didn't provide enough arguments, create stack
+            // space and nullify slots
+            else if (nargs <= ar2) {
+                while (nargs++ <= ar2)
+                    assign_null(&sp++->v);
+            }
+            c  = fn->code;
+            ip = c->code;
+            z_break;
+        }
+
+        // Fall-through to OP_CALL for C function calls
+    }
+
     // Calling convention Arguments are pushed in-order following the
     // rf_val containing a pointer to the function to be called.
     // Caller sets SP and FP to appropriate positions and cleans up
@@ -747,6 +801,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 
         // User-defined functions
         if (is_rfn(&sp[-nargs-1].v)) {
+
             rf_fn *fn = sp[-nargs-1].v.u.fn;
             arity = fn->arity;
 
@@ -816,6 +871,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         }
         z_break;
     }
+
 
     z_case(RET) return 0;
 

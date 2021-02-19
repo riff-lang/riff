@@ -108,6 +108,7 @@ static struct {
     [OP_TBL0]    = { "tbl    0", 0 },
     [OP_TBLK]    = { "tbl",      1 },
     [OP_TBL]     = { "tbl",      1 },
+    [OP_TCALL]   = { "tcall",    1 },
     [OP_TEST]    = { "test",     0 },
     [OP_XJNZ16]  = { "xjnz",     2 },
     [OP_XJNZ8]   = { "xjnz",     1 },

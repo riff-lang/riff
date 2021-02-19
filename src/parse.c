@@ -942,15 +942,15 @@ static void ret_stmt(rf_parser *y) {
     if (y->ld == y->fd)
         set(retx);
     if (y->x->tk.kind == ';' || y->x->tk.kind == '}') {
-        push(OP_RET);
+        c_return(y->c, 0);
         return;
     }
     const char *p = y->x->p; // Save pointer
     expr(y, 0);
-    if (p == y->x->p)        // No expression parsed
-        push(OP_RET);
-    else
-        push(OP_RET1);
+
+    // p != y->x->p when a valid expression is parsed following the
+    // `return` keyword
+    c_return(y->c, p != y->x->p);
 }
 
 static void while_stmt(rf_parser *y) {
