@@ -6,25 +6,27 @@
 
 #include "util.h"
 
-#define TYPE_NULL 1
-#define TYPE_INT  2
-#define TYPE_FLT  4
-#define TYPE_STR  8
-#define TYPE_SEQ  16
-#define TYPE_TBL  32
-#define TYPE_RFN  64
-#define TYPE_CFN  128
+enum types {
+    TYPE_NULL = 1,
+    TYPE_INT,
+    TYPE_FLT,
+    TYPE_STR,
+    TYPE_SEQ,
+    TYPE_TBL,
+    TYPE_RFN,
+    TYPE_CFN
+};
 
-#define is_null(x) ((x)->type & TYPE_NULL)
-#define is_int(x)  ((x)->type & TYPE_INT)
-#define is_flt(x)  ((x)->type & TYPE_FLT)
-#define is_str(x)  ((x)->type & TYPE_STR)
-#define is_seq(x)  ((x)->type & TYPE_SEQ)
-#define is_tbl(x)  ((x)->type & TYPE_TBL)
-#define is_rfn(x)  ((x)->type & TYPE_RFN)
-#define is_cfn(x)  ((x)->type & TYPE_CFN)
-#define is_num(x)  ((x)->type & (TYPE_INT | TYPE_FLT))
-#define is_fn(x)   ((x)->type & (TYPE_RFN | TYPE_CFN))
+#define is_null(x) ((x)->type == TYPE_NULL)
+#define is_int(x)  ((x)->type == TYPE_INT)
+#define is_flt(x)  ((x)->type == TYPE_FLT)
+#define is_str(x)  ((x)->type == TYPE_STR)
+#define is_seq(x)  ((x)->type == TYPE_SEQ)
+#define is_tbl(x)  ((x)->type == TYPE_TBL)
+#define is_rfn(x)  ((x)->type == TYPE_RFN)
+#define is_cfn(x)  ((x)->type == TYPE_CFN)
+#define is_num(x)  ((x)->type == TYPE_INT || (x)->type == TYPE_FLT)
+#define is_fn(x)   ((x)->type == TYPE_RFN || (x)->type == TYPE_CFN)
 
 typedef double  rf_flt;
 typedef int64_t rf_int;
