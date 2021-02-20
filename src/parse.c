@@ -770,6 +770,8 @@ static void for_stmt(rf_parser *y) {
     p_list *r_cont = y->cont;
     p_list b, c;
 
+    y->id++;
+
     // Increment lexical depth once before adding locals [k,] v so
     // they're only visible to the loop
     y->ld++;
@@ -828,6 +830,7 @@ static void for_stmt(rf_parser *y) {
 
     // Decrement lexical depth twice
     y->ld -= 2;
+    y->id -= 1;
     y->loop = old_loop;
 
     // Pop locals with lexical depth as the argument instead of
@@ -939,12 +942,19 @@ static void print_stmt(rf_parser *y) {
 }
 
 static void ret_stmt(rf_parser *y) {
+    // Destroy any unterminated iterators before returning control.
+    // Destroying iterators before parsing any return expression
+    // allows for codegen to still check for tailcalls.
+    for (int i = y->id; i > 0; --i) {
+        push(OP_POPL);
+    }
     if (y->ld == y->fd)
         set(retx);
     if (y->x->tk.kind == ';' || y->x->tk.kind == '}') {
         c_return(y->c, 0);
         return;
     }
+
     const char *p = y->x->p; // Save pointer
     expr(y, 0);
 
@@ -1034,6 +1044,7 @@ static void y_init(rf_parser *y) {
 
     y->ld   = 0;
     y->fd   = 0;
+    y->id   = 0;
     y->sd   = 0;
     y->loop = 0;
     y->brk  = NULL;

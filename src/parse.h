@@ -44,6 +44,7 @@ typedef struct {
 
     uint8_t ld;     // Lexical depth/scope
     uint8_t fd;     // Top-level scope of the current function
+    uint8_t id;     // Iterator depth (`for` loops only)
     uint8_t sd;     // Subscript depth (exprs inside [])
     uint8_t loop;   // Depth of current loop
 
