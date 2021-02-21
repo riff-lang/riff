@@ -815,6 +815,11 @@ static void for_stmt(rf_parser *y) {
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
     }
+
+    // Pop locals created inside the loop body
+    y->ld -= 1;
+    y->nlcl -= pop_locals(y, y->ld, 1);
+
     c_patch(y->c, l1);
     c_loop(y->c, l1 + 2);
 
@@ -828,8 +833,7 @@ static void for_stmt(rf_parser *y) {
     // OP_LOOP instructions to prevent further iteration
     push(OP_POPL);
 
-    // Decrement lexical depth twice
-    y->ld -= 2;
+    y->ld -= 1;
     y->id -= 1;
     y->loop = old_loop;
 
