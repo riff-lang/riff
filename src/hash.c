@@ -67,11 +67,23 @@ static uint32_t node_slot(ht_node **e, uint32_t cap, uint32_t hash) {
 }
 
 static int exists(rf_htbl *h, rf_str *k) {
+    if (!h->cap) return 0;
     if (!k->hash)
         k->hash = u_strhash(k->str);
     int i = node_slot(h->nodes, h->cap, k->hash);
     return h->nodes[i] && h->nodes[i]->key->hash == k->hash;
 }
+
+#include <inttypes.h>
+
+int h_exists_int(rf_htbl *h, rf_int k) {
+    if (!h->cap) return 0;
+    char str[32];
+    size_t len = sprintf(str, "%"PRId64, k);
+    str[len] = '\0';
+    return exists(h, &(rf_str){len,u_strhash(str),str});
+}
+
 
 rf_val *h_lookup(rf_htbl *h, rf_str *k, int set) {
     if (set) set(lx);
@@ -101,7 +113,7 @@ rf_val *h_insert(rf_htbl *h, rf_str *k, rf_val *v, int set) {
         int old_an = h->an;
         int j;
         if (old_an) {
-            for (int i = 0; old_an && (i < h->cap); i++) {
+            for (int i = 0; old_an && (i < h->cap); ++i) {
                 if (!h->nodes[i]) {
                     continue;
                 } else {

@@ -18,6 +18,7 @@ typedef struct {
 
 void      h_init(rf_htbl *);
 uint32_t  h_length(rf_htbl *);
+int       h_exists_int(rf_htbl *, rf_int);
 rf_val   *h_lookup(rf_htbl *, rf_str *, int);
 rf_val   *h_insert(rf_htbl *, rf_str *, rf_val *, int);
 rf_val   *h_delete(rf_htbl *, rf_str *);

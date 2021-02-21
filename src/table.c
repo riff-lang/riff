@@ -68,8 +68,8 @@ rf_val *t_collect_keys(rf_tbl *t) {
 }
 
 static double potential_lf(int n, int cap, rf_int k) {
-    double n1 = n + 1;
-    double n2 = cap > k ? cap : k + 1;
+    double n1 = n + 1.0;
+    double n2 = cap > k ? cap : k + 1.0;
     return n1 / n2;
 }
 
@@ -176,13 +176,13 @@ static int new_size(int n, int cap, rf_int k) {
 rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
     if (set) set(lx);
     if (k >= 0 && (force || (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
-        if (t->cap <= k) {
+        if (t->cap <= k || h_exists_int(t->h, k)) {
             set(lx);
             int oc = t->cap;
             int nc = force ? k + 1 : new_size(t->an, t->cap, k);
             // TODO the hackiest hack that ever hacked - maybe keep
             // track of integer keys in the hash part instead
-            nc += (!force * h_length(t->h)) + 1;
+            nc += !force * h_length(t->h);
             t->v = realloc(t->v, sizeof(rf_val *) * nc);
 
             // Collect valid integer keys from the hash part and move
