@@ -1,4 +1,6 @@
 // Extended Euclidean Algorithm
+// Good test for tailcalls (mismatched call frame sizes)
+// Expected output: 71
 
 fn eea(n1, n2) {
     return n1 > n2 ? eea_(n1, n2, 1, 0, 0, 1)

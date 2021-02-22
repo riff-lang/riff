@@ -34,6 +34,7 @@ SRC    += src/vm.c
 
 TESTS   = test/expressions.bats
 TESTS  += test/literals.bats
+TESTS  += test/etc.bats
 
 .PHONY: all clean install mem prof test warn
 

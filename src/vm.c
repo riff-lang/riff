@@ -751,6 +751,14 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 fp[i].v = sp[i].v;
             }
 
+            // Increment SP without nullifying slots (preserving
+            // values) if number of arguments exceeds the frame's
+            // current "arity"
+            if (nargs-1 > ar1) {
+                sp += (nargs - ar1 - 1);
+                ar1 = nargs - 1;
+            }
+
             // In the case of direct recursion and no call frame
             // adjustments needed, quickly reset IP and dispatch
             // control
