@@ -288,6 +288,9 @@ static int read_id(rf_lexer *x, rf_token *tk) {
         if (check_kw(x, "ocal", 4)) {
             x->p += 4;
             return TK_LOCAL;
+        } else if (check_kw(x, "oop", 3)) {
+            x->p += 3;
+            return TK_LOOP;
         } else break;
     case 'n':
         if (check_kw(x, "ull", 3)) {

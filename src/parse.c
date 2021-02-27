@@ -930,6 +930,36 @@ static void local_stmt(rf_parser *y) {
     }
 }
 
+static void loop_stmt(rf_parser *y) {
+    p_list *r_brk  = y->brk;
+    p_list *r_cont = y->cont;
+    p_list b, c;
+    uint8_t old_loop = y->loop;
+    y->loop = y->ld++;
+    enter_loop(y, &b, &c);
+    int l1 = y->c->n;
+    if (y->x->tk.kind == '{') {
+        adv;
+        stmt_list(y);
+        consume(y, '}', "expected '}'");
+    } else {
+        stmt(y);
+    }
+    y->ld--;
+    y->loop = old_loop;
+    y->nlcl -= pop_locals(y, y->ld, 1);
+    // Patch continue stmts
+    for (int i = 0; i < c.n; i++) {
+        c_patch(y->c, c.l[i]);
+    }
+    c_jump(y->c, JMP, l1);
+    // Patch break stmts
+    for (int i = 0; i < b.n; i++) {
+        c_patch(y->c, b.l[i]);
+    }
+    exit_loop(y, r_brk, r_cont, &b, &c);
+}
+
 static void print_stmt(rf_parser *y) {
     int paren = 0;
     if (y->x->tk.kind == '(') { // Parenthesized expr list?
@@ -1021,6 +1051,7 @@ static void stmt(rf_parser *y) {
     case TK_FOR:    adv; for_stmt(y);   break;
     case TK_IF:     adv; if_stmt(y);    break;
     case TK_LOCAL:  adv; local_stmt(y); break;
+    case TK_LOOP:   adv; loop_stmt(y);  break;
     case TK_PRINT:  adv; print_stmt(y); break;
     case TK_RETURN: adv; ret_stmt(y);   break;
     case TK_WHILE:  adv; while_stmt(y); break;
