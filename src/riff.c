@@ -18,6 +18,31 @@ static void version(void) {
     exit(0);
 }
 
+// Entry point for the Emscripten-compiled WASM/JS module
+#ifdef __EMSCRIPTEN__
+int wasm_main(char *str) {
+    rf_env e;
+    rf_fn  main;
+    rf_code c;
+    c_init(&c);
+    main.code = &c;
+    main.arity = 0;
+    e.nf   = 0;
+    e.fcap = 0;
+    e.fn   = NULL;
+    e.main = main;
+    e.argc = 0;
+    e.ff   = 0;
+    e.argv = NULL;
+    e.pname = "HTML";
+    e.src = str;
+    main.name = s_newstr(e.pname, strlen(e.pname), 1);
+    y_compile(&e);
+    z_exec(&e);
+    return 0;
+}
+#endif
+
 // TODO handle piped input (stdin)
 int main(int argc, char **argv) {
     if (argc == 1) {

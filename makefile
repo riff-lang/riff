@@ -62,6 +62,7 @@ test: bin/riff
 	bats -p $(TESTS)
 
 warn: bin/warn
+wasm: bin/wasm
 
 # Targets
 
@@ -90,3 +91,7 @@ bin/prof: $(SRC)
 bin/warn: $(SRC)
 	mkdir -p bin
 	$(CC) $(CFLAGS) $(WFLAGS) $(SRC) -o bin/warn $(LDFLAGS)
+
+bin/wasm: $(SRC)
+	mkdir -p bin
+	emcc $(CFLAGS) $(SRC) -s EXPORTED_FUNCTIONS='["_wasm_main"]' -s EXPORTED_RUNTIME_METHODS='["ccall"]' -o bin/riff.js
