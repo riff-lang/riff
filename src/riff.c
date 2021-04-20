@@ -20,7 +20,7 @@ static void version(void) {
 
 // Entry point for the Emscripten-compiled WASM/JS module
 #ifdef __EMSCRIPTEN__
-int wasm_main(char *str) {
+int wasm_main(int flag, char *str) {
     rf_env e;
     rf_fn  main;
     rf_code c;
@@ -34,11 +34,14 @@ int wasm_main(char *str) {
     e.argc = 0;
     e.ff   = 0;
     e.argv = NULL;
-    e.pname = "HTML";
+    e.pname = "<playground>";
     e.src = str;
     main.name = s_newstr(e.pname, strlen(e.pname), 1);
     y_compile(&e);
-    z_exec(&e);
+    if (flag)
+        z_exec(&e);
+    else
+        d_prog(&e);
     return 0;
 }
 #endif
