@@ -45,9 +45,11 @@ static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
             (base == 16 && isxdigit(end[1])))
             return read_flt(x, tk, start, base);
     } else if (base == 10 && (*end == 'e' || *end == 'E')) {
-        return read_flt(x, tk, start, base);
+        if (end[1] == '+' || end[1] == '-' || isdigit(end[1]))
+            return read_flt(x, tk, start, base);
     } else if (base == 16 && (*end == 'p' || *end == 'P')) {
-        return read_flt(x, tk, start, base);
+        if (end[1] == '+' || end[1] == '-' || isxdigit(end[1]))
+            return read_flt(x, tk, start, base);
     }
 
     x->p = end;
