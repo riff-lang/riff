@@ -7,11 +7,9 @@ to make it a useful supplementary tool for programmers.
 
 This repository contains source code for the Riff interpreter.
 
-## Status
-
-Riff is still in the design/prototype phase. Documentation and
-language specification can be found on [Riff's
-website](https://riff.cx/doc).
+Check out [Riff's website](https://riff.cx) for information and
+language specification. There is also a [standalone
+playground](https://riff.run) featuring sample programs.
 
 ## Usage
 
