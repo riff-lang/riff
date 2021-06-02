@@ -94,4 +94,4 @@ bin/warn: $(SRC)
 
 bin/wasm: $(SRC)
 	mkdir -p bin
-	emcc $(CFLAGS) $(SRC) -s EXPORTED_FUNCTIONS='["_wasm_main"]' -s EXPORTED_RUNTIME_METHODS='["ccall"]' -o bin/riff.js
+	emcc $(CFLAGS) $(SRC) -s EXPORTED_FUNCTIONS='["_wasm_main"]' -s EXPORTED_RUNTIME_METHODS='["ccall"]' -s ALLOW_MEMORY_GROWTH=1 -o bin/riff.js
