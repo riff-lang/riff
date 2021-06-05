@@ -593,6 +593,27 @@ static int l_split(rf_val *fp, int argc) {
     return 1;
 }
 
+// type(x)
+static int l_type(rf_val *fp, int argc) {
+    if (!argc)
+        return 0;
+    char *str;
+    size_t len = 0;
+    switch (fp->type) {
+    case TYPE_NULL: str = "null";     len = 4; break;
+    case TYPE_INT:  str = "int";      len = 3; break;
+    case TYPE_FLT:  str = "float";    len = 5; break;
+    case TYPE_STR:  str = "string";   len = 6; break;
+    case TYPE_SEQ:  str = "sequence"; len = 8; break;
+    case TYPE_TBL:  str = "table";    len = 5; break;
+    case TYPE_RFN:
+    case TYPE_CFN:  str = "function"; len = 8; break;
+    default: break;
+    }
+    assign_str(fp-1, s_newstr(str, len, 0));
+    return 1;
+}
+
 // upper(s)
 static int l_upper(rf_val *fp, int argc) {
     if (!is_str(fp))
@@ -626,6 +647,7 @@ static struct {
     { "lower", { 1, l_lower } },
     { "num",   { 1, l_num }   },
     { "split", { 1, l_split } },
+    { "type",  { 1, l_type }  },
     { "upper", { 1, l_upper } },
     { NULL,    { 0, NULL }    }
 };
