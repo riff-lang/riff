@@ -74,6 +74,7 @@ static int lbp(int tk) {
     case '|':                     return 8;
     case '>': case '<':      
     case TK_GE: case TK_LE:       return 7;
+    case '~': case TK_NMATCH:     return 6;
     case TK_EQ: case TK_NE:       return 6;
     case TK_AND:                  return 5;
     case TK_OR:                   return 4;
@@ -94,10 +95,10 @@ static int lbop(int tk) {
     return tk == '#' || tk == '%' || tk == '&' || tk == '(' ||
            tk == '*' || tk == '+' || tk == '-' || tk == '/' ||
            tk == '<' || tk == '>' || tk == '^' || tk == '|' ||
-           tk == '[' ||
+           tk == '[' || tk == '~' ||
            tk == TK_AND || tk == TK_EQ  || tk == TK_NE ||
            tk == TK_GE  || tk == TK_LE  || tk == TK_OR ||
-           tk == TK_SHL || tk == TK_SHR;
+           tk == TK_SHL || tk == TK_SHR || tk == TK_NMATCH;
 }
 
 static int rbop(int tk) {
@@ -391,7 +392,7 @@ static int nud(rf_parser *y) {
         }
         unset(rx);
         break;
-    case TK_NULL: case TK_FLT: case TK_INT: case TK_STR:
+    case TK_NULL: case TK_FLT: case TK_INT: case TK_STR: case TK_RE:
         literal(y);
         break;
     case TK_ID:

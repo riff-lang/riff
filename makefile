@@ -33,6 +33,7 @@ SRC    += src/hash.c
 SRC    += src/lex.c
 SRC    += src/lib.c
 SRC    += src/parse.c
+SRC    += src/re.c
 SRC    += src/str.c
 SRC    += src/table.c
 SRC    += src/util.c

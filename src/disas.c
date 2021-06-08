@@ -62,12 +62,14 @@ static struct {
     [OP_LOOP16]  = { "loop",     2 },
     [OP_LOOP8]   = { "loop",     1 },
     [OP_LT]      = { "lt",       0 },
+    [OP_MATCH]   = { "match",    0 },
     [OP_MODX]    = { "modx",     0 },
     [OP_MOD]     = { "mod",      0 },
     [OP_MULX]    = { "mulx",     0 },
     [OP_MUL]     = { "mul",      0 },
     [OP_NEG]     = { "neg",      0 },
     [OP_NE]      = { "ne",       0 },
+    [OP_NMATCH]  = { "nmatch",   0 },
     [OP_NOT]     = { "not",      0 },
     [OP_NULL]    = { "null",     0 },
     [OP_NUM]     = { "num",      0 },
@@ -324,7 +326,7 @@ void d_prog(rf_env *e) {
 
 static const char *tokenstr[] = {
     [TK_AND] =
-    "&&", "--", "..", "==", ">=", "++", "<=", "!=", "||", "**",
+    "&&", "--", "..", "==", ">=", "++", "<=", "!=", "!~", "||", "**",
     "<<", ">>", "+=", "&=", "#=", "/=", "%=", "*=", "|=", "**=",
     "<<=", ">>=", "-=", "^=",
     "break", "continue", "do", "elif", "else", "exit", "fn", "for",
@@ -356,6 +358,9 @@ static void tk2str(rf_token *tk, char *s) {
             sprintf(s, "<String (%zu, 0x%x), %s>", tk->lexeme.s->l,
                                                    tk->lexeme.s->hash,
                                                    tk->lexeme.s->str);
+            break;
+        case TK_RE:
+            sprintf(s, "<Regex>");
             break;
         case TK_ID:
             sprintf(s, "<Identifier, %s>", tk->lexeme.s->str);

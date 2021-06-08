@@ -46,6 +46,8 @@ enum opcodes {
     OP_LE,      // Less-than or equal-to
     OP_LNOT,    // Logical NOT
     OP_CAT,     // Concatenate
+    OP_MATCH,   // Match
+    OP_NMATCH,  // Not match
     OP_PREINC,  // Pre-increment
     OP_PREDEC,  // Pre-decrement
     OP_POSTINC, // Post-increment

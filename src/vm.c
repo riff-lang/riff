@@ -227,6 +227,14 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     if (!is_str(r)) { m_freestr(rhs); }
 }
 
+static inline void z_match(rf_val *l, rf_val *r) {
+    assign_int(l, re_match(l->u.s, r->u.r));
+}
+
+static inline void z_nmatch(rf_val *l, rf_val *r) {
+    assign_int(l, !re_match(l->u.s, r->u.r));
+}
+
 // Potentially very slow for strings; allocates 2 new string objects
 // for every int or float LHS
 static inline void z_idx(rf_val *l, rf_val *r) {
@@ -574,24 +582,26 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     --sp; \
     ++ip;
 
-    z_case(ADD) binop(add); z_break;
-    z_case(SUB) binop(sub); z_break;
-    z_case(MUL) binop(mul); z_break;
-    z_case(DIV) binop(div); z_break;
-    z_case(MOD) binop(mod); z_break;
-    z_case(POW) binop(pow); z_break;
-    z_case(AND) binop(and); z_break;
-    z_case(OR)  binop(or);  z_break;
-    z_case(XOR) binop(xor); z_break;
-    z_case(SHL) binop(shl); z_break;
-    z_case(SHR) binop(shr); z_break;
-    z_case(EQ)  binop(eq);  z_break;
-    z_case(NE)  binop(ne);  z_break;
-    z_case(GT)  binop(gt);  z_break;
-    z_case(GE)  binop(ge);  z_break;
-    z_case(LT)  binop(lt);  z_break;
-    z_case(LE)  binop(le);  z_break;
-    z_case(CAT) binop(cat); z_break;
+    z_case(ADD)    binop(add);    z_break;
+    z_case(SUB)    binop(sub);    z_break;
+    z_case(MUL)    binop(mul);    z_break;
+    z_case(DIV)    binop(div);    z_break;
+    z_case(MOD)    binop(mod);    z_break;
+    z_case(POW)    binop(pow);    z_break;
+    z_case(AND)    binop(and);    z_break;
+    z_case(OR)     binop(or);     z_break;
+    z_case(XOR)    binop(xor);    z_break;
+    z_case(SHL)    binop(shl);    z_break;
+    z_case(SHR)    binop(shr);    z_break;
+    z_case(EQ)     binop(eq);     z_break;
+    z_case(NE)     binop(ne);     z_break;
+    z_case(GT)     binop(gt);     z_break;
+    z_case(GE)     binop(ge);     z_break;
+    z_case(LT)     binop(lt);     z_break;
+    z_case(LE)     binop(le);     z_break;
+    z_case(CAT)    binop(cat);    z_break;
+    z_case(MATCH)  binop(match);  z_break;
+    z_case(NMATCH) binop(nmatch); z_break;
 
 // Pre-increment/decrement
 // sp[-1].a is address of some variable's rf_val.

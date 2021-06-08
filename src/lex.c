@@ -217,6 +217,28 @@ str_start:
     return TK_STR;
 }
 
+static int read_re(rf_lexer *x, rf_token *tk, int d) {
+    x->buf.n = 0;
+    int c;
+    while ((c = *x->p) != d) {
+        adv;
+        if (c == '\\') {
+            m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
+            x->buf.c[x->buf.n++] = c;
+            x->buf.c[x->buf.n++] = *x->p;
+            adv;
+        } else {
+            m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
+            x->buf.c[x->buf.n++] = c;
+        }
+    }
+    x->buf.c[x->buf.n] = 0; // null terminate the RE string
+    rf_re *r = re_compile(x->buf.c);
+    adv;
+    tk->lexeme.r = r;
+    return TK_RE;
+}
+
 static int check_kw(rf_lexer *x, const char *s, int size) {
     int f = size;     // Character immediately following
     int i = 0;
@@ -396,7 +418,12 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case '\0': return 1;
         case '\n': case '\r': ++x->ln;
         case ' ': case '\t': break;
-        case '!': return test2(x, '=', TK_NE, '!');
+        case '!':
+            if (x->mode) {
+                return test3(x, '=', TK_NE, '~', TK_NMATCH, '!');
+            } else {
+                return test2(x, '=', TK_NE, '!');
+            }
         case '"': return read_str(x, tk, c);
         case '#': return test2(x, '=', TK_CATX, '#');
         case '%': return test2(x, '=', TK_MODX, '%');
@@ -439,8 +466,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                 if (x->mode)
                     return test2(x, '=', TK_DIVX, '/');
                 else
-                    // TODO regex literals - read as strings for now
-                    return read_str(x, tk, c);
+                    return read_re(x, tk, c);
                 break;
             }
             break;

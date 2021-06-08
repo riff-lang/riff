@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <regex.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -11,6 +12,7 @@ enum types {
     TYPE_INT,
     TYPE_FLT,
     TYPE_STR,
+    TYPE_RE,
     TYPE_SEQ,
     TYPE_TBL,
     TYPE_RFN,
@@ -21,6 +23,7 @@ enum types {
 #define is_int(x)  ((x)->type == TYPE_INT)
 #define is_flt(x)  ((x)->type == TYPE_FLT)
 #define is_str(x)  ((x)->type == TYPE_STR)
+#define is_re(x)   ((x)->type == TYPE_RE)
 #define is_seq(x)  ((x)->type == TYPE_SEQ)
 #define is_tbl(x)  ((x)->type == TYPE_TBL)
 #define is_rfn(x)  ((x)->type == TYPE_RFN)
@@ -36,6 +39,8 @@ typedef struct {
     uint32_t  hash;
     char     *str;
 } rf_str;
+
+typedef regex_t rf_re;
 
 typedef struct {
     rf_int from;
@@ -57,6 +62,7 @@ typedef struct {
         rf_flt  f;
         rf_int  i;
         rf_str *s;
+        rf_re  *r;
         rf_seq *q;
         rf_tbl *t;
         rf_fn  *fn;
@@ -121,6 +127,8 @@ typedef struct {
 
 rf_int  str2int(rf_str *);
 rf_flt  str2flt(rf_str *);
+rf_re  *re_compile(char *);
+rf_int  re_match(rf_str *, rf_re *);
 rf_str *s_newstr(const char *, size_t, int);
 rf_str *s_substr(rf_str *, rf_int, rf_int, rf_int);
 rf_str *s_concat(rf_str *, rf_str *, int);

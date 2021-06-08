@@ -14,6 +14,7 @@ typedef struct {
         rf_flt  f;
         rf_int  i;
         rf_str *s;
+        rf_re  *r;
     } lexeme;
 } rf_token;
 
@@ -28,6 +29,7 @@ enum tokens {
     TK_INC,       // ++
     TK_LE,        // <=
     TK_NE,        // !=
+    TK_NMATCH,    // !~
     TK_OR,        // ||
     TK_POW,       // **
     TK_SHL,       // <<
@@ -67,6 +69,7 @@ enum tokens {
     TK_FLT,
     TK_INT,
     TK_STR,
+    TK_RE,
 
     // Identifiers
     TK_ID,

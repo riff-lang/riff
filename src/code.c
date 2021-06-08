@@ -166,6 +166,11 @@ void c_constant(rf_code *c, rf_token *tk) {
     if (tk->kind == TK_NULL) {
         push(OP_NULL);
         return;
+    } else if (tk->kind == TK_RE) {
+        m_growarray(c->k, c->nk, c->kcap, rf_val);
+        c->k[c->nk++] = (rf_val) {TYPE_RE, .u.r = tk->lexeme.r};
+        c_pushk(c, c->nk - 1);
+        return;
     }
 
     // Search for existing duplicate literal
@@ -372,37 +377,39 @@ void c_index(rf_code *c, int n, int type) {
 // "nodes" and fold constants if possible.
 void c_infix(rf_code *c, int op) {
     switch (op) {
-    case '+':     push(OP_ADD);  break;
-    case '-':     push(OP_SUB);  break;
-    case '*':     push(OP_MUL);  break;
-    case '/':     push(OP_DIV);  break;
-    case '#':     push(OP_CAT);  break;
-    case '%':     push(OP_MOD);  break;
-    case '>':     push(OP_GT);   break;
-    case '<':     push(OP_LT);   break;
-    case '=':     push(OP_SET);  break;
-    case '&':     push(OP_AND);  break;
-    case '|':     push(OP_OR);   break;
-    case '^':     push(OP_XOR);  break;
-    case TK_SHL:  push(OP_SHL);  break;
-    case TK_SHR:  push(OP_SHR);  break;
-    case TK_POW:  push(OP_POW);  break;
-    case TK_GE:   push(OP_GE);   break;
-    case TK_LE:   push(OP_LE);   break;
-    case TK_EQ:   push(OP_EQ);   break;
-    case TK_NE:   push(OP_NE);   break;
-    case TK_ADDX: push(OP_ADDX); break;
-    case TK_ANDX: push(OP_ANDX); break;
-    case TK_DIVX: push(OP_DIVX); break;
-    case TK_MODX: push(OP_MODX); break;
-    case TK_MULX: push(OP_MULX); break;
-    case TK_ORX:  push(OP_ORX);  break;
-    case TK_SUBX: push(OP_SUBX); break;
-    case TK_XORX: push(OP_XORX); break;
-    case TK_CATX: push(OP_CATX); break;
-    case TK_POWX: push(OP_POWX); break;
-    case TK_SHLX: push(OP_SHLX); break;
-    case TK_SHRX: push(OP_SHRX); break;
+    case '+':       push(OP_ADD);    break;
+    case '-':       push(OP_SUB);    break;
+    case '*':       push(OP_MUL);    break;
+    case '/':       push(OP_DIV);    break;
+    case '#':       push(OP_CAT);    break;
+    case '%':       push(OP_MOD);    break;
+    case '>':       push(OP_GT);     break;
+    case '<':       push(OP_LT);     break;
+    case '=':       push(OP_SET);    break;
+    case '&':       push(OP_AND);    break;
+    case '|':       push(OP_OR);     break;
+    case '^':       push(OP_XOR);    break;
+    case '~':       push(OP_MATCH);  break;
+    case TK_NMATCH: push(OP_NMATCH); break;
+    case TK_SHL:    push(OP_SHL);    break;
+    case TK_SHR:    push(OP_SHR);    break;
+    case TK_POW:    push(OP_POW);    break;
+    case TK_GE:     push(OP_GE);     break;
+    case TK_LE:     push(OP_LE);     break;
+    case TK_EQ:     push(OP_EQ);     break;
+    case TK_NE:     push(OP_NE);     break;
+    case TK_ADDX:   push(OP_ADDX);   break;
+    case TK_ANDX:   push(OP_ANDX);   break;
+    case TK_DIVX:   push(OP_DIVX);   break;
+    case TK_MODX:   push(OP_MODX);   break;
+    case TK_MULX:   push(OP_MULX);   break;
+    case TK_ORX:    push(OP_ORX);    break;
+    case TK_SUBX:   push(OP_SUBX);   break;
+    case TK_XORX:   push(OP_XORX);   break;
+    case TK_CATX:   push(OP_CATX);   break;
+    case TK_POWX:   push(OP_POWX);   break;
+    case TK_SHLX:   push(OP_SHLX);   break;
+    case TK_SHRX:   push(OP_SHRX);   break;
     default: break;
     }
 }

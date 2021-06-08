@@ -43,6 +43,8 @@ static void *dispatch_labels[] = {
     &&L_LE,
     &&L_LNOT,
     &&L_CAT,
+    &&L_MATCH,
+    &&L_NMATCH,
     &&L_PREINC,
     &&L_PREDEC,
     &&L_POSTINC,
