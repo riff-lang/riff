@@ -171,6 +171,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND(s->str));
                     break;
+                case TYPE_RE:
+                    sprintf(s, "regex: %p", OPND(r));
+                    break;
                 case TYPE_RFN:
                     sprintf(s, "fn: %p", OPND(fn));
                     break;
@@ -225,6 +228,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND0(s->str));
                     break;
+                case TYPE_RE:
+                    sprintf(s, "regex: %p", OPND0(r));
+                    break;
                 case TYPE_RFN:
                     sprintf(s, "fn: %p", OPND0(fn));
                     break;
@@ -244,6 +250,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND1(s->str));
                     break;
+                case TYPE_RE:
+                    sprintf(s, "regex: %p", OPND1(r));
+                    break;
                 case TYPE_RFN:
                     sprintf(s, "fn: %p", OPND1(fn));
                     break;
@@ -262,6 +271,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                     break;
                 case TYPE_STR:
                     sprintf(s, "\"%s\"", OPND2(s->str));
+                    break;
+                case TYPE_RE:
+                    sprintf(s, "regex: %p", OPND2(r));
                     break;
                 case TYPE_RFN:
                     sprintf(s, "fn: %p", OPND2(fn));
