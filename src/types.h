@@ -128,7 +128,8 @@ typedef struct {
 rf_int  str2int(rf_str *);
 rf_flt  str2flt(rf_str *);
 rf_re  *re_compile(char *);
-rf_int  re_match(rf_str *, rf_re *);
+void    re_free(rf_re *);
+rf_int  re_match(char *, rf_re *);
 rf_str *s_newstr(const char *, size_t, int);
 rf_str *s_substr(rf_str *, rf_int, rf_int, rf_int);
 rf_str *s_concat(rf_str *, rf_str *, int);

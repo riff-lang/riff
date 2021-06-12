@@ -1,3 +1,6 @@
+#include <inttypes.h>
+#include <stdio.h>
+
 #include "types.h"
 
 #define CFLAGS REG_EXTENDED
@@ -8,6 +11,11 @@ rf_re *re_compile(char *pattern) {
     return regex;
 }
 
-rf_int re_match(rf_str *s, rf_re *regex) {
-    return !regexec(regex, s->str, 0, NULL, 0);
+void re_free(rf_re *regex) {
+    regfree(regex);
+    return;
+}
+
+rf_int re_match(char *s, rf_re *regex) {
+    return !regexec(regex, s, 0, NULL, 0);
 }

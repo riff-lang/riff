@@ -205,10 +205,8 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     case TYPE_INT:  lhs = s_int2str(l->u.i);    break;
     case TYPE_FLT:  lhs = s_flt2str(l->u.f);    break;
     case TYPE_STR:  lhs = l->u.s;               break;
-    case TYPE_SEQ: case TYPE_TBL:
-    case TYPE_RFN: case TYPE_CFN:
+    default:
         err("concatenation with incompatible type(s)");
-    default: break;
     }
 
     switch (r->type) {
@@ -216,10 +214,8 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     case TYPE_INT:  rhs = s_int2str(r->u.i);    break;
     case TYPE_FLT:  rhs = s_flt2str(r->u.f);    break;
     case TYPE_STR:  rhs = r->u.s;               break;
-    case TYPE_SEQ: case TYPE_TBL:
-    case TYPE_RFN: case TYPE_CFN:
+    default:
         err("concatenation with incompatible type(s)");
-    default: break;
     }
 
     assign_str(l, s_concat(lhs, rhs, 0));
@@ -227,12 +223,54 @@ static inline void z_cat(rf_val *l, rf_val *r) {
     if (!is_str(r)) { m_freestr(rhs); }
 }
 
+static rf_int match(rf_val *l, rf_val *r) {
+
+    // Common case: LHS string, RHS regex
+    if (is_str(l) && is_re(r))
+        return re_match(l->u.s->str, r->u.r);
+
+    char *lhs;
+    char temp_lhs[64];
+    char temp_rhs[64];
+
+    if (!is_str(l)) {
+        switch (l->type) {
+        case TYPE_INT: snprintf(temp_lhs, 64, "%"PRId64, l->u.i); break;
+        case TYPE_FLT: snprintf(temp_lhs, 64, "%g", l->u.f); break;
+        default:       temp_lhs[0] = '\0'; break;
+        }
+        lhs = temp_lhs;
+    } else {
+        lhs = l->u.s->str;
+    }
+
+    if (!is_re(r)) {
+        rf_re *temp_re;
+        rf_int res;
+        switch (r->type) {
+        case TYPE_INT: snprintf(temp_rhs, 64, "%"PRId64, r->u.i); break;
+        case TYPE_FLT: snprintf(temp_rhs, 64, "%g", r->u.f); break;
+        case TYPE_STR:
+            temp_re = re_compile(r->u.s->str);
+            goto do_match;
+        default:       temp_rhs[0] = '\0'; break;
+        }
+        temp_re = re_compile(temp_rhs);
+do_match:
+        res = re_match(lhs, temp_re);
+        re_free(temp_re);
+        return res;
+    } else {
+        return re_match(lhs, r->u.r);
+    }
+}
+
 static inline void z_match(rf_val *l, rf_val *r) {
-    assign_int(l, re_match(l->u.s, r->u.r));
+    assign_int(l, match(l, r));
 }
 
 static inline void z_nmatch(rf_val *l, rf_val *r) {
-    assign_int(l, !re_match(l->u.s, r->u.r));
+    assign_int(l, !match(l, r));
 }
 
 // Potentially very slow for strings; allocates 2 new string objects
