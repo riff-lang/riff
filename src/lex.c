@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -211,32 +212,37 @@ str_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-    rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
-    adv;
-    tk->lexeme.s = s;
-    return TK_STR;
-}
 
-static int read_re(rf_lexer *x, rf_token *tk, int d) {
-    x->buf.n = 0;
-    int c;
-    while ((c = *x->p) != d) {
+    // Standard string literals
+    if (d == '"') {
+        rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
         adv;
-        if (c == '\\') {
-            m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
-            x->buf.c[x->buf.n++] = c;
-            x->buf.c[x->buf.n++] = *x->p;
-            adv;
-        } else {
-            m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
-            x->buf.c[x->buf.n++] = c;
-        }
+        tk->lexeme.s = s;
+        return TK_STR;
     }
-    x->buf.c[x->buf.n] = 0; // null terminate the RE string
-    rf_re *r = re_compile(x->buf.c);
-    adv;
-    tk->lexeme.r = r;
-    return TK_RE;
+
+    // Regex literals
+    else if (d == '/') {
+        // Null terminate the RE string
+        x->buf.c[x->buf.n] = 0;
+        int flags = 0;
+        adv;
+
+        // Parse regex options (i,m,x)
+        while (*x->p == 'i' || *x->p == 'm' || *x->p == 'x') {
+            switch (*x->p) {
+            case 'i': flags |= REG_ICASE;    adv; break;
+            case 'm': flags |= REG_NEWLINE;  adv; break;
+            // Superfluous, but valid?
+            case 'x': flags |= REG_EXTENDED; adv; break;
+            }
+        }
+        rf_re *r = re_compile(x->buf.c, flags);
+        tk->lexeme.r = r;
+        return TK_RE;
+    }
+
+    return 0; // Unreachable
 }
 
 static int check_kw(rf_lexer *x, const char *s, int size) {
@@ -466,7 +472,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                 if (x->mode)
                     return test2(x, '=', TK_DIVX, '/');
                 else
-                    return read_re(x, tk, c);
+                    return read_str(x, tk, c);
                 break;
             }
             break;

@@ -251,11 +251,11 @@ static rf_int match(rf_val *l, rf_val *r) {
         case TYPE_INT: snprintf(temp_rhs, 64, "%"PRId64, r->u.i); break;
         case TYPE_FLT: snprintf(temp_rhs, 64, "%g", r->u.f); break;
         case TYPE_STR:
-            temp_re = re_compile(r->u.s->str);
+            temp_re = re_compile(r->u.s->str, 0);
             goto do_match;
         default:       temp_rhs[0] = '\0'; break;
         }
-        temp_re = re_compile(temp_rhs);
+        temp_re = re_compile(temp_rhs, 0);
 do_match:
         res = re_match(lhs, temp_re);
         re_free(temp_re);

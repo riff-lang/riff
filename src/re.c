@@ -3,11 +3,11 @@
 
 #include "types.h"
 
-#define CFLAGS REG_EXTENDED
+#define CFLAGS REG_EXTENDED // Extended Regex by default
 
-rf_re *re_compile(char *pattern) {
+rf_re *re_compile(char *pattern, int flags) {
     rf_re *regex = malloc(sizeof(rf_re));
-    regcomp(regex, pattern, CFLAGS);
+    regcomp(regex, pattern, flags | CFLAGS);
     return regex;
 }
 
