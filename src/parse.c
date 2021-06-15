@@ -1016,6 +1016,9 @@ static void while_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
+    y->ld--;
+    y->loop = old_loop;
+    y->nlcl -= pop_locals(y, y->ld, 1);
     // Patch continue stmts
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
@@ -1026,9 +1029,6 @@ static void while_stmt(rf_parser *y) {
     for (int i = 0; i < b.n; i++) {
         c_patch(y->c, b.l[i]);
     }
-    y->ld--;
-    y->loop = old_loop;
-    y->nlcl -= pop_locals(y, y->ld, 1);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
