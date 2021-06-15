@@ -11,7 +11,7 @@
 #include "util.h"
 #include "vm.h"
 
-#define VERSION "0.1a"
+#define VERSION "0.1"
 
 static void version(void) {
     printf("riff %s Copyright 2020-2021, Darryl Abbate\n", VERSION);
