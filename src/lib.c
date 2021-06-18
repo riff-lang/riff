@@ -486,6 +486,83 @@ redir_flt:
     return 1;
 }
 
+static int xsub(rf_val *fp, int argc, int flags) {
+    char  *s;
+    rf_re *p;
+    char  *r;
+
+    char temp_s[32];
+    char temp_r[32];
+
+    // String `s`
+    if (!is_str(fp)) {
+        if (is_int(fp))
+            snprintf(temp_s, 32, "%"PRId64, fp->u.i);
+        else if (is_flt(fp))
+            snprintf(temp_s, 32, "%g", fp->u.f);
+        else
+            return 0;
+        s = temp_s;
+    } else {
+        s = fp->u.s->str;
+    }
+
+    // Pattern `p`
+    if (!is_re(fp+1)) {
+        if (is_num(fp+1)) {
+            char temp_p[32];
+            if (is_int(fp+1))
+                snprintf(temp_p, 32, "%"PRId64, fp[1].u.i);
+            else if (is_flt(fp+1))
+                snprintf(temp_p, 32, "%g", fp[1].u.f);
+            p = re_compile(temp_p, 0);
+        } else if (is_str(fp+1)) {
+            p = re_compile(fp[1].u.s->str, 0);
+        } else {
+            return 0;
+        }
+    } else {
+        p = fp[1].u.r;
+    }
+
+    // If replacement `r` provided
+    if (argc > 2) {
+        if (!is_str(fp+2)) {
+            if (is_int(fp+2))
+                snprintf(temp_r, 32, "%"PRId64, fp[2].u.i);
+            else if (is_flt(fp+2))
+                snprintf(temp_r, 32, "%g", fp[2].u.f);
+            else
+                temp_r[0] = '\0';
+            r = temp_r;
+        } else {
+            r = fp[2].u.s->str;
+        }
+    }
+
+    // Otherwise, treat `r` as an empty string, effectively deleting
+    // substrings matching `p` from `s`.
+    else {
+        temp_r[0] = '\0';
+        r = temp_r;
+    }
+
+    char   buf[STR_BUF_SZ];
+    size_t n = STR_BUF_SZ;
+
+    int res = re_sub(s, p, r, buf, &n, flags);
+
+    assign_str(fp-1, s_newstr(buf, n, 0));
+    return 1;
+}
+
+// gsub(s,p[,r])
+// Returns a copy of string `s` where all occurrences of pattern `p`
+// are replaced by string `r`
+static int l_gsub(rf_val *fp, int argc) {
+    return xsub(fp, argc, PCRE2_SUBSTITUTE_GLOBAL);
+}
+
 // hex(x)
 // Returns a string of `x` as an integer in hexadecimal (lowercase)
 // with the leading "0x"
@@ -593,6 +670,13 @@ static int l_split(rf_val *fp, int argc) {
     return 1;
 }
 
+// sub(s,p[,r])
+// Returns a copy of string `s` where only the first occurrence of
+// pattern `p` is replaced by string `r`
+static int l_sub(rf_val *fp, int argc) {
+    return xsub(fp, argc, 0);
+}
+
 // type(x)
 static int l_type(rf_val *fp, int argc) {
     if (!argc)
@@ -604,6 +688,7 @@ static int l_type(rf_val *fp, int argc) {
     case TYPE_INT:  str = "int";      len = 3; break;
     case TYPE_FLT:  str = "float";    len = 5; break;
     case TYPE_STR:  str = "string";   len = 6; break;
+    case TYPE_RE:   str = "regex";    len = 5; break;
     case TYPE_SEQ:  str = "sequence"; len = 8; break;
     case TYPE_TBL:  str = "table";    len = 5; break;
     case TYPE_RFN:
@@ -643,10 +728,12 @@ static struct {
     { "byte",  { 1, l_byte }  },
     { "char",  { 0, l_char }  },
     { "fmt",   { 1, l_fmt }   },
+    { "gsub",  { 2, l_gsub }  },
     { "hex",   { 1, l_hex }   },
     { "lower", { 1, l_lower } },
     { "num",   { 1, l_num }   },
     { "split", { 1, l_split } },
+    { "sub",   { 2, l_sub }   },
     { "type",  { 1, l_type }  },
     { "upper", { 1, l_upper } },
     { NULL,    { 0, NULL }    }

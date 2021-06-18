@@ -1,7 +1,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <regex.h>
+// Must precede pcre2.h inclusion
+#define PCRE2_CODE_UNIT_WIDTH 8
+
+#include <pcre2.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -40,7 +43,15 @@ typedef struct {
     char     *str;
 } rf_str;
 
-typedef regex_t rf_re;
+typedef pcre2_code rf_re;
+
+#define RE_ICASE     PCRE2_CASELESS
+#define RE_MULTILINE PCRE2_MULTILINE
+#define RE_DOTALL    PCRE2_DOTALL
+#define RE_EXTENDED  PCRE2_EXTENDED
+
+// Default compile options for regular expressions
+#define RE_CFLAGS RE_EXTENDED
 
 typedef struct {
     rf_int from;
@@ -130,6 +141,7 @@ rf_flt  str2flt(rf_str *);
 rf_re  *re_compile(char *, int);
 void    re_free(rf_re *);
 rf_int  re_match(char *, rf_re *);
+int     re_sub(char *, rf_re *, char *, char *, size_t *, int);
 rf_str *s_newstr(const char *, size_t, int);
 rf_str *s_substr(rf_str *, rf_int, rf_int, rf_int);
 rf_str *s_concat(rf_str *, rf_str *, int);

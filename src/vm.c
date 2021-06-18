@@ -230,13 +230,13 @@ static rf_int match(rf_val *l, rf_val *r) {
         return re_match(l->u.s->str, r->u.r);
 
     char *lhs;
-    char temp_lhs[64];
-    char temp_rhs[64];
+    char temp_lhs[32];
+    char temp_rhs[32];
 
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: snprintf(temp_lhs, 64, "%"PRId64, l->u.i); break;
-        case TYPE_FLT: snprintf(temp_lhs, 64, "%g", l->u.f); break;
+        case TYPE_INT: snprintf(temp_lhs, 32, "%"PRId64, l->u.i); break;
+        case TYPE_FLT: snprintf(temp_lhs, 32, "%g", l->u.f); break;
         default:       temp_lhs[0] = '\0'; break;
         }
         lhs = temp_lhs;
@@ -248,8 +248,8 @@ static rf_int match(rf_val *l, rf_val *r) {
         rf_re *temp_re;
         rf_int res;
         switch (r->type) {
-        case TYPE_INT: snprintf(temp_rhs, 64, "%"PRId64, r->u.i); break;
-        case TYPE_FLT: snprintf(temp_rhs, 64, "%g", r->u.f); break;
+        case TYPE_INT: snprintf(temp_rhs, 32, "%"PRId64, r->u.i); break;
+        case TYPE_FLT: snprintf(temp_rhs, 32, "%g", r->u.f); break;
         case TYPE_STR:
             temp_re = re_compile(r->u.s->str, 0);
             goto do_match;

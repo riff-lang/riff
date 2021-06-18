@@ -3,7 +3,8 @@ LOC     = /usr/local/bin
 
 CFLAGS  = -O3
 
-LDFLAGS = -lm
+LDFLAGS  = `pkg-config --cflags --libs libpcre2-8`
+LDFLAGS += -lm
 
 # AddressSanitizer
 AFLAGS  = -g

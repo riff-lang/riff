@@ -1,7 +1,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
-#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -213,36 +212,96 @@ str_start:
         x->buf.c[x->buf.n++] = c;
     }
 
-    // Standard string literals
-    if (d == '"') {
-        rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
-        adv;
-        tk->lexeme.s = s;
-        return TK_STR;
-    }
+    rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
+    adv;
+    tk->lexeme.s = s;
+    return TK_STR;
+}
 
-    // Regex literals
-    else if (d == '/') {
-        // Null terminate the RE string
-        x->buf.c[x->buf.n] = 0;
-        int flags = 0;
-        adv;
-
-        // Parse regex options (i,m,x)
-        while (*x->p == 'i' || *x->p == 'm' || *x->p == 'x') {
+static int read_re(rf_lexer *x, rf_token *tk, int d) {
+    x->buf.n = 0;
+    int c;
+re_start:
+    while ((c = *x->p) != d) {
+        switch(c) {
+        case '\\':
+            adv;
             switch (*x->p) {
-            case 'i': flags |= REG_ICASE;    adv; break;
-            case 'm': flags |= REG_NEWLINE;  adv; break;
-            // Superfluous, but valid?
-            case 'x': flags |= REG_EXTENDED; adv; break;
-            }
-        }
-        rf_re *r = re_compile(x->buf.c, flags);
-        tk->lexeme.r = r;
-        return TK_RE;
-    }
+            // Notably absent escape sqeunces:
+            //   b     (word boundary)
+            //   x     (hex escapes)
+            //   <nnn> (octal escapes/backreferences)
+            //
+            // Even though Riff supports decimal escapes in the style
+            // of `\nnn` in string/char literals, PCRE2 parses them as
+            // octal (Perl). Unfortunately there's no way to override
+            // this and hardcode decimal escape parsing without
+            // potentially breaking a backreference provided by the
+            // user. The only workaround might be to modify PCRE2
+            // source code.
+            //
+            // NOTE: PCRE2 can lex the following as well
+            case 'a': adv; c = '\a'; break;
+            case 'e': adv; c = 0x1b; break; // Escape char
+            case 'f': adv; c = '\f'; break;
+            case 'n': adv; c = '\n'; break;
+            case 'r': adv; c = '\r'; break;
+            case 't': adv; c = '\t'; break;
+            case 'v': adv; c = '\v'; break;
 
-    return 0; // Unreachable
+            case 'u': adv; unicode_esc(x, 4); goto re_start;
+            case 'U': adv; unicode_esc(x, 8); goto re_start;
+            // Ignore newlines following `\`
+            case '\n': case '\r':
+                ++x->ln;
+                adv;
+                goto re_start;
+            default:
+                m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
+                x->buf.c[x->buf.n++] = c;
+                if (*x->p == d) {
+                    m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
+                    x->buf.c[x->buf.n++] = d;
+                    adv;
+                }
+                goto re_start;
+            }
+            break;
+
+        // Newlines inside regex literal
+        case '\n': case '\r':
+            ++x->ln;
+            c = '\n';
+            adv;
+            break;
+        case '\0':
+            err(x, "reached end of input with unterminated regular expression");
+        default:
+            adv;
+            break;
+        }
+        m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
+        x->buf.c[x->buf.n++] = c;
+        adv;
+    }
+    // Null terminate the RE string
+    x->buf.c[x->buf.n] = 0;
+    int flags = 0;
+    adv;
+
+    // Parse regex options (i,m,x)
+    while (*x->p == 'i' || *x->p == 'm' || *x->p == 's' ||*x->p == 'x') {
+        switch (*x->p) {
+        case 'i': flags |= RE_ICASE;     adv; break;
+        case 'm': flags |= RE_MULTILINE; adv; break;
+        case 's': flags |= RE_DOTALL;    adv; break;
+        // Superfluous, but valid
+        case 'x': flags |= RE_EXTENDED; adv; break;
+        }
+    }
+    rf_re *r = re_compile(x->buf.c, flags);
+    tk->lexeme.r = r;
+    return TK_RE;
 }
 
 static int check_kw(rf_lexer *x, const char *s, int size) {
@@ -472,7 +531,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                 if (x->mode)
                     return test2(x, '=', TK_DIVX, '/');
                 else
-                    return read_str(x, tk, c);
+                    return read_re(x, tk, c);
                 break;
             }
             break;
