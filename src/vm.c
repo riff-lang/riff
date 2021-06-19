@@ -198,6 +198,8 @@ static inline void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
+// TODO no need to allocate and free rf_str objects, use
+// stack-allocated string buffers.
 static inline void z_cat(rf_val *l, rf_val *r) {
     rf_str *lhs, *rhs;
     switch (l->type) {
@@ -247,15 +249,16 @@ static rf_int match(rf_val *l, rf_val *r) {
     if (!is_re(r)) {
         rf_re *temp_re;
         rf_int res;
+        int errcode;
         switch (r->type) {
         case TYPE_INT: snprintf(temp_rhs, 32, "%"PRId64, r->u.i); break;
         case TYPE_FLT: snprintf(temp_rhs, 32, "%g", r->u.f); break;
         case TYPE_STR:
-            temp_re = re_compile(r->u.s->str, 0);
+            temp_re = re_compile(r->u.s->str, 0, &errcode);
             goto do_match;
         default:       temp_rhs[0] = '\0'; break;
         }
-        temp_re = re_compile(temp_rhs, 0);
+        temp_re = re_compile(temp_rhs, 0, &errcode);
 do_match:
         res = re_match(lhs, temp_re);
         re_free(temp_re);
@@ -273,6 +276,7 @@ static inline void z_nmatch(rf_val *l, rf_val *r) {
     assign_int(l, !match(l, r));
 }
 
+// TODO
 // Potentially very slow for strings; allocates 2 new string objects
 // for every int or float LHS
 static inline void z_idx(rf_val *l, rf_val *r) {
@@ -301,7 +305,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     }
     case TYPE_STR: {
         if (is_seq(r)) {
-            l->u.s =  s_substr(l->u.s, r->u.q->from, r->u.q->to, r->u.q->itvl);
+            l->u.s = s_substr(l->u.s, r->u.q->from, r->u.q->to, r->u.q->itvl);
         } else {
             rf_int r1 = intval(r);
             if (r1 > l->u.s->l - 1 || r1 < 0)
@@ -335,6 +339,7 @@ static inline void z_print(rf_val *v) {
     case TYPE_INT:  printf("%"PRId64, v->u.i);      break;
     case TYPE_FLT:  printf(FLT_PRINT_FMT, v->u.f);  break;
     case TYPE_STR:  printf("%s", v->u.s->str);      break;
+    case TYPE_RE:   printf("regex: %p", v->u.r);    break;
     case TYPE_SEQ:
         printf("seq: %"PRId64"..%"PRId64":%"PRId64,
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
@@ -372,6 +377,8 @@ static inline void new_iter(rf_val *set) {
         iter->keys = NULL;
         iter->set.str = set->u.s->str;
         break;
+    case TYPE_RE:
+        err("cannot iterate over regular expression");
     case TYPE_SEQ:
         iter->keys = NULL;
         iter->t = LOOP_SEQ;

@@ -256,15 +256,18 @@ re_start:
                 ++x->ln;
                 adv;
                 goto re_start;
-            default:
-                m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
-                x->buf.c[x->buf.n++] = c;
-                if (*x->p == d) {
-                    m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
-                    x->buf.c[x->buf.n++] = d;
-                    adv;
-                }
+            case '\\':
+                m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
+                x->buf.c[x->buf.n++] =  '\\';
+                x->buf.c[x->buf.n++] =  '\\';
+                adv;
                 goto re_start;
+            case '/':
+                c = *x->p;
+                // Fall-through
+            default:
+                adv;
+                break;
             }
             break;
 
@@ -282,15 +285,14 @@ re_start:
         }
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
-        adv;
     }
     // Null terminate the RE string
     x->buf.c[x->buf.n] = 0;
     int flags = 0;
     adv;
 
-    // Parse regex options (i,m,x)
-    while (*x->p == 'i' || *x->p == 'm' || *x->p == 's' ||*x->p == 'x') {
+    // Parse regex options ([imsx]*)
+    while (*x->p == 'i' || *x->p == 'm' || *x->p == 's' || *x->p == 'x') {
         switch (*x->p) {
         case 'i': flags |= RE_ICASE;     adv; break;
         case 'm': flags |= RE_MULTILINE; adv; break;
@@ -299,7 +301,16 @@ re_start:
         case 'x': flags |= RE_EXTENDED; adv; break;
         }
     }
-    rf_re *r = re_compile(x->buf.c, flags);
+    int errcode;
+    rf_re *r = re_compile(x->buf.c, flags, &errcode);
+
+    // Regex compilation error handling
+    if (errcode != 100) {
+        PCRE2_UCHAR errstr[0x200];
+        pcre2_get_error_message(errcode, errstr, 0x200);
+        err(x, (const char *) errstr);
+    }
+
     tk->lexeme.r = r;
     return TK_RE;
 }

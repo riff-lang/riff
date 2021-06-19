@@ -138,7 +138,7 @@ typedef struct {
 
 rf_int  str2int(rf_str *);
 rf_flt  str2flt(rf_str *);
-rf_re  *re_compile(char *, int);
+rf_re  *re_compile(char *, int, int *);
 void    re_free(rf_re *);
 rf_int  re_match(char *, rf_re *);
 int     re_sub(char *, rf_re *, char *, char *, size_t *, int);

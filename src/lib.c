@@ -509,15 +509,16 @@ static int xsub(rf_val *fp, int argc, int flags) {
 
     // Pattern `p`
     if (!is_re(fp+1)) {
+        int errcode;
         if (is_num(fp+1)) {
             char temp_p[32];
             if (is_int(fp+1))
                 snprintf(temp_p, 32, "%"PRId64, fp[1].u.i);
             else if (is_flt(fp+1))
                 snprintf(temp_p, 32, "%g", fp[1].u.f);
-            p = re_compile(temp_p, 0);
+            p = re_compile(temp_p, 0, &errcode);
         } else if (is_str(fp+1)) {
-            p = re_compile(fp[1].u.s->str, 0);
+            p = re_compile(fp[1].u.s->str, 0, &errcode);
         } else {
             return 0;
         }
