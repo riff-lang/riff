@@ -261,18 +261,16 @@ re_start:
                 ++x->ln;
                 adv;
                 goto re_start;
-            case '\\':
-                m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
-                x->buf.c[x->buf.n++] =  '\\';
-                x->buf.c[x->buf.n++] =  '\\';
-                adv;
-                goto re_start;
             case '/':
                 c = *x->p;
-                // Fall-through
-            default:
                 adv;
                 break;
+            default:
+                m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
+                x->buf.c[x->buf.n++] =  '\\';
+                x->buf.c[x->buf.n++] =  *x->p;
+                adv;
+                goto re_start;
             }
             break;
 

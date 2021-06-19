@@ -45,21 +45,25 @@ typedef struct {
 
 typedef pcre2_code rf_re;
 
+// Standard PCRE2 compile options
 #define RE_ANCHORED       PCRE2_ANCHORED
 #define RE_ICASE          PCRE2_CASELESS
 #define RE_DOLLAREND      PCRE2_DOLLAR_ENDONLY
 #define RE_DOTALL         PCRE2_DOTALL
 #define RE_DUPNAMES       PCRE2_DUPNAMES
 #define RE_EXTENDED       PCRE2_EXTENDED
-#define RE_IGNORE_BAD_ESC PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL
 #define RE_LITERAL        PCRE2_LITERAL
 #define RE_MULTILINE      PCRE2_MULTILINE
 #define RE_UNGREEDY       PCRE2_UNGREEDY
 
+// Extra PCRE2 compile options
+// Can only be set via pcre2_set_compile_extra_options() before
+// calling pcre2_compile()
+#define RE_IGNORE_BAD_ESC PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL
 
 // Default compile options for regular expressions
-#define RE_CFLAGS       RE_EXTENDED | RE_DUPNAMES
-#define RE_CFLAGS_EXTRA RE_IGNORE_BAD_ESC
+#define RE_CFLAGS         RE_DUPNAMES
+#define RE_CFLAGS_EXTRA   RE_IGNORE_BAD_ESC
 
 typedef struct {
     rf_int from;
