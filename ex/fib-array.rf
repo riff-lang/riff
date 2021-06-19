@@ -1,6 +1,6 @@
 // Iterative Fibonacci number program, using arrays/caching
 
-n = $1 ?: 92    // If no arg, print 92nd Fibonacci number
+n = arg[1] ?: 92    // If no arg, print 92nd Fibonacci number
 
 f[0] = 0
 f[1] = 1

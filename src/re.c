@@ -3,16 +3,23 @@
 
 #include "types.h"
 
-rf_re *re_compile(char *pattern, int flags, int *errcode) {
-    PCRE2_SIZE erroffset;
+static pcre2_compile_context *context = NULL;
 
-    return pcre2_compile(
+rf_re *re_compile(char *pattern, int flags, int *errcode) {
+    if (context == NULL) {
+        context = pcre2_compile_context_create(NULL);
+        pcre2_set_compile_extra_options(context, RE_CFLAGS_EXTRA);
+    }
+
+    PCRE2_SIZE erroffset;
+    rf_re *r = pcre2_compile(
             (PCRE2_SPTR) pattern,   // Raw pattern string
             PCRE2_ZERO_TERMINATED,  // Length (or specify zero terminated)
             flags | RE_CFLAGS,      // Options/flags
             errcode,                // Error code
             &erroffset,             // Error offset
-            NULL);                  // Compile context
+            context);               // Compile context
+    return r;
 }
 
 void re_free(rf_re *re) {

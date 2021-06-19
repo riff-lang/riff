@@ -26,6 +26,11 @@ static int valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
+static int valid_re_flag(char c) {
+    return c == 'A' || c == 'D' || c == 'J' || c == 'U' ||
+           c == 'i' || c == 'm' || c == 's' || c == 'x';
+}
+
 static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     tk->lexeme.f = u_str2d(start, &end, base);
@@ -292,14 +297,18 @@ re_start:
     adv;
 
     // Parse regex options ([imsx]*)
-    while (*x->p == 'i' || *x->p == 'm' || *x->p == 's' || *x->p == 'x') {
+    while (valid_re_flag(*x->p)) {
         switch (*x->p) {
-        case 'i': flags |= RE_ICASE;     adv; break;
-        case 'm': flags |= RE_MULTILINE; adv; break;
-        case 's': flags |= RE_DOTALL;    adv; break;
-        // Superfluous, but valid
-        case 'x': flags |= RE_EXTENDED; adv; break;
+        case 'A': flags |= RE_ANCHORED;  break;
+        case 'D': flags |= RE_DOLLAREND; break;
+        case 'J': flags |= RE_DUPNAMES;  break;
+        case 'U': flags |= RE_UNGREEDY;  break;
+        case 'i': flags |= RE_ICASE;     break;
+        case 'm': flags |= RE_MULTILINE; break;
+        case 's': flags |= RE_DOTALL;    break;
+        case 'x': flags |= RE_EXTENDED;  break;
         }
+        adv;
     }
     int errcode;
     rf_re *r = re_compile(x->buf.c, flags, &errcode);
