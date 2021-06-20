@@ -40,18 +40,3 @@ rf_int re_match(char *s, rf_re *re) {
     pcre2_match_data_free(match_data);
     return (rf_int) (rc > 0);
 }
-
-int re_sub(char *s, rf_re *re, char *repl, char *new, size_t *n, int flags) {
-    return pcre2_substitute(
-            re,                     // Compiled regex
-            (PCRE2_SPTR) s,         // Original string pointer
-            PCRE2_ZERO_TERMINATED,  // Original string length
-            0,                      // Start offset
-            flags,                  // Options/flags
-            NULL,                   // Match data block
-            NULL,                   // Match context
-            (PCRE2_SPTR) repl,      // Replacement string pointer
-            PCRE2_ZERO_TERMINATED,  // Replacement string length
-            (PCRE2_UCHAR *) new,    // Buffer for new string
-            n);                     // Buffer size (overwritten w/ length)
-}

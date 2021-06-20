@@ -551,7 +551,18 @@ static int xsub(rf_val *fp, int argc, int flags) {
     char   buf[STR_BUF_SZ];
     size_t n = STR_BUF_SZ;
 
-    int res = re_sub(s, p, r, buf, &n, flags);
+    int res = pcre2_substitute(
+            p,                      // Compiled regex
+            (PCRE2_SPTR) s,         // Original string pointer
+            PCRE2_ZERO_TERMINATED,  // Original string length
+            0,                      // Start offset
+            flags,                  // Options/flags
+            NULL,                   // Match data block
+            NULL,                   // Match context
+            (PCRE2_SPTR) r,         // Replacement string pointer
+            PCRE2_ZERO_TERMINATED,  // Replacement string length
+            (PCRE2_UCHAR *) buf,    // Buffer for new string
+            &n);                    // Buffer size (overwritten w/ length)
 
     assign_str(fp-1, s_newstr(buf, n, 0));
     return 1;
@@ -638,37 +649,94 @@ ret_flt:
 
 // split(s[,d])
 // Returns a table with elements being string `s` split on delimiter
-// `d`. The delimiter can be zero or more characters. If no delimiter
-// is provided, the default is " \t". If the delimiter is the empty
-// string (""), the string is split into a table of individual
-// characters.
+// `d`, treated as a regular expression. If no delimiter is provided,
+// the regular expression /\s+/ (whitespace) is used. If the delimiter
+// is the empty string (""), the string is split into a table of
+// single-byte strings.
 static int l_split(rf_val *fp, int argc) {
-    if (!is_str(fp))
-        return 0;
-    size_t len = fp->u.s->l + 1;
-    char str[len];
-    memcpy(str, fp->u.s->str, len);
-    const char *delim = (argc < 2 || !is_str(fp+1)) ? " \t" : fp[1].u.s->str;
-    rf_val *tbl = v_newtbl();
+    char *str;
+    size_t len;
+    char temp_s[20];
+    if (!is_str(fp)) {
+        if (is_int(fp))
+            len = sprintf(temp_s, "%"PRId64, fp->u.i);
+        else if (is_flt(fp))
+            len = sprintf(temp_s, "%g", fp->u.f);
+        else
+            return 0;
+        temp_s[len] = '\0';
+        str = temp_s;
+    } else {
+        str = fp->u.s->str;
+        len = fp->u.s->l;
+    }
     rf_str *s;
     rf_val v;
-    if (!strlen(delim)) {
-        for (rf_int i = 0; i < len - 1; ++i) {
-            s = s_newstr(str + i, 1, 0);
-            v = (rf_val) {TYPE_STR, .u.s = s};
-            t_insert_int(tbl->u.t, i, &v, 1, 1);
+    rf_val *tbl = v_newtbl();
+    rf_re *delim;
+    int errcode = 0;
+    if (argc < 2) {
+        delim = re_compile("\\s+", 0, &errcode);
+    } else if (!is_re(fp+1)) {
+        char temp[32];
+        switch (fp[1].type) {
+        case TYPE_INT: snprintf(temp, 32, "%"PRId64, fp[1].u.i); break;
+        case TYPE_FLT: snprintf(temp, 32, "%g", fp[1].u.f); break;
+        case TYPE_STR:
+            if (!fp[1].u.s->l)
+                goto split_chars;
+            delim = re_compile(fp[1].u.s->str, 0, &errcode);
+            goto do_split;
+        default:
+            goto split_chars;
         }
+        delim = re_compile(temp, 0, &errcode);
     } else {
-        char *tk = strtok(str, delim);
-        for (rf_int i = 0; tk; ++i) {
-            s = s_newstr(tk, strlen(tk), 0);
-            v = (rf_val) {TYPE_STR, .u.s = s};
-            t_insert_int(tbl->u.t, i, &v, 1, 1);
-            tk = strtok(NULL, delim);
-        }
+        delim = fp[1].u.r;
+    }
+
+    // Split on regular expression
+do_split: {
+    char buf[STR_BUF_SZ];
+    char *p = buf;
+    size_t n = STR_BUF_SZ;
+    char *sentinel = "\0";
+    int rc = pcre2_substitute(
+            delim,
+            (PCRE2_SPTR) str,
+            PCRE2_ZERO_TERMINATED,
+            0,
+            PCRE2_SUBSTITUTE_GLOBAL,
+            NULL,
+            NULL,
+            (PCRE2_SPTR) sentinel,
+            1,
+            (PCRE2_UCHAR *) buf,
+            &n);
+    // Extra null terminator, since the '\0' at buf[n] is a sentinel
+    // value
+    buf[n+1] = '\0';
+    for (rf_int i = 0; *p; ++i) {
+        size_t l = strlen(p);
+        s = s_newstr(p, l, 0);
+        v = (rf_val) {TYPE_STR, .u.s = s};
+        t_insert_int(tbl->u.t, i, &v, 1, 1);
+        p += l + 1;
     }
     fp[-1] = *tbl;
     return 1;
+    }
+
+    // Split into single-byte strings
+split_chars: {
+    for (rf_int i = 0; i < len; ++i) {
+        s = s_newstr(str + i, 1, 0);
+        v = (rf_val) {TYPE_STR, .u.s = s};
+        t_insert_int(tbl->u.t, i, &v, 1, 1);
+    }
+    fp[-1] = *tbl;
+    return 1;
+    }
 }
 
 // sub(s,p[,r])
