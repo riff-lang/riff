@@ -16,6 +16,10 @@ static void err(rf_lexer *x, const char *msg) {
     exit(1);
 }
 
+static int isoctal(char c) {
+    return c >= '0' && c <= '7';
+}
+
 static int valid_alpha(char c) {
     return (c >= 'A' && c <= 'Z') ||
            (c >= 'a' && c <= 'z') ||
@@ -96,18 +100,18 @@ static int hex_esc(rf_lexer *x) {
     return e;
 }
 
-// Reads a maximum of three decimal digits. Throws an error if
+// Reads a maximum of three octal digits. Throws an error if
 // resulting number > 255.
-static int dec_esc(rf_lexer *x) {
+static int oct_esc(rf_lexer *x) {
     int e = u_decval(*x->p++);
     for (int i = 0; i < 2; ++i) {
-        if (!isdigit(*x->p))
+        if (!isoctal(*x->p))
             break;
-        e *= 10;
+        e *= 8;
         e += u_decval(*x->p++);
     }
     if (e > UCHAR_MAX)
-        err(x, "invalid decimal escape");
+        err(x, "invalid octal escape");
     return e;
 }
 
@@ -128,7 +132,7 @@ static int read_charint(rf_lexer *x, rf_token *tk) {
         case 'x':  adv; c = hex_esc(x); break;
         case '\\': adv; c = '\\';       break; 
         case '\'': adv; c = '\'';       break; 
-        default:        c = dec_esc(x); break;
+        default:        c = oct_esc(x); break;
         }
         break;
     default:
@@ -196,7 +200,7 @@ str_start:
                 adv;
                 break;
             default:
-                c = dec_esc(x);
+                c = oct_esc(x);
                 break;
             }
             break;
