@@ -236,28 +236,6 @@ re_start:
         case '\\':
             adv;
             switch (*x->p) {
-            // Notably absent escape sqeunces:
-            //   b     (word boundary)
-            //   x     (hex escapes)
-            //   <nnn> (octal escapes/backreferences)
-            //
-            // Even though Riff supports decimal escapes in the style
-            // of `\nnn` in string/char literals, PCRE2 parses them as
-            // octal (Perl). Unfortunately there's no way to override
-            // this and hardcode decimal escape parsing without
-            // potentially breaking a backreference provided by the
-            // user. The only workaround might be to modify PCRE2
-            // source code.
-            //
-            // NOTE: PCRE2 can lex the following as well
-            case 'a': adv; c = '\a'; break;
-            case 'e': adv; c = 0x1b; break; // Escape char
-            case 'f': adv; c = '\f'; break;
-            case 'n': adv; c = '\n'; break;
-            case 'r': adv; c = '\r'; break;
-            case 't': adv; c = '\t'; break;
-            case 'v': adv; c = '\v'; break;
-
             case 'u': adv; unicode_esc(x, 4); goto re_start;
             case 'U': adv; unicode_esc(x, 8); goto re_start;
             // Ignore newlines following `\`
@@ -270,6 +248,8 @@ re_start:
                 adv;
                 break;
             default:
+                // Copy over escape sequence unmodified - let PCRE2
+                // handle it.
                 m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
                 x->buf.c[x->buf.n++] =  '\\';
                 x->buf.c[x->buf.n++] =  *x->p;

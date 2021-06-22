@@ -713,15 +713,25 @@ do_split: {
             1,
             (PCRE2_UCHAR *) buf,
             &n);
+    n += 1;
     // Extra null terminator, since the '\0' at buf[n] is a sentinel
     // value
-    buf[n+1] = '\0';
-    for (rf_int i = 0; *p; ++i) {
-        size_t l = strlen(p);
-        s = s_newstr(p, l, 0);
+    buf[n] = '\0';
+    for (rf_int i = 0; n > 0; ++i) {
+        // Insert an empty string when the delimiter produces
+        // consecutive sentinel values
+        if (!*p) {
+            s = s_newstr("", 0, 0);
+            ++p;
+            --n;
+        } else {
+            size_t l = strlen(p);
+            s = s_newstr(p, l, 0);
+            p += l + 1;
+            n -= l + 1;
+        }
         v = (rf_val) {TYPE_STR, .u.s = s};
         t_insert_int(tbl->u.t, i, &v, 1, 1);
-        p += l + 1;
     }
     fp[-1] = *tbl;
     return 1;
