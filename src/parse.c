@@ -9,7 +9,7 @@
 #define set(f)    y->f    = 1;
 #define unset(f)  y->f    = 0;
 #define unset_all y->lhs  = 0; \
-                  y->argx = 0; \
+                  y->fldx = 0; \
                   y->ax   = 0; \
                   y->ox   = 0; \
                   y->px   = 0; \
@@ -158,7 +158,7 @@ static void identifier(rf_parser *y) {
     // of the symbol. Otherwise, push the value itself.
     peek;
     y->x->mode = 0;
-    if (!y->argx &&
+    if (!y->fldx &&
             (is_incdec(y->x->la.kind) ||
              is_asgmt(y->x->la.kind)  ||
              y->x->la.kind == '[')) {
@@ -181,7 +181,7 @@ static void literal(rf_parser *y) {
     adv;
     y->x->mode = 0;
     // Assert no assignment appears following a constant literal
-    if (!y->argx && is_asgmt(y->x->tk.kind))
+    if (!y->fldx && is_asgmt(y->x->tk.kind))
         err(y, "attempt to assign to constant value");
 }
 
@@ -339,15 +339,15 @@ static int nud(rf_parser *y) {
         unset(ox);
         unset(rx);
         adv;
-        set(argx);
+        set(fldx);
         expr(y, 17);
         if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
             set(ax);
-            push(OP_ARGA);
+            push(OP_FLDA);
         } else
-            push(OP_ARGV);
+            push(OP_FLDV);
         if (!y->lhs) set(lhs);
-        unset(argx);
+        unset(fldx);
         y->ox = ox;
         y->rx = rx;
         break;
@@ -358,7 +358,7 @@ static int nud(rf_parser *y) {
         y->x->mode = 1;
         consume(y, ')', "expected ')'");
         y->x->mode = 0;
-        if (!y->argx) { 
+        if (!y->fldx) { 
             if (is_asgmt(y->x->tk.kind))
                 err(y, "invalid operator following expr");
             // Hack to prevent parsing ++/-- as postfix following
@@ -466,7 +466,7 @@ static int led(rf_parser *y, int p, int tk) {
                 } else {
                     set(ox);
                 }
-            } else if (y->lhs && !y->argx && y->ox && is_asgmt(tk)) {
+            } else if (y->lhs && !y->fldx && y->ox && is_asgmt(tk)) {
                 err(y, "syntax error");
             }
             unset(rx);

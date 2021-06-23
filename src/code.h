@@ -104,8 +104,8 @@ enum opcodes {
     OP_IDXA1,   // Index of a set, leaving address on stack
     OP_IDXV,    // Index of a set, leaving value on stack (nD array)
     OP_IDXV1,   // Index of a set, leaving value on stack
-    OP_ARGA,    // Index of the argv, leaving address on stack
-    OP_ARGV,    // Index of the argv, leaving value on stack
+    OP_FLDA,    // Index of the fldv, leaving address on stack
+    OP_FLDV,    // Index of the fldv, leaving value on stack
     OP_SEQ,     // Sequence: SP[-2]..SP[-1]
     OP_SEQF,    // Sequence: SP[-1]..INT_MAX
     OP_SEQT,    // Sequence: 0..SP[-1]

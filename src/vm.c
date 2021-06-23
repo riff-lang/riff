@@ -17,6 +17,7 @@ static void err(const char *msg) {
 
 static rf_htbl   globals;
 static rf_tbl    argv;
+static rf_tbl    fldv;
 static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
 
@@ -229,7 +230,7 @@ static rf_int match(rf_val *l, rf_val *r) {
 
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
-        return re_match(l->u.s->str, r->u.r);
+        return re_match(l->u.s->str, r->u.r, &fldv);
 
     char *lhs;
     char temp_lhs[32];
@@ -260,11 +261,11 @@ static rf_int match(rf_val *l, rf_val *r) {
         }
         temp_re = re_compile(temp_rhs, 0, &errcode);
 do_match:
-        res = re_match(lhs, temp_re);
+        res = re_match(lhs, temp_re, &fldv);
         re_free(temp_re);
         return res;
     } else {
-        return re_match(lhs, r->u.r);
+        return re_match(lhs, r->u.r, &fldv);
     }
 }
 
@@ -446,6 +447,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
 int z_exec(rf_env *e) {
     h_init(&globals);
     iter = NULL;
+    t_init(&fldv);
     init_argv(&argv, e->ff, e->argc, e->argv);
     h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1); 
 
@@ -1096,13 +1098,13 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         }
         z_break;
 
-    z_case(ARGA)
-        sp[-1].a = t_lookup(&argv, &sp[-1].v, 1);
+    z_case(FLDA)
+        sp[-1].a = t_lookup(&fldv, &sp[-1].v, 1);
         ++ip;
         z_break;
 
-    z_case(ARGV)
-        sp[-1].v = *t_lookup(&argv, &sp[-1].v, 0);
+    z_case(FLDV)
+        sp[-1].v = *t_lookup(&fldv, &sp[-1].v, 0);
         ++ip;
         z_break;
 
