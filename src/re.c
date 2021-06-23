@@ -6,7 +6,7 @@
 
 static pcre2_compile_context *context = NULL;
 
-rf_re *re_compile(char *pattern, int flags, int *errcode) {
+rf_re *re_compile(char *pattern, uint32_t flags, int *errcode) {
     if (context == NULL) {
         context = pcre2_compile_context_create(NULL);
         pcre2_set_compile_extra_options(context, RE_CFLAGS_EXTRA);
@@ -28,7 +28,7 @@ void re_free(rf_re *re) {
     return;
 }
 
-rf_int re_match(char *s, rf_re *re, rf_tbl *fldv) {
+rf_int re_match(char *s, rf_re *re, rf_tbl *fldv, int capture) {
 
     // Create PCRE2 match data block
     pcre2_match_data *md = pcre2_match_data_create_from_pattern(re, NULL);
@@ -43,13 +43,15 @@ rf_int re_match(char *s, rf_re *re, rf_tbl *fldv) {
             md,                     // Match data block
             NULL);                  // Match context
 
-    // Insert captured substrings into the VM's field vector
-    for (uint32_t i = 0; i < rc; ++i) {
-        PCRE2_UCHAR *buf;
-        PCRE2_SIZE   n;
-        pcre2_substring_get_bynumber(md, i, &buf, &n);
-        rf_val v = (rf_val) {TYPE_STR, .u.s = s_newstr((const char *) buf, n, 0)};
-        t_insert_int(fldv, (rf_int) i, &v, 1, 0);
+    if (capture) {
+        // Insert captured substrings into the VM's field vector
+        for (uint32_t i = 0; i < rc; ++i) {
+            PCRE2_UCHAR *buf;
+            PCRE2_SIZE   n;
+            pcre2_substring_get_bynumber(md, i, &buf, &n);
+            rf_val v = (rf_val) {TYPE_STR, .u.s = s_newstr((const char *) buf, n, 0)};
+            t_insert_int(fldv, (rf_int) i, &v, 1, 0);
+        }
     }
 
     // Free the PCRE2 match data

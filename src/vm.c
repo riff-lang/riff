@@ -230,7 +230,7 @@ static rf_int match(rf_val *l, rf_val *r) {
 
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
-        return re_match(l->u.s->str, r->u.r, &fldv);
+        return re_match(l->u.s->str, r->u.r, &fldv, 1);
 
     char *lhs;
     char temp_lhs[32];
@@ -251,21 +251,23 @@ static rf_int match(rf_val *l, rf_val *r) {
         rf_re *temp_re;
         rf_int res;
         int errcode;
+        int capture = 0;
         switch (r->type) {
         case TYPE_INT: snprintf(temp_rhs, 32, "%"PRId64, r->u.i); break;
         case TYPE_FLT: snprintf(temp_rhs, 32, "%g", r->u.f); break;
         case TYPE_STR:
+            capture = 1;
             temp_re = re_compile(r->u.s->str, 0, &errcode);
             goto do_match;
         default:       temp_rhs[0] = '\0'; break;
         }
         temp_re = re_compile(temp_rhs, 0, &errcode);
 do_match:
-        res = re_match(lhs, temp_re, &fldv);
+        res = re_match(lhs, temp_re, &fldv, capture);
         re_free(temp_re);
         return res;
     } else {
-        return re_match(lhs, r->u.r, &fldv);
+        return re_match(lhs, r->u.r, &fldv, 1);
     }
 }
 

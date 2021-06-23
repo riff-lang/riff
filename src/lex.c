@@ -32,7 +32,8 @@ static int valid_alphanum(char c) {
 
 static int valid_re_flag(char c) {
     return c == 'A' || c == 'D' || c == 'J' || c == 'U' ||
-           c == 'i' || c == 'm' || c == 's' || c == 'x';
+           c == 'i' || c == 'm' || c == 'n' || c == 's' ||
+           c == 'u' || c == 'x';
 }
 
 static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
@@ -275,20 +276,22 @@ re_start:
     }
     // Null terminate the RE string
     x->buf.c[x->buf.n] = 0;
-    int flags = 0;
+    uint32_t flags = 0;
     adv;
 
-    // Parse regex options ([imsx]*)
+    // Parse regex options ([ADJUimnsux]*)
     while (valid_re_flag(*x->p)) {
         switch (*x->p) {
-        case 'A': flags |= RE_ANCHORED;  break;
-        case 'D': flags |= RE_DOLLAREND; break;
-        case 'J': flags |= RE_DUPNAMES;  break;
-        case 'U': flags |= RE_UNGREEDY;  break;
-        case 'i': flags |= RE_ICASE;     break;
-        case 'm': flags |= RE_MULTILINE; break;
-        case 's': flags |= RE_DOTALL;    break;
-        case 'x': flags |= RE_EXTENDED;  break;
+        case 'A': flags |= RE_ANCHORED;        break;
+        case 'D': flags |= RE_DOLLAREND;       break;
+        case 'J': flags |= RE_DUPNAMES;        break;
+        case 'U': flags |= RE_UNGREEDY;        break;
+        case 'i': flags |= RE_ICASE;           break;
+        case 'm': flags |= RE_MULTILINE;       break;
+        case 'n': flags |= RE_NO_AUTO_CAPTURE; break;
+        case 's': flags |= RE_DOTALL;          break;
+        case 'u': flags |= RE_UNICODE;         break;
+        case 'x': flags |= RE_EXTENDED;        break;
         }
         adv;
     }
