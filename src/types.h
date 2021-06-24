@@ -152,9 +152,11 @@ typedef struct {
 
 rf_int  str2int(rf_str *);
 rf_flt  str2flt(rf_str *);
+void    re_register_fldv(rf_tbl *);
 rf_re  *re_compile(char *, uint32_t, int *);
 void    re_free(rf_re *);
-rf_int  re_match(char *, rf_re *, rf_tbl *, int);
+int     re_store_numbered_captures(pcre2_match_data *);
+rf_int  re_match(char *, rf_re *, int);
 rf_str *s_newstr(const char *, size_t, int);
 rf_str *s_substr(rf_str *, rf_int, rf_int, rf_int);
 rf_str *s_concat(rf_str *, rf_str *, int);

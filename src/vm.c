@@ -230,7 +230,7 @@ static rf_int match(rf_val *l, rf_val *r) {
 
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
-        return re_match(l->u.s->str, r->u.r, &fldv, 1);
+        return re_match(l->u.s->str, r->u.r, 1);
 
     char *lhs;
     char temp_lhs[32];
@@ -263,11 +263,11 @@ static rf_int match(rf_val *l, rf_val *r) {
         }
         temp_re = re_compile(temp_rhs, 0, &errcode);
 do_match:
-        res = re_match(lhs, temp_re, &fldv, capture);
+        res = re_match(lhs, temp_re, capture);
         re_free(temp_re);
         return res;
     } else {
-        return re_match(lhs, r->u.r, &fldv, 1);
+        return re_match(lhs, r->u.r, 1);
     }
 }
 
@@ -450,6 +450,7 @@ int z_exec(rf_env *e) {
     h_init(&globals);
     iter = NULL;
     t_init(&fldv);
+    re_register_fldv(&fldv);
     init_argv(&argv, e->ff, e->argc, e->argv);
     h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1); 
 

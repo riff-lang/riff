@@ -551,19 +551,40 @@ static int xsub(rf_val *fp, int argc, int flags) {
     char   buf[STR_BUF_SZ];
     size_t n = STR_BUF_SZ;
 
+    // Create match data for storing captured subexpressions
+    pcre2_match_data *md = pcre2_match_data_create_from_pattern(p, NULL);
+
+    // In order to properly capture substrings resulting from the
+    // substitution pattern, PCRE2 match data must be passed to a
+    // PCRE2 match operation with the same pattern and subject string
+    // before performing the actual subtitution
+    int m_res = pcre2_match(
+            p,
+            (PCRE2_SPTR) s,
+            PCRE2_ZERO_TERMINATED,
+            0,
+            0,
+            md,
+            NULL);
+
+    // Perform the substitution
     int res = pcre2_substitute(
             p,                      // Compiled regex
             (PCRE2_SPTR) s,         // Original string pointer
             PCRE2_ZERO_TERMINATED,  // Original string length
             0,                      // Start offset
-            flags,                  // Options/flags
-            NULL,                   // Match data block
+            PCRE2_SUBSTITUTE_MATCHED
+            | flags,                // Options/flags
+            md,                     // Match data block
             NULL,                   // Match context
             (PCRE2_SPTR) r,         // Replacement string pointer
             PCRE2_ZERO_TERMINATED,  // Replacement string length
             (PCRE2_UCHAR *) buf,    // Buffer for new string
             &n);                    // Buffer size (overwritten w/ length)
 
+    // Store capture substrings in the global fields table
+    re_store_numbered_captures(md);
+    pcre2_match_data_free(md);
     assign_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
