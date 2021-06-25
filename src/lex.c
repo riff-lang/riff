@@ -291,7 +291,14 @@ re_start:
         case 'n': flags |= RE_NO_AUTO_CAPTURE; break;
         case 's': flags |= RE_DOTALL;          break;
         case 'u': flags |= RE_UNICODE;         break;
-        case 'x': flags |= RE_EXTENDED;        break;
+        case 'x':
+            if (x->p[1] == 'x') {
+                flags |= RE_EXTENDED_MORE;
+                adv;
+            } else {
+                flags |= RE_EXTENDED;
+            }
+            break;
         }
         adv;
     }
