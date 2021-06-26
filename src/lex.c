@@ -82,6 +82,14 @@ static int read_num(rf_lexer *x, rf_token *tk) {
         } else if (*x->p == 'b' || *x->p == 'B') {
             base = 2;
         }
+    } else if (*start == '+' || *start == '-') {
+        if (start[1] == '0') {
+            if (start[2] == 'x' || start[2] == 'X') {
+                base = 16;
+            } else if (start[2] == 'b' || start[2] == 'B') {
+                base = 2;
+            }
+        }
     }
 
     return read_int(x, tk, start, base);
