@@ -1,0 +1,3 @@
+[submodule "lib/pcre2"]
+	path = lib/pcre2
+	url = git@github.com:jwilk-mirrors/pcre2.git
