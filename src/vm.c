@@ -64,12 +64,7 @@ static int str2num(rf_val *v) {
     if (is_int(l) && is_int(r)) { \
         l->u.i = (l->u.i op r->u.i); \
     } else { \
-        rf_flt f = (numval(l) op numval(r)); \
-        if (f == (rf_int) f) { \
-            assign_int(l, ((rf_int) f)); \
-        } else { \
-            assign_flt(l, (f)); \
-        } \
+        assign_flt(l, (numval(l) op numval(r))); \
     }
 
 // Return logical result of value
