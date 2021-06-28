@@ -194,8 +194,11 @@ static inline void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
-// TODO no need to allocate and free rf_str objects, use
-// stack-allocated string buffers.
+// TODO
+// - No need to allocate and free rf_str objects, use
+//   stack-allocated string buffers.
+// - Use flags to avoid creating/concatenating strings for values
+//   equivalent to empty strings.
 static inline void z_cat(rf_val *l, rf_val *r) {
     rf_str *lhs, *rhs;
     switch (l->type) {
@@ -233,8 +236,8 @@ static rf_int match(rf_val *l, rf_val *r) {
 
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: snprintf(temp_lhs, 32, "%"PRId64, l->u.i); break;
-        case TYPE_FLT: snprintf(temp_lhs, 32, "%g", l->u.f); break;
+        case TYPE_INT: u_int2str(l->u.i, temp_lhs, 32); break;
+        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs, 32); break;
         default:       temp_lhs[0] = '\0'; break;
         }
         lhs = temp_lhs;
@@ -248,8 +251,8 @@ static rf_int match(rf_val *l, rf_val *r) {
         int errcode;
         int capture = 0;
         switch (r->type) {
-        case TYPE_INT: snprintf(temp_rhs, 32, "%"PRId64, r->u.i); break;
-        case TYPE_FLT: snprintf(temp_rhs, 32, "%g", r->u.f); break;
+        case TYPE_INT: u_int2str(r->u.i, temp_rhs, 32); break;
+        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs, 32); break;
         case TYPE_STR:
             capture = 1;
             temp_re = re_compile(r->u.s->str, 0, &errcode);

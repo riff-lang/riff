@@ -497,9 +497,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // String `s`
     if (!is_str(fp)) {
         if (is_int(fp))
-            snprintf(temp_s, 32, "%"PRId64, fp->u.i);
+            u_int2str(fp->u.i, temp_s, 32);
         else if (is_flt(fp))
-            snprintf(temp_s, 32, "%g", fp->u.f);
+            u_flt2str(fp->u.f, temp_s, 32);
         else
             return 0;
         s = temp_s;
@@ -513,9 +513,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
         if (is_num(fp+1)) {
             char temp_p[32];
             if (is_int(fp+1))
-                snprintf(temp_p, 32, "%"PRId64, fp[1].u.i);
+                u_int2str(fp[1].u.i, temp_p, 32);
             else if (is_flt(fp+1))
-                snprintf(temp_p, 32, "%g", fp[1].u.f);
+                u_flt2str(fp[1].u.f, temp_p, 32);
             p = re_compile(temp_p, 0, &errcode);
         } else if (is_str(fp+1)) {
             p = re_compile(fp[1].u.s->str, 0, &errcode);
@@ -530,9 +530,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
     if (argc > 2) {
         if (!is_str(fp+2)) {
             if (is_int(fp+2))
-                snprintf(temp_r, 32, "%"PRId64, fp[2].u.i);
+                u_int2str(fp[2].u.i, temp_r, 32);
             else if (is_flt(fp+2))
-                snprintf(temp_r, 32, "%g", fp[2].u.f);
+                u_flt2str(fp[2].u.f, temp_r, 32);
             else
                 temp_r[0] = '\0';
             r = temp_r;
@@ -701,8 +701,8 @@ static int l_split(rf_val *fp, int argc) {
     } else if (!is_re(fp+1)) {
         char temp[32];
         switch (fp[1].type) {
-        case TYPE_INT: snprintf(temp, 32, "%"PRId64, fp[1].u.i); break;
-        case TYPE_FLT: snprintf(temp, 32, "%g", fp[1].u.f); break;
+        case TYPE_INT: u_int2str(fp[1].u.i, temp, 32); break;
+        case TYPE_FLT: u_flt2str(fp[1].u.f, temp, 32); break;
         case TYPE_STR:
             if (!fp[1].u.s->l)
                 goto split_chars;
