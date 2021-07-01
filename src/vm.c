@@ -84,7 +84,7 @@ static inline int test(rf_val *v) {
         return !!v->u.s->l;
     }
     case TYPE_TBL: return !!t_length(v->u.t);
-    case TYPE_SEQ:
+    case TYPE_RE:  case TYPE_SEQ:
     case TYPE_RFN: case TYPE_CFN:
         return 1;
     default: return 0;
@@ -97,7 +97,7 @@ static inline void z_sub(rf_val *l, rf_val *r) { num_arith(l,r,-); }
 static inline void z_mul(rf_val *l, rf_val *r) { num_arith(l,r,*); }
 
 // Language comparison for division by zero:
-// `inf`: lua, mawk
+// 0/0 = nan; 1/0 = inf : lua, mawk
 // error: pretty much all others
 static inline void z_div(rf_val *l, rf_val *r) {
     flt_arith(l,r,/);
@@ -123,14 +123,12 @@ static inline void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
 
 static inline void z_num(rf_val *v) {
     switch (v->type) {
+    case TYPE_INT: case TYPE_FLT: break;
     case TYPE_STR:
         assign_flt(v, str2flt(v->u.s));
         break;
-    case TYPE_NULL: case TYPE_TBL:
-    case TYPE_RFN: case TYPE_CFN:
-        assign_int(v, 0);
-        break;
     default:
+        assign_int(v, 0);
         break;
     }
 }
@@ -156,8 +154,8 @@ static inline void z_not(rf_val *v) {
     assign_int(v, ~intval(v));
 }
 
-static inline void z_eq(rf_val *l, rf_val *r) { cmp_eq(l,r,==); }
-static inline void z_ne(rf_val *l, rf_val *r) { cmp_eq(l,r,!=); }
+static inline void z_eq(rf_val *l, rf_val *r) { cmp_eq(l,r,==);  }
+static inline void z_ne(rf_val *l, rf_val *r) { cmp_eq(l,r,!=);  }
 static inline void z_gt(rf_val *l, rf_val *r) { cmp_rel(l,r,>);  }
 static inline void z_ge(rf_val *l, rf_val *r) { cmp_rel(l,r,>=); }
 static inline void z_lt(rf_val *l, rf_val *r) { cmp_rel(l,r,<);  }
@@ -184,7 +182,11 @@ static inline void z_len(rf_val *v) {
     case TYPE_STR: l = v->u.s->l;        break;
     case TYPE_TBL: l = t_length(v->u.t); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
-    case TYPE_SEQ: case TYPE_CFN: l = 1; break; // TODO - sequences
+    case TYPE_RE:   // TODO - extract something from PCRE pattern?
+    case TYPE_SEQ:  // TODO
+    case TYPE_CFN:
+        l = 1;
+        break;
     default: break;
     }
     assign_int(v, l);
@@ -450,7 +452,7 @@ int z_exec(rf_env *e) {
     t_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, e->ff, e->argc, e->argv);
-    h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1); 
+    h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1);
 
     l_register(&globals);
 
