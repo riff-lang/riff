@@ -689,9 +689,7 @@ static void local_fn(rf_parser *y) {
     int idx = resolve_local(y, id);
 
     // Create string for disassembly
-    rf_str *str1 = s_newstr("local fn ", 9, 0);
-    rf_str *str2 = s_concat(str1, y->x->tk.lexeme.s, 0);
-    m_freestr(str1);
+    rf_str *fn_name = s_newstr_concat("local fn ", y->x->tk.lexeme.s->str, 0);
 
     // If the identifier doesn't already exist as a local at the
     // current scope, add a new local
@@ -709,7 +707,7 @@ static void local_fn(rf_parser *y) {
         }
     }
     rf_fn *f = malloc(sizeof(rf_fn));
-    f_init(f, str2);
+    f_init(f, fn_name);
     rf_parser fy;
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;

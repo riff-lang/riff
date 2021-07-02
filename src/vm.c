@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "conf.h"
 #include "lib.h"
@@ -55,11 +56,11 @@ static int str2num(rf_val *v) {
         assign_int(l, (intval(l) op intval(r))); \
     }
 
-// Floating-point arithmetic
+// Floating-point arithmetic (div)
 #define flt_arith(l,r,op) \
     assign_flt(l, (numval(l) op numval(r)))
 
-// "Polymorphic" arithmetic
+// "Polymorphic" arithmetic (add, sub, mul)
 #define num_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
         l->u.i = (l->u.i op r->u.i); \
@@ -196,34 +197,33 @@ static inline void z_test(rf_val *v) {
     assign_int(v, test(v));
 }
 
-// TODO
-// - No need to allocate and free rf_str objects, use
-//   stack-allocated string buffers.
-// - Use flags to avoid creating/concatenating strings for values
-//   equivalent to empty strings.
 static inline void z_cat(rf_val *l, rf_val *r) {
-    rf_str *lhs, *rhs;
-    switch (l->type) {
-    case TYPE_NULL: lhs = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  lhs = s_int2str(l->u.i);    break;
-    case TYPE_FLT:  lhs = s_flt2str(l->u.f);    break;
-    case TYPE_STR:  lhs = l->u.s;               break;
-    default:
-        err("concatenation with incompatible type(s)");
+    char *lhs, *rhs;
+    char temp_lhs[32];
+    char temp_rhs[32];
+    if (!is_str(l)) {
+        switch (l->type) {
+        case TYPE_INT: u_int2str(l->u.i, temp_lhs, 32); break;
+        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs, 32); break;
+        default:       temp_lhs[0] = '\0';              break;
+        }
+        lhs = temp_lhs;
+    } else {
+        lhs = l->u.s->str;
     }
 
-    switch (r->type) {
-    case TYPE_NULL: rhs = s_newstr(NULL, 0, 0); break;
-    case TYPE_INT:  rhs = s_int2str(r->u.i);    break;
-    case TYPE_FLT:  rhs = s_flt2str(r->u.f);    break;
-    case TYPE_STR:  rhs = r->u.s;               break;
-    default:
-        err("concatenation with incompatible type(s)");
+    if (!is_str(r)) {
+        switch (r->type) {
+        case TYPE_INT: u_int2str(r->u.i, temp_rhs, 32); break;
+        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs, 32); break;
+        default:       temp_rhs[0] = '\0';              break;
+        }
+        rhs = temp_rhs;
+    } else {
+        rhs = r->u.s->str;
     }
 
-    assign_str(l, s_concat(lhs, rhs, 0));
-    if (!is_str(l)) { m_freestr(lhs); }
-    if (!is_str(r)) { m_freestr(rhs); }
+    assign_str(l, s_newstr_concat(lhs, rhs, 0));
 }
 
 static rf_int match(rf_val *l, rf_val *r) {
@@ -280,30 +280,30 @@ static inline void z_nmatch(rf_val *l, rf_val *r) {
 }
 
 // TODO
-// Potentially very slow for strings; allocates 2 new string objects
-// for every int or float LHS
+// Allow negative indices to subscript statrting from end of string
+// Ex:
+//   "hello"[-1] == "o"
 static inline void z_idx(rf_val *l, rf_val *r) {
+    char temp[32];
     switch (l->type) {
     case TYPE_INT: {
-        rf_str *is = s_int2str(l->u.i);
+        u_int2str(l->u.i, temp, 32);
         rf_int r1 = intval(r);
 
         // Index out-of-bounds: assign null
-        if (r1 > is->l - 1 || r1 < 0)
+        if (r1 > strlen(temp) - 1 || r1 < 0)
             assign_null(l);
         else
-            assign_str(l, s_newstr(&is->str[r1], 1, 0));
-        m_freestr(is);
+            assign_str(l, s_newstr(temp + r1, 1, 0));
         break;
     }
     case TYPE_FLT: {
-        rf_str *fs = s_flt2str(l->u.f);
+        u_flt2str(l->u.f, temp, 32);
         rf_int r1 = intval(r);
-        if (r1 > fs->l - 1 || r1 < 0)
+        if (r1 > strlen(temp) - 1 || r1 < 0)
             assign_null(l);
         else
-            assign_str(l, s_newstr(&fs->str[r1], 1, 0));
-        m_freestr(fs);
+            assign_str(l, s_newstr(temp + r1, 1, 0));
         break;
     }
     case TYPE_STR: {
@@ -330,7 +330,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
         break;
     }
     default:
-        assign_int(l, 0);
+        assign_null(l);
         break;
     }
 }
@@ -427,7 +427,6 @@ static inline void destroy_iter(void) {
 }
 
 // TODO
-#include <string.h>
 static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) {
     t_init(t);
     for (rf_int i = 0; i < rf_argc; ++i) {
