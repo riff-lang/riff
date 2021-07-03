@@ -75,6 +75,17 @@ static int l_log(rf_val *fp, int argc) {
     return 1;
 }
 
+// pow(x,y[,z])
+static int l_pow(rf_val *fp, int argc) {
+    rf_flt pow_res = pow(fltval(fp), fltval(fp+1));
+    if (argc < 3) {
+        assign_flt(fp-1, pow_res);
+    } else {
+        assign_flt(fp-1, fmod(pow_res, fltval(fp+2)));
+    }
+    return 1;
+}
+
 // sin(x)
 static int l_sin(rf_val *fp, int argc) {
     assign_flt(fp-1, sin(fltval(fp)));
@@ -818,6 +829,7 @@ static struct {
     { "exp",   { 1, l_exp }   },
     { "int",   { 1, l_int }   },
     { "log",   { 1, l_log }   },
+    { "pow",   { 2, l_pow }   },
     { "sin",   { 1, l_sin }   },
     { "sqrt",  { 1, l_sqrt }  },
     { "tan",   { 1, l_tan }   },
