@@ -236,11 +236,11 @@ static int l_char(rf_val *fp, int argc) {
         } \
     } else if ((prec < 0) && (flags & FMT_ZERO)) { \
         if (flags & FMT_SIGN) { \
-            n += sprintf(b + n, "%+0*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%+0*"fmt, width, i); \
         } else if (flags & FMT_SPACE) { \
-            n += sprintf(b + n, "% 0*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "% 0*"fmt, width, i); \
         } else { \
-            n += sprintf(b + n, "%0*.*"fmt, width, prec, i); \
+            n += sprintf(b + n, "%0*"fmt, width, i); \
         } \
     } else if (flags & FMT_SIGN) { \
         n += sprintf(b + n, "%+*.*"fmt, width, prec, i); \
@@ -258,7 +258,7 @@ static int l_char(rf_val *fp, int argc) {
     if (flags & FMT_LEFT) { \
         n += sprintf(b + n, "%-*.*"fmt, width, prec, i); \
     } else if ((prec < 0) && (flags & FMT_ZERO)) { \
-        n += sprintf(b + n, "%0*.*"fmt, width, prec, i); \
+        n += sprintf(b + n, "%0*"fmt, width, i); \
     } else { \
         n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
     }
