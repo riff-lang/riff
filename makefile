@@ -2,10 +2,10 @@
 LOC           = /usr/local/bin
 
 CFLAGS        = -O3
-CFLAGS       += `pcre2-config --cflags`
+CFLAGS       += $(shell pcre2-config --cflags)
 
 LDFLAGS       = -lm
-LDFLAGS      += `pcre2-config --libs8`
+LDFLAGS      += $(shell pcre2-config --libs8)
 
 WASM_CFLAGS   = -O3
 WASM_CFLAGS  += -Ilib/pcre2/src
