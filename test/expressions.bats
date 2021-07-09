@@ -6,6 +6,11 @@
     [ "$output" -eq 1 ]
 }
 
+@test "Operator precedence" {
+    run bin/riff '-2**4'
+    [ "$output" = "-16" ]
+}
+
 @test "Divide by zero returns inf" {
     run bin/riff '1/0'
     [ "$output" = "inf" ]

@@ -519,22 +519,18 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
             if (x->mode)
                 return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
             else {
+                // Allow `+` to be consumed when directly prefixing a
+                // numeric literal. This has no effect on operator
+                // precedence (unlike `-`) since the result of any
+                // expression is the same regardless. All this really
+                // does is save an OP_NUM byte from being emitted.
                 if (isdigit(*x->p) || *x->p == '.')
                     return read_num(x, tk);
                 else
                     return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
             }
             break;
-        case '-':
-            if (x->mode)
-                return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
-            else {
-                if (isdigit(*x->p) || *x->p == '.')
-                    return read_num(x, tk);
-                else
-                    return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
-            }
-            break;
+        case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
         case '.':
             if (isdigit(*x->p))
                 return read_num(x, tk);
