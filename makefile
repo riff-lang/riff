@@ -49,6 +49,7 @@ SRC          += src/val.c
 SRC          += src/vm.c
 
 TESTS         = test/expressions.bats
+TESTS        += test/fmt.bats
 TESTS        += test/literals.bats
 TESTS        += test/etc.bats
 

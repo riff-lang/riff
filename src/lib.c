@@ -263,6 +263,40 @@ static int l_char(rf_val *fp, int argc) {
         n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
     }
 
+// %b
+static int fmt_bin_itoa(char *buf, rf_int num, unsigned int flags, int width, int prec) {
+
+    if (!num && !prec)
+        return 0;
+
+    int  size = width > 64 ? width : 64;
+    char temp[size];
+    int  len = 0;
+    do {
+        temp[size-(++len)] = '0' + (num & 1);
+        num >>= 1;
+    } while (num && len < size);
+
+    while (len < prec) {
+        temp[size-(++len)] = '0';
+    }
+
+    if (!(flags & FMT_LEFT)) {
+        char padc = flags & FMT_ZERO ? '0' : ' ';
+        while (len < width) {
+            temp[size-(++len)] = padc;
+        }
+        memcpy(buf, temp + (size-len), len);
+    } else {
+        memcpy(buf, temp + (size-len), len);
+        if (len < width) {
+            memset(buf + len, ' ', width - len);
+            len = width;
+        }
+    }
+    return len;
+}
+
 // fmt(...)
 // Riff's `sprintf()` implementation. Doubles as `printf()` due to the
 // implicit printing functionality of the language.
@@ -278,6 +312,7 @@ static int l_char(rf_val *fp, int argc) {
 // Format specifiers:
 //   %              | Literal `%`
 //   a / A          | Hex float (exp notation; lowercase/uppercase)
+//   b              | Binary integer
 //   c              | Single character
 //   d / i          | Decimal integer
 //   e / E          | Decimal float (exp notation)
@@ -363,7 +398,6 @@ capture_flags:
         rf_int i;
         rf_flt f;
 
-        // TODO binary/%b?
         // Evaluate format specifier
         switch (*fstr++) {
         case 'c': {
@@ -401,6 +435,12 @@ redir_int:
             if (argc--) {
                 i = intval(fp+arg);
                 fmt_unsigned(buf, n, i, PRIX64);
+                ++arg;
+            }
+            break;
+        case 'b':
+            if (argc--) {
+                n += fmt_bin_itoa(buf + n, intval(fp+arg), flags, width, prec);
                 ++arg;
             }
             break;
