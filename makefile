@@ -53,6 +53,10 @@ TESTS        += test/fmt.bats
 TESTS        += test/literals.bats
 TESTS        += test/etc.bats
 
+# Compile-time info for riff -v
+GIT_DESC      = $(shell git describe --tags --abbrev=0)
+CFLAGS       += -DGIT_DESC=\"$(GIT_DESC)\"
+
 .PHONY: all clean install mem prof test warn
 
 all: bin/riff
@@ -89,14 +93,14 @@ bin/riff: $(SRC)
 
 bin/asan: $(SRC)
 	mkdir -p bin
-	$(CC) $(AFLAGS) $(SRC) -o bin/asan $(LDFLAGS)
+	$(CC) $(CFLAGS) $(AFLAGS) $(SRC) -o bin/asan $(LDFLAGS)
 
 bin/lsan: $(SRC)
 # LeakSanitizer doesn't seem to be supported by the default compiler
 # on macOS - use Homebrew-installed clang instead
 ifneq ($(wildcard /usr/local/opt/llvm/bin/clang),)
 	mkdir -p bin
-	/usr/local/opt/llvm/bin/clang $(LFLAGS) $(SRC) -o bin/lsan $(LDFLAGS)
+	/usr/local/opt/llvm/bin/clang $(CFLAGS) $(LFLAGS) $(SRC) -o bin/lsan $(LDFLAGS)
 else
 	@echo ERROR: LeakSanitizer requires Brew-installed clang
 endif
