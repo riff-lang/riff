@@ -16,6 +16,7 @@ char *u_file2str(const char *path) {
     rewind(file);
     char *buf  = malloc(s + 1);
     size_t end = fread(buf, sizeof(char), s, file);
+    fclose(file);
     buf[end]   = '\0';
     return buf;
 }
