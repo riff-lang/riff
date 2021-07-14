@@ -95,49 +95,129 @@ static int l_tan(rf_val *fp, int argc) {
 
 // Pseudo-random number generation
 
+// xoshiro256**
+// Source: https://prng.di.unimi.it
+
+static inline uint64_t rol(const uint64_t x, int k) {
+    return (x << k) | (x >> (64 - k));
+}
+
+static uint64_t prngs[4];
+
+static uint64_t prng_next(void) {
+    const uint64_t res = rol(prngs[1] * 5, 7) * 9;
+    const uint64_t t   = prngs[1] << 17;
+
+    prngs[2] ^= prngs[0];
+    prngs[3] ^= prngs[1];
+    prngs[1] ^= prngs[2];
+    prngs[0] ^= prngs[3];
+    prngs[2] ^= t;
+    prngs[3]  = rol(prngs[3], 45);
+
+    return res;
+}
+
 // rand([x])
-// Uses POSIX drand48() to produce random floats and two calls to
-// lrand48()/mrand48() concatenated together to produce random 64-bit
-// integers.
-// Ex:
-//   rand()  -> float in the range [0..1)
-//   rand(0) -> random Riff integer (64 bit signed)
-//   rand(n) -> random integer in the range [0..n]; n can be negative
-// TODO handle rand(x,y), returning a random integer in the range of
-// [x,y]
+//   rand()         | random float ∈ [0..1)
+//   rand(0)        | random int ∈ [INT64_MIN..INT64_MAX]
+//   rand(n)        | random int ∈ [0..n]
+//   rand(m,n)      | random int ∈ [m..n]
+//   rand(m..n)     | random int ∈ [m..n]
+//   rand(m..n:p)   | random int ∈ [m..n:p]
 static int l_rand(rf_val *fp, int argc) {
+    uint64_t rand = prng_next();
     if (!argc) {
-        assign_flt(fp-1, drand48());
-    } else { 
-        if (intval(fp) == 0) {
-            int64_t n1 = mrand48();
-            int64_t n2 = mrand48();
-            rf_int n = (n1 << 32) ^ n2;
-            assign_int(fp-1, n);
+        rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((uint64_t)1 << 52)));
+        assign_flt(fp-1, f);
+    }
+
+    // If first argument is a range/sequence
+    else if (is_seq(fp)) {
+        int64_t from = fp->u.q->from;
+        int64_t to   = fp->u.q->to;
+        int64_t itvl = fp->u.q->itvl;
+        uint64_t diff, offset;
+        if (from < to) {
+            diff = to - from;
+            offset = from;
+            if (itvl < 0) {
+                offset = diff - 1;
+                diff = from - to;
+            }
+        } else if (from > to) {
+            diff = from - to;
+            offset = to;
+            if (itvl > 0) {
+                offset = diff;
+                diff = to - from;
+            }
         } else {
-            uint64_t n1 = lrand48();
-            uint64_t n2 = lrand48();
-            rf_int n = (n1 << 32) ^ n2;
-            if (intval(fp) > 0)
-                assign_int(fp-1, n % (intval(fp) + 1));
-            else
-                assign_int(fp-1, -(n % -(intval(fp) - 1)));
+            assign_int(fp-1, from);
+            return 1;
+        }
+        itvl = llabs(itvl);
+        diff /= itvl;
+        assign_int(fp-1,   ((rand %  (diff + 1) * itvl))  + offset);
+    }
+
+    // 1 argument (0..n)
+    else if (argc == 1) {
+        int64_t n1 = intval(fp);
+        if (n1 == 0) {
+            assign_int(fp-1, rand);
+        } else {
+            if (n1 > 0) {
+                assign_int(fp-1,   rand %  (n1 + 1));
+            } else {
+                assign_int(fp-1, -(rand % -(n1 - 1)));
+            }
         }
     }
+
+    // 2 arguments (m..n)
+    else {
+        int64_t n1 = intval(fp);
+        int64_t n2 = intval(fp+1);
+        int64_t diff, offset;
+        if (n1 < n2) {
+            diff = n2 - n1;
+            offset = n1;
+        } else if (n1 > n2) {
+            diff = n1 - n2;
+            offset = n2;
+        } else {
+            assign_int(fp-1, n1);
+            return 1;
+        }
+        assign_int(fp-1,   (rand %  (diff + 1))  + offset);
+    }
     return 1;
+}
+
+// I believe this is how you would utilize splitmix64 to initialize
+// the PRNG state
+static void prng_seed(uint64_t seed) {
+    prngs[0] = seed + 0x9e3779b97f4a7c15u;
+    prngs[1] = (prngs[0] ^ (prngs[0] >> 30)) * 0xbf58476d1ce4e5b9u;
+    prngs[2] = (prngs[1] ^ (prngs[1] >> 27)) * 0x94d049bb133111ebu;
+    prngs[3] =  prngs[2] ^ (prngs[2] >> 31);
+    for (int i = 0; i < 16; ++i)
+        prng_next();
 }
 
 // srand([x])
 // Initializes the PRNG with seed `x` or time(0) if no argument given.
 // rand() will produce the same sequence when srand is initialized
 // with a given seed every time.
-// Ex:
-//   srand(99); rand(); rand() -> 0.380257, 0.504358
 static int l_srand(rf_val *fp, int argc) {
     if (!argc)
-        srand48(time(0));
+        prng_seed(time(0));
+    else if (is_null(fp))
+        prng_seed(0);
     else
-        srand48((long) intval(fp));
+        // Seed the PRNG with whatever 64 bits are in the rf_val union
+        prng_seed(fp->u.i);
     return 0;
 }
 
@@ -882,7 +962,7 @@ static struct {
 
 void l_register(rf_htbl *g) {
     // Initialize the PRNG with the current time
-    srand48(time(0));
+    prng_seed(time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
         rf_str *s  = s_newstr(lib_fn[i].name, strlen(lib_fn[i].name), 1);
         rf_val *fn = malloc(sizeof(rf_val));
