@@ -11,11 +11,6 @@
 #include "util.h"
 #include "vm.h"
 
-static void version(void) {
-    printf("riff %s Copyright 2020-2021, Darryl Abbate\n", GIT_DESC);
-    exit(0);
-}
-
 // Entry point for the Emscripten-compiled WASM/JS module
 #ifdef __EMSCRIPTEN__
 int wasm_main(int flag, char *str) {
@@ -23,18 +18,18 @@ int wasm_main(int flag, char *str) {
     rf_fn  main;
     rf_code c;
     c_init(&c);
-    main.code = &c;
+    main.code  = &c;
     main.arity = 0;
-    e.nf   = 0;
-    e.fcap = 0;
-    e.fn   = NULL;
-    e.main = main;
-    e.argc = 0;
-    e.ff   = 0;
-    e.argv = NULL;
-    e.pname = "<playground>";
-    e.src = str;
-    main.name = s_newstr(e.pname, strlen(e.pname), 1);
+    e.nf       = 0;
+    e.fcap     = 0;
+    e.fn       = NULL;
+    e.main     = main;
+    e.argc     = 0;
+    e.ff       = 0;
+    e.argv     = NULL;
+    e.pname    = "<playground>";
+    e.src      = str;
+    main.name  = s_newstr(e.pname, strlen(e.pname), 1);
     y_compile(&e);
     if (flag)
         z_exec(&e);
@@ -42,7 +37,23 @@ int wasm_main(int flag, char *str) {
         d_prog(&e);
     return 0;
 }
-#endif
+#else
+static void version(void) {
+    printf("riff %s Copyright 2020-2021, Darryl Abbate\n", GIT_DESC);
+    exit(0);
+}
+
+static void usage(void) {
+    puts("usage: riff [options] 'program' [argument ...]\n"
+         "       riff [options] -f file [argument ...]\n"
+         "Available options:\n"
+         "  -f file  execute program stored in 'file'\n"
+         "  -h       print this usage text and exit\n"
+         "  -l       list bytecode\n"
+         "  -v       print version information and exit\n"
+         "  --       stop processing options");
+    exit(0);
+}
 
 // TODO handle piped input (stdin)
 int main(int argc, char **argv) {
@@ -55,12 +66,12 @@ int main(int argc, char **argv) {
     rf_fn  main;
     rf_code c;
     c_init(&c);
-    main.code = &c;
+    main.code  = &c;
     main.arity = 0;
-    e.nf   = 0;
-    e.fcap = 0;
-    e.fn   = NULL;
-    e.main = main;
+    e.nf       = 0;
+    e.fcap     = 0;
+    e.fn       = NULL;
+    e.main     = main;
 
     int ff = 0;
     int lf = 0;
@@ -68,9 +79,11 @@ int main(int argc, char **argv) {
     opterr = 0;
 
     int o;
-    while ((o = getopt(argc, argv, "flv")) != -1) {
+    while ((o = getopt(argc, argv, "-fhlv")) != -1) {
         switch (o) {
+        case '-': o = -1; break;
         case 'f': ff = 1; break;
+        case 'h': usage();
         case 'l': lf = 1; break;
         case 'v': version();
         case '?': uf = 1; break;
@@ -106,3 +119,4 @@ int main(int argc, char **argv) {
         z_exec(&e);
     return 0;
 }
+#endif

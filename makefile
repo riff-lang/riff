@@ -54,8 +54,7 @@ TESTS        += test/literals.bats
 TESTS        += test/etc.bats
 
 # Compile-time info for riff -v
-GIT_DESC      = $(shell git describe --tags --abbrev=0)
-CFLAGS       += -DGIT_DESC=\"$(GIT_DESC)\"
+CFLAGS       += -DGIT_DESC=\"$(shell git describe --tags)\"
 
 .PHONY: all clean install mem prof test warn
 
