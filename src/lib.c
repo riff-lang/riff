@@ -119,12 +119,11 @@ static uint64_t prng_next(void) {
 }
 
 // rand([x])
-//   rand()         | random float ∈ [0..1)
-//   rand(0)        | random int ∈ [INT64_MIN..INT64_MAX]
-//   rand(n)        | random int ∈ [0..n]
-//   rand(m,n)      | random int ∈ [m..n]
-//   rand(m..n)     | random int ∈ [m..n]
-//   rand(m..n:p)   | random int ∈ [m..n:p]
+//   rand()     | random float ∈ [0..1)
+//   rand(0)    | random int ∈ [INT64_MIN..INT64_MAX]
+//   rand(n)    | random int ∈ [0..n]
+//   rand(m,n)  | random int ∈ [m..n]
+//   rand(seq)  | random int ∈ (range/sequence)
 static int l_rand(rf_val *fp, int argc) {
     uint64_t rand = prng_next();
     if (!argc) {
@@ -132,33 +131,47 @@ static int l_rand(rf_val *fp, int argc) {
         assign_flt(fp-1, f);
     }
 
-    // If first argument is a range/sequence
+    // If first argument is a range/sequence, ignore any succeeding
+    // args
     else if (is_seq(fp)) {
         int64_t from = fp->u.q->from;
         int64_t to   = fp->u.q->to;
         int64_t itvl = fp->u.q->itvl;
-        uint64_t diff, offset;
+        uint64_t range, offset;
         if (from < to) {
-            diff = to - from;
-            offset = from;
+            //           <<<
+            // [i64min..from] ∪ [to..i64max]
             if (itvl < 0) {
-                offset = diff - 1;
-                diff = from - to;
+                range  = UINT64_MAX - (to - from) + 1;
+                itvl   = llabs(itvl);
+                offset = to + (range % itvl);
+            } else {
+                range  = to - from;
+                offset = from;
             }
-        } else if (from > to) {
-            diff = from - to;
-            offset = to;
+        }
+
+        //                 >>>
+        // [i64min..to] ∪ [from..i64max]
+        else if (from > to) {
             if (itvl > 0) {
-                offset = diff;
-                diff = to - from;
+                range  = UINT64_MAX - (from - to);
+                offset = from;
+            } else {
+                range  = from - to;
+                itvl   = llabs(itvl);
+                offset = to + (range % itvl);
             }
         } else {
             assign_int(fp-1, from);
             return 1;
         }
-        itvl = llabs(itvl);
-        diff /= itvl;
-        assign_int(fp-1,   ((rand %  (diff + 1) * itvl))  + offset);
+        range /= itvl;
+        range += !(range == UINT64_MAX);
+        rand  %= range;
+        rand  *= itvl;
+        rand  += offset;
+        assign_int(fp-1, rand);
     }
 
     // 1 argument (0..n)
@@ -179,18 +192,19 @@ static int l_rand(rf_val *fp, int argc) {
     else {
         int64_t n1 = intval(fp);
         int64_t n2 = intval(fp+1);
-        int64_t diff, offset;
+        uint64_t range, offset;
         if (n1 < n2) {
-            diff = n2 - n1;
+            range  = n2 - n1;
             offset = n1;
         } else if (n1 > n2) {
-            diff = n1 - n2;
+            range  = n1 - n2;
             offset = n2;
         } else {
             assign_int(fp-1, n1);
             return 1;
         }
-        assign_int(fp-1,   (rand %  (diff + 1))  + offset);
+        range += !(range == UINT64_MAX);
+        assign_int(fp-1, (rand % range) + offset);
     }
     return 1;
 }
