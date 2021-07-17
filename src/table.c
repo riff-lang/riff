@@ -96,7 +96,7 @@ static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
     }
 }
 
-// If the entire string is is a valid integer, return the number
+// If the entire string is a valid integer, return the number
 static rf_int str2intidx(rf_str *s) {
     char *end;
     rf_flt f = u_str2d(s->str, &end, 0);
@@ -106,15 +106,11 @@ static rf_int str2intidx(rf_str *s) {
         // actually has `0` in it somewhere. Otherwise, it may read
         // a string like "+" to be 0.0, which would be unintended.
         if (f == 0.0) {
-            int has_zero = 0;
-            for (int i = 0; i < s->l; ++i) {
-                if (s->str[i] == '0') {
-                    has_zero = 1;
-                    break;
-                }
+            for (int j = 0; j < s->l; ++j) {
+                if (s->str[j] == '0')
+                    return 0;
             }
-            if (!has_zero)
-                return -1;
+            return -1;
         }
         return i;
     }
