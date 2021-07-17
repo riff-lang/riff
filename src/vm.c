@@ -34,20 +34,6 @@ inline rf_flt str2flt(rf_str *s) {
     return u_str2d(s->str, &end, 0);
 }
 
-// Return character pointed to by `end`, signaling whether the entire
-// string was consumed or not.
-static int str2num(rf_val *v) {
-    char *end;
-    rf_flt f = u_str2d(v->u.s->str, &end, 0);
-    rf_int i = (rf_int) f;
-    if (f == i) {
-        assign_int(v, i);
-    } else {
-        assign_flt(v, f);
-    }
-    return *end;
-}
-
 // Integer arithmetic (Bitwise ops)
 #define int_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
