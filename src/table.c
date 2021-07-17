@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 
 #include "table.h"
@@ -7,11 +8,6 @@
 #define unset(f) t->f = 0
 
 #define MIN_LOAD_FACTOR 0.5
-
-static void err(const char *msg) {
-    fprintf(stderr, "%s\n", msg);
-    exit(1);
-}
 
 void t_init(rf_tbl *t) {
     unset(nullx);
@@ -105,8 +101,23 @@ static rf_int str2intidx(rf_str *s) {
     char *end;
     rf_flt f = u_str2d(s->str, &end, 0);
     rf_int i = (rf_int) f;
-    if (f == i && *end == '\0')
+    if (f == i && *end == '\0') {
+        // Be dubious of strings coerced to 0.0; make sure the string
+        // actually has `0` in it somewhere. Otherwise, it may read
+        // a string like "+" to be 0.0, which would be unintended.
+        if (f == 0.0) {
+            int has_zero = 0;
+            for (int i = 0; i < s->l; ++i) {
+                if (s->str[i] == '0') {
+                    has_zero = 1;
+                    break;
+                }
+            }
+            if (!has_zero)
+                return -1;
+        }
         return i;
+    }
     return -1;
 }
 
