@@ -155,7 +155,7 @@ static int l_rand(rf_val *fp, int argc) {
         // [i64min..to] ∪ [from..i64max]
         else if (from > to) {
             if (itvl > 0) {
-                range  = UINT64_MAX - (from - to);
+                range  = UINT64_MAX - (from - to) + 1;
                 offset = from;
             } else {
                 range  = from - to;
