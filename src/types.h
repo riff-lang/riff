@@ -160,7 +160,7 @@ int     re_store_numbered_captures(pcre2_match_data *);
 rf_int  re_match(char *, rf_re *, int);
 rf_str *s_newstr(const char *, size_t, int);
 rf_str *s_newstr_concat(char *, char *, int);
-rf_str *s_substr(rf_str *, rf_int, rf_int, rf_int);
+rf_str *s_substr(char *, rf_int, rf_int, rf_int);
 rf_str *s_int2str(rf_int);
 rf_str *s_flt2str(rf_flt);
 rf_val *v_newnull(void);

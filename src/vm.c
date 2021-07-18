@@ -265,39 +265,50 @@ static inline void z_nmatch(rf_val *l, rf_val *r) {
     assign_int(l, !match(l, r));
 }
 
-// TODO
-// Allow negative indices to subscript statrting from end of string
-// Ex:
-//   "hello"[-1] == "o"
 static inline void z_idx(rf_val *l, rf_val *r) {
     char temp[32];
     switch (l->type) {
     case TYPE_INT: {
         u_int2str(l->u.i, temp, 32);
-        rf_int r1 = intval(r);
-
-        // Index out-of-bounds: assign null
-        if (r1 > strlen(temp) - 1 || r1 < 0)
-            assign_null(l);
-        else
-            assign_str(l, s_newstr(temp + r1, 1, 0));
+        if (is_seq(r)) {
+            assign_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
+        } else {
+            rf_int r1  = intval(r);
+            rf_int len = (rf_int) strlen(temp);
+            if (r1 < 0)
+                r1 += len;
+            if (r1 > len - 1 || r1 < 0)
+                assign_null(l);
+            else
+                assign_str(l, s_newstr(temp + r1, 1, 0));
+        }
         break;
     }
     case TYPE_FLT: {
         u_flt2str(l->u.f, temp, 32);
-        rf_int r1 = intval(r);
-        if (r1 > strlen(temp) - 1 || r1 < 0)
-            assign_null(l);
-        else
-            assign_str(l, s_newstr(temp + r1, 1, 0));
+        if (is_seq(r)) {
+            assign_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
+        } else {
+            rf_int r1  = intval(r);
+            rf_int len = (rf_int) strlen(temp);
+            if (r1 < 0)
+                r1 += len;
+            if (r1 > len - 1 || r1 < 0)
+                assign_null(l);
+            else
+                assign_str(l, s_newstr(temp + r1, 1, 0));
+        }
         break;
     }
     case TYPE_STR: {
         if (is_seq(r)) {
-            l->u.s = s_substr(l->u.s, r->u.q->from, r->u.q->to, r->u.q->itvl);
+            l->u.s = s_substr(l->u.s->str, r->u.q->from, r->u.q->to, r->u.q->itvl);
         } else {
-            rf_int r1 = intval(r);
-            if (r1 > l->u.s->l - 1 || r1 < 0)
+            rf_int r1  = intval(r);
+            rf_int len = (rf_int) l->u.s->l;
+            if (r1 < 0)
+                r1 += len;
+            if (r1 > len - 1 || r1 < 0)
                 assign_null(l);
             else
                 l->u.s = s_newstr(&l->u.s->str[r1], 1, 0);
