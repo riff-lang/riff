@@ -49,7 +49,7 @@ static void usage(void) {
          "Available options:\n"
          "  -f file  execute program stored in 'file'\n"
          "  -h       print this usage text and exit\n"
-         "  -l       list bytecode\n"
+         "  -l       list bytecode with assembler-like mnemonics\n"
          "  -v       print version information and exit\n"
          "  --       stop processing options");
     exit(0);
@@ -79,15 +79,25 @@ int main(int argc, char **argv) {
     opterr = 0;
 
     int o;
-    while ((o = getopt(argc, argv, "-fhlv")) != -1) {
+    while ((o = getopt(argc, argv, "f:hlv")) != -1) {
         switch (o) {
-        case '-': o = -1; break;
-        case 'f': ff = 1; break;
-        case 'h': usage();
-        case 'l': lf = 1; break;
-        case 'v': version();
-        case '?': uf = 1; break;
-        default: break;
+        case 'f':
+            ff = 1;
+            e.pname = optarg;
+            e.src   = u_file2str(optarg);
+            break;
+        case 'h':
+            usage();
+        case 'l':
+            lf = 1;
+            break;
+        case 'v':
+            version();
+        case '?':
+            uf = 1;
+            break;
+        default:
+            break;
         }
     }
 
@@ -100,11 +110,7 @@ int main(int argc, char **argv) {
     // begins with a unary minus sign.
     if (uf) --optind;
 
-    // -f: Open file and convert contents to null-terminated string
-    if (ff) {
-        e.pname = argv[optind];
-        e.src   = u_file2str(argv[optind]);
-    } else {
+    if (!ff) {
         e.pname = "<command-line>";
         e.src   = argv[optind];
     }
