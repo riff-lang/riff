@@ -9,7 +9,7 @@
 #include "mem.h"
 #include "util.h"
 
-#define adv (++x->p)
+#define adv() (++x->p)
 
 static void err(rf_lexer *x, const char *msg) {
     fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
@@ -128,19 +128,19 @@ static int read_charint(rf_lexer *x, rf_token *tk) {
     int c = *x->p;
     switch (c) {
     case '\\':
-        adv;
+        adv();
         switch (*x->p) {
-        case 'a':  adv; c = '\a';       break;
-        case 'b':  adv; c = '\b';       break;
-        case 'e':  adv; c = 0x1b;       break; // Escape char
-        case 'f':  adv; c = '\f';       break;
-        case 'n':  adv; c = '\n';       break;
-        case 'r':  adv; c = '\r';       break;
-        case 't':  adv; c = '\t';       break;
-        case 'v':  adv; c = '\v';       break;
-        case 'x':  adv; c = hex_esc(x); break;
-        case '\\': adv; c = '\\';       break; 
-        case '\'': adv; c = '\'';       break; 
+        case 'a':  adv(); c = '\a';       break;
+        case 'b':  adv(); c = '\b';       break;
+        case 'e':  adv(); c = 0x1b;       break; // Escape char
+        case 'f':  adv(); c = '\f';       break;
+        case 'n':  adv(); c = '\n';       break;
+        case 'r':  adv(); c = '\r';       break;
+        case 't':  adv(); c = '\t';       break;
+        case 'v':  adv(); c = '\v';       break;
+        case 'x':  adv(); c = hex_esc(x); break;
+        case '\\': adv(); c = '\\';       break; 
+        case '\'': adv(); c = '\'';       break; 
         default:        c = oct_esc(x); break;
         }
         break;
@@ -152,7 +152,7 @@ static int read_charint(rf_lexer *x, rf_token *tk) {
             if (c < 0)
                 err(x, "invalid unicode character");
         } else {
-            adv;
+            adv();
         }
         break;
     }
@@ -184,29 +184,29 @@ str_start:
     while ((c = *x->p) != d) {
         switch(c) {
         case '\\':
-            adv;
+            adv();
             switch (*x->p) {
-            case 'a': adv; c = '\a';       break;
-            case 'b': adv; c = '\b';       break;
-            case 'e': adv; c = 0x1b;       break; // Escape char
-            case 'f': adv; c = '\f';       break;
-            case 'n': adv; c = '\n';       break;
-            case 'r': adv; c = '\r';       break;
-            case 't': adv; c = '\t';       break;
-            case 'v': adv; c = '\v';       break;
-            case 'x': adv; c = hex_esc(x); break;
+            case 'a': adv(); c = '\a';       break;
+            case 'b': adv(); c = '\b';       break;
+            case 'e': adv(); c = 0x1b;       break; // Escape char
+            case 'f': adv(); c = '\f';       break;
+            case 'n': adv(); c = '\n';       break;
+            case 'r': adv(); c = '\r';       break;
+            case 't': adv(); c = '\t';       break;
+            case 'v': adv(); c = '\v';       break;
+            case 'x': adv(); c = hex_esc(x); break;
 
-            case 'u': adv; unicode_esc(x, 4); goto str_start;
-            case 'U': adv; unicode_esc(x, 8); goto str_start;
+            case 'u': adv(); unicode_esc(x, 4); goto str_start;
+            case 'U': adv(); unicode_esc(x, 8); goto str_start;
 
             // Ignore newlines following `\`
             case '\n': case '\r':
                 ++x->ln;
-                adv;
+                adv();
                 goto str_start;
             case '\\': case '\'': case '"':
                 c = *x->p;
-                adv;
+                adv();
                 break;
             default:
                 c = oct_esc(x);
@@ -218,12 +218,12 @@ str_start:
         case '\n': case '\r':
             ++x->ln;
             c = '\n';
-            adv;
+            adv();
             break;
         case '\0':
             err(x, "reached end of input with unterminated string");
         default:
-            adv;
+            adv();
             break;
         }
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
@@ -231,7 +231,7 @@ str_start:
     }
 
     rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
-    adv;
+    adv();
     tk->lexeme.s = s;
     return TK_STR;
 }
@@ -243,18 +243,18 @@ re_start:
     while ((c = *x->p) != d) {
         switch(c) {
         case '\\':
-            adv;
+            adv();
             switch (*x->p) {
-            case 'u': adv; unicode_esc(x, 4); goto re_start;
-            case 'U': adv; unicode_esc(x, 8); goto re_start;
+            case 'u': adv(); unicode_esc(x, 4); goto re_start;
+            case 'U': adv(); unicode_esc(x, 8); goto re_start;
             // Ignore newlines following `\`
             case '\n': case '\r':
                 ++x->ln;
-                adv;
+                adv();
                 goto re_start;
             case '/':
                 c = *x->p;
-                adv;
+                adv();
                 break;
             default:
                 // Copy over escape sequence unmodified - let PCRE2
@@ -262,7 +262,7 @@ re_start:
                 m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
                 x->buf.c[x->buf.n++] =  '\\';
                 x->buf.c[x->buf.n++] =  *x->p;
-                adv;
+                adv();
                 goto re_start;
             }
             break;
@@ -271,12 +271,12 @@ re_start:
         case '\n': case '\r':
             ++x->ln;
             c = '\n';
-            adv;
+            adv();
             break;
         case '\0':
             err(x, "reached end of input with unterminated regular expression");
         default:
-            adv;
+            adv();
             break;
         }
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
@@ -285,7 +285,7 @@ re_start:
     // Null terminate the RE string
     x->buf.c[x->buf.n] = 0;
     uint32_t flags = 0;
-    adv;
+    adv();
 
     // Parse regex options ([ADJUimnsux]*)
     while (valid_re_flag(*x->p)) {
@@ -302,13 +302,13 @@ re_start:
         case 'x':
             if (x->p[1] == 'x') {
                 flags |= RE_EXTENDED_MORE;
-                adv;
+                adv();
             } else {
                 flags |= RE_EXTENDED;
             }
             break;
         }
-        adv;
+        adv();
     }
     int errcode;
     rf_re *r = re_compile(x->buf.c, flags, &errcode);
@@ -428,7 +428,7 @@ static int read_id(rf_lexer *x, rf_token *tk) {
     size_t count = 1;
     while (valid_alphanum(*x->p)) {
         ++count;
-        adv;
+        adv();
     }
     rf_str *s = s_newstr(start, count, 1);
     tk->lexeme.s = s;
@@ -437,7 +437,7 @@ static int read_id(rf_lexer *x, rf_token *tk) {
 
 static int test2(rf_lexer *x, int c, int t1, int t2) {
     if (*x->p == c) {
-        adv;
+        adv();
         return t1;
     } else
         return t2;
@@ -445,10 +445,10 @@ static int test2(rf_lexer *x, int c, int t1, int t2) {
 
 static int test3(rf_lexer *x, int c1, int t1, int c2, int t2, int t3) {
     if (*x->p == c1) {
-        adv;
+        adv();
         return t1;
     } else if (*x->p == c2) {
-        adv;
+        adv();
         return t2;
     } else
         return t3;
@@ -457,12 +457,12 @@ static int test3(rf_lexer *x, int c1, int t1, int c2, int t2, int t3) {
 static int
 test4(rf_lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
     if (*x->p == c1) {
-        adv;
+        adv();
         return t1;
     } else if (*x->p == c2) {
-        adv;
+        adv();
         if (*x->p == c3) {
-            adv;
+            adv();
             return t2;
         } else
             return t3;
@@ -475,7 +475,7 @@ static void line_comment(rf_lexer *x) {
         if (*x->p == '\n' || *x->p == '\0')
             break;
         else
-            adv;
+            adv();
     }
 }
 
@@ -486,13 +486,13 @@ static void block_comment(rf_lexer *x) {
         if (*x->p == '\0')
             err(x, "reached end of input with unterminated block comment");
         else if (*x->p == '*') {
-            adv;
+            adv();
             if (*x->p == '/') {
-                adv;
+                adv();
                 break;
             }
         }
-        else adv;
+        else adv();
     }
 }
 
@@ -535,14 +535,14 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
             if (isdigit(*x->p))
                 return read_num(x, tk);
             else if ((*x->p) == '.') {
-                adv;
+                adv();
                 return TK_DOTS;
             } else
                 return '.';
         case '/':
             switch (*x->p) {
-            case '/': adv; line_comment(x);  break;
-            case '*': adv; block_comment(x); break;
+            case '/': adv(); line_comment(x);  break;
+            case '*': adv(); block_comment(x); break;
             default: 
                 if (x->mode)
                     return test2(x, '=', TK_DIVX, '/');
@@ -626,5 +626,3 @@ int x_peek(rf_lexer *x) {
     }
     return 0;
 }
-
-#undef adv
