@@ -11,17 +11,17 @@
 #define unset(f)    y->f    = 0;
 #define restore(f)  y->f    = f;
 #define unset_all() y->lhs  = 0; \
-                    y->fldx = 0; \
                     y->ax   = 0; \
                     y->ox   = 0; \
                     y->px   = 0; \
                     y->rx   = 0; \
+                    y->ux   = 0; \
                     y->retx = 0;
 
 #define save_and_unset(f) int f = y->f; y->f = 0;
 
 #define expect_nud() y->x->mode = 0;
-#define expect_led() y->x->mode = 91;
+#define expect_led() y->x->mode = 1;
     
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned
 // up
@@ -165,7 +165,7 @@ static void identifier(rf_parser *y) {
     // of the symbol. Otherwise, push the value itself.
     peek();
     expect_nud();
-    if (!y->fldx &&
+    if ((!y->fld || y->ux) &&
             (is_incdec(y->x->la.kind) ||
              is_asgmt(y->x->la.kind)  ||
              y->x->la.kind == '[')) {
@@ -188,7 +188,7 @@ static void literal(rf_parser *y) {
     adv();
     expect_nud();
     // Assert no assignment appears following a constant literal
-    if (!y->fldx && is_asgmt(y->x->tk.kind))
+    if (!y->fld && is_asgmt(y->x->tk.kind))
         err(y, "attempt to assign to constant value");
 }
 
@@ -197,15 +197,15 @@ static int parenthesized_expr(rf_parser *y) {
     save_and_unset(ax);
     save_and_unset(ox);
     save_and_unset(px);
-    save_and_unset(fldx);
     save_and_unset(rx);
+    save_and_unset(ux);
     int e = expr(y, 0);
     restore(lhs);
     restore(ax);
     restore(ox);
     restore(px);
-    restore(fldx);
     restore(rx);
+    restore(ux);
     return e;
 }
 
@@ -346,12 +346,12 @@ static int nud(rf_parser *y) {
     int tk = y->x->tk.kind;
     int e = 0;
     if (uop(tk)) {
+        set(ux);
         if (!y->sd)
             set(ox);
         adv();
-        save_and_unset(fldx);
         e = expr(y, 13);
-        restore(fldx);
+        unset(ux);
         c_prefix(y->c, tk);
         return e;
     }
@@ -359,10 +359,11 @@ static int nud(rf_parser *y) {
 
     // TODO
     case '$': {
+        y->fld++;
         save_and_unset(ox);
         save_and_unset(rx);
+        save_and_unset(ux);
         adv();
-        set(fldx);
         expr(y, 17);
         if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
             set(ax);
@@ -371,18 +372,20 @@ static int nud(rf_parser *y) {
             push(OP_FLDV);
         }
         set(lhs);
-        unset(fldx);
         restore(ox);
         restore(rx);
+        restore(ux);
+        y->fld--;
         break;
     }
     case '(': {
         adv();
+        y->pd++;
         parenthesized_expr(y);
         expect_led();
         consume(y, ')', "expected ')'");
         expect_nud();
-        if (!y->fldx) { 
+        if (!y->fld || (y->fld != y->pd)) {
             if (is_asgmt(y->x->tk.kind))
                 err(y, "invalid operator following expr");
             // Hack to prevent parsing ++/-- as postfix following
@@ -390,6 +393,7 @@ static int nud(rf_parser *y) {
             else if (is_incdec(y->x->tk.kind))
                 return TK_INC;
         }
+        y->pd--;
         return ')';
     }
     case '{':
@@ -496,7 +500,7 @@ static int led(rf_parser *y, int p, int tk) {
                 } else {
                     set(ox);
                 }
-            } else if (y->lhs && !y->fldx && y->ox && is_asgmt(tk)) {
+            } else if (y->lhs && !y->fld && y->ox && is_asgmt(tk)) {
                 err(y, "syntax error");
             }
             unset(rx);
@@ -1106,6 +1110,8 @@ static void y_init(rf_parser *y) {
     y->lcap = 0;
     y->lcl  = NULL;
 
+    y->fld  = 0;
+    y->pd   = 0;
     y->ld   = 0;
     y->fd   = 0;
     y->id   = 0;
@@ -1129,10 +1135,3 @@ int y_compile(rf_env *e) {
     x_free(&x);
     return 0;
 }
-
-#undef adv
-#undef peek
-#undef push
-#undef set
-#undef unset
-#undef unset_all
