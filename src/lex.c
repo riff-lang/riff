@@ -61,7 +61,6 @@ static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
         if (end[1] == '+' || end[1] == '-' || isxdigit(end[1]))
             return read_flt(x, tk, start, base);
     }
-
     x->p = end;
     tk->lexeme.i = i;
     return TK_INT;
@@ -91,7 +90,6 @@ static int read_num(rf_lexer *x, rf_token *tk) {
             }
         }
     }
-
     return read_int(x, tk, start, base);
 }
 
@@ -112,6 +110,8 @@ static int hex_esc(rf_lexer *x) {
 // Reads a maximum of three octal digits. Throws an error if
 // resulting number > 255.
 static int oct_esc(rf_lexer *x) {
+    if (!isoctal(*x->p))
+        err(x, "expected octal digit");
     int e = u_decval(*x->p++);
     for (int i = 0; i < 2; ++i) {
         if (!isoctal(*x->p))
@@ -124,56 +124,95 @@ static int oct_esc(rf_lexer *x) {
     return e;
 }
 
-static int read_charint(rf_lexer *x, rf_token *tk) {
-    int c = *x->p;
-    switch (c) {
-    case '\\':
-        adv();
-        switch (*x->p) {
-        case 'a':  adv(); c = '\a';       break;
-        case 'b':  adv(); c = '\b';       break;
-        case 'e':  adv(); c = 0x1b;       break; // Escape char
-        case 'f':  adv(); c = '\f';       break;
-        case 'n':  adv(); c = '\n';       break;
-        case 'r':  adv(); c = '\r';       break;
-        case 't':  adv(); c = '\t';       break;
-        case 'v':  adv(); c = '\v';       break;
-        case 'x':  adv(); c = hex_esc(x); break;
-        case '\\': adv(); c = '\\';       break; 
-        case '\'': adv(); c = '\'';       break; 
-        default:        c = oct_esc(x); break;
-        }
-        break;
-    default:
-        if (c & 0x80) {
-            char *end;
-            c = u_utf82unicode(x->p, &end);
-            x->p = end;
-            if (c < 0)
-                err(x, "invalid unicode character");
-        } else {
-            adv();
-        }
-        break;
-    }
-    if (*x->p++ != '\'')
-        err(x, "expected `'` following character literal");
-    tk->lexeme.i = c;
-    return TK_INT;
-}
-
-static void unicode_esc(rf_lexer *x, int len) {
+static uint32_t unicode_int(rf_lexer *x, int len) {
     uint32_t c = 0;
     for (int i = 0; i < len && isxdigit(*x->p); ++i) {
         c <<= 4;
         c += u_hexval(*x->p++);
     }
+    return c;
+}
+
+static void unicode_esc(rf_lexer *x, int len) {
+    uint32_t c = unicode_int(x, len);
     char buf[8];
     int n = 8 - u_unicode2utf8(buf, c);
     for (; n < 8; ++n) {
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = buf[n];
     }
+}
+
+static int read_charint(rf_lexer *x, rf_token *tk, int d) {
+    int c;
+    rf_int v = 0;
+    while ((c = *x->p) != d) {
+
+        // NOTE: check for (v & (0xFFull << 55) to assert a
+        // multicharacter sequence contains only 64 bits worth of
+        // characters. Otherwise, the resulting value will simply be
+        // the lowest 64 bits of the sequence.
+
+        v <<= 8;
+        switch (c) {
+        case '\\':
+            adv();
+            switch (*x->p) {
+            case 'a':  adv(); v += '\a';       break;
+            case 'b':  adv(); v += '\b';       break;
+            case 'e':  adv(); v += 0x1b;       break; // Escape char
+            case 'f':  adv(); v += '\f';       break;
+            case 'n':  adv(); v += '\n';       break;
+            case 'r':  adv(); v += '\r';       break;
+            case 't':  adv(); v += '\t';       break;
+            case 'v':  adv(); v += '\v';       break;
+            case 'x':  adv(); v += hex_esc(x); break;
+            case '\\': adv(); v += '\\';       break; 
+            case '\'': adv(); v += '\'';       break; 
+            case 'u': {
+                adv();
+                uint32_t u = unicode_int(x, 4);
+                v <<= u & 0xff00 ? 8 : 0;
+                v += u;
+                break;
+            }
+            case 'U': {
+                adv();
+                uint32_t u = unicode_int(x, 8);
+                v <<= u & 0xff000000 ? 24 :
+                      u & 0x00ff0000 ? 16 :
+                      u & 0x0000ff00 ?  8 : 0;
+                v += u;
+                break;
+            }
+            default:
+               v += oct_esc(x);
+               break;
+            }
+            break;
+        case '\0':
+            err(x, "reached end of input with unterminated character literal");
+        default:
+            if (c & 0x80) {
+                char *end;
+                rf_int u = u_utf82unicode(x->p, &end);
+                v <<= u & 0xff000000 ? 24 :
+                      u & 0x00ff0000 ? 16 :
+                      u & 0x0000ff00 ?  8 : 0;
+                v += u;
+                x->p = end;
+                if (u < 0)
+                    err(x, "invalid unicode character");
+            } else {
+                adv();
+                v += c;
+            }
+            break;
+        }
+    }
+    adv();
+    tk->lexeme.i = v;
+    return TK_INT;
 }
 
 // TODO handling of multi-line string literals
@@ -229,7 +268,6 @@ str_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-
     rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
     adv();
     tk->lexeme.s = s;
@@ -319,7 +357,6 @@ re_start:
         pcre2_get_error_message(errcode, errstr, 0x200);
         err(x, (const char *) errstr);
     }
-
     tk->lexeme.r = r;
     return TK_RE;
 }
@@ -561,7 +598,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
                                   '=', TK_SHRX, TK_SHR, '>');
         case '^': return test2(x, '=', TK_XORX, '^');
         case '|': return test3(x, '=', TK_ORX, '|', TK_OR, '|');
-        case '\'': return read_charint(x, tk);
+        case '\'': return read_charint(x, tk, c);
         case '$': case '(': case ')': case ',': case ':':
         case ';': case '?': case ']': case '[': case '{':
         case '}': case '~':

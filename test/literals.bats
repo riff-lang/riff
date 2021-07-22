@@ -60,6 +60,12 @@
 @test "Character literals" {
     run bin/riff "'A'"
     [ "$output" -eq 65 ]
+
+    run bin/riff "'abcd'"
+    [ "$output" = "1633837924" ]
+
+    run bin/riff "'abcdefgh'"
+    [ "$output" = "7017280452245743464" ]
 }
 
 @test "String literals" {
