@@ -14,10 +14,28 @@ char *u_file2str(const char *path) {
     fseek(file, 0L, SEEK_END);
     size_t s = ftell(file);
     rewind(file);
+
+    // Skip shebang (#!...)
+    int c = fgetc(file);
+    if (c == '#') {
+        c = fgetc(file);
+        if (c == '!') {
+            s -= 2;
+            do {
+                c = fgetc(file);
+                --s;
+            } while (c != EOF && c != '\n');
+            fgetc(file);
+        } else {
+            rewind(file);
+        }
+    } else {
+        rewind(file);
+    }
     char *buf  = malloc(s + 1);
     size_t end = fread(buf, sizeof(char), s, file);
     fclose(file);
-    buf[end]   = '\0';
+    buf[end] = '\0';
     return buf;
 }
 
