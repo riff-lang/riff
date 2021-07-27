@@ -39,19 +39,19 @@ inline rf_flt str2flt(rf_str *s) {
     if (is_int(l) && is_int(r)) { \
         l->u.i = (l->u.i op r->u.i); \
     } else { \
-        assign_int(l, (intval(l) op intval(r))); \
+        set_int(l, (intval(l) op intval(r))); \
     }
 
 // Floating-point arithmetic (div)
 #define flt_arith(l,r,op) \
-    assign_flt(l, (numval(l) op numval(r)))
+    set_flt(l, (numval(l) op numval(r)))
 
 // "Polymorphic" arithmetic (add, sub, mul)
 #define num_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
         l->u.i = (l->u.i op r->u.i); \
     } else { \
-        assign_flt(l, (numval(l) op numval(r))); \
+        set_flt(l, (numval(l) op numval(r))); \
     }
 
 // Return logical result of value
@@ -95,11 +95,11 @@ static inline void z_div(rf_val *l, rf_val *r) {
 // error: pretty much all others
 static inline void z_mod(rf_val *l, rf_val *r) {
     rf_flt res = fmod(numval(l), numval(r));
-    assign_flt(l, res < 0 ? res + numval(r) : res);
+    set_flt(l, res < 0 ? res + numval(r) : res);
 }
 
 static inline void z_pow(rf_val *l, rf_val *r) {
-    assign_flt(l, pow(fltval(l), fltval(r)));
+    set_flt(l, pow(fltval(l), fltval(r)));
 }
 
 static inline void z_and(rf_val *l, rf_val *r) { int_arith(l,r,&);  }
@@ -112,10 +112,10 @@ static inline void z_num(rf_val *v) {
     switch (v->type) {
     case TYPE_INT: case TYPE_FLT: break;
     case TYPE_STR:
-        assign_flt(v, str2flt(v->u.s));
+        set_flt(v, str2flt(v->u.s));
         break;
     default:
-        assign_int(v, 0);
+        set_int(v, 0);
         break;
     }
 }
@@ -129,16 +129,16 @@ static inline void z_neg(rf_val *v) {
         v->u.f = -v->u.f;
         break;
     case TYPE_STR:
-        assign_flt(v, -str2flt(v->u.s));
+        set_flt(v, -str2flt(v->u.s));
         break;
     default:
-        assign_int(v, 0);
+        set_int(v, 0);
         break;
     }
 }
 
 static inline void z_not(rf_val *v) {
-    assign_int(v, ~intval(v));
+    set_int(v, ~intval(v));
 }
 
 static inline void z_eq(rf_val *l, rf_val *r) { cmp_eq(l,r,==);  }
@@ -149,7 +149,7 @@ static inline void z_lt(rf_val *l, rf_val *r) { cmp_rel(l,r,<);  }
 static inline void z_le(rf_val *l, rf_val *r) { cmp_rel(l,r,<=); }
 
 static inline void z_lnot(rf_val *v) {
-    assign_int(v, !test(v));
+    set_int(v, !test(v));
 }
 
 static inline void z_len(rf_val *v) {
@@ -176,11 +176,11 @@ static inline void z_len(rf_val *v) {
         break;
     default: break;
     }
-    assign_int(v, l);
+    set_int(v, l);
 }
 
 static inline void z_test(rf_val *v) {
-    assign_int(v, test(v));
+    set_int(v, test(v));
 }
 
 static inline void z_cat(rf_val *l, rf_val *r) {
@@ -209,7 +209,7 @@ static inline void z_cat(rf_val *l, rf_val *r) {
         rhs = r->u.s->str;
     }
 
-    assign_str(l, s_newstr_concat(lhs, rhs, 0));
+    set_str(l, s_newstr_concat(lhs, rhs, 0));
 }
 
 static rf_int match(rf_val *l, rf_val *r) {
@@ -258,11 +258,11 @@ do_match:
 }
 
 static inline void z_match(rf_val *l, rf_val *r) {
-    assign_int(l, match(l, r));
+    set_int(l, match(l, r));
 }
 
 static inline void z_nmatch(rf_val *l, rf_val *r) {
-    assign_int(l, !match(l, r));
+    set_int(l, !match(l, r));
 }
 
 static inline void z_idx(rf_val *l, rf_val *r) {
@@ -271,32 +271,32 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     case TYPE_INT: {
         u_int2str(l->u.i, temp, 32);
         if (is_seq(r)) {
-            assign_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
+            set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {
             rf_int r1  = intval(r);
             rf_int len = (rf_int) strlen(temp);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
-                assign_null(l);
+                set_null(l);
             else
-                assign_str(l, s_newstr(temp + r1, 1, 0));
+                set_str(l, s_newstr(temp + r1, 1, 0));
         }
         break;
     }
     case TYPE_FLT: {
         u_flt2str(l->u.f, temp, 32);
         if (is_seq(r)) {
-            assign_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
+            set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {
             rf_int r1  = intval(r);
             rf_int len = (rf_int) strlen(temp);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
-                assign_null(l);
+                set_null(l);
             else
-                assign_str(l, s_newstr(temp + r1, 1, 0));
+                set_str(l, s_newstr(temp + r1, 1, 0));
         }
         break;
     }
@@ -309,7 +309,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
-                assign_null(l);
+                set_null(l);
             else
                 l->u.s = s_newstr(&l->u.s->str[r1], 1, 0);
         }
@@ -321,13 +321,13 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     case TYPE_RFN: {
         rf_int r1 = intval(r);
         if (r1 > l->u.fn->code->n - 1 || r1 < 0)
-            assign_null(l);
+            set_null(l);
         else
-            assign_int(l, l->u.fn->code->code[r1]);
+            set_int(l, l->u.fn->code->code[r1]);
         break;
     }
     default:
-        assign_null(l);
+        set_null(l);
         break;
     }
 }
@@ -536,7 +536,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case LOOP_STR:
             if (iter->k != NULL) {
                 if (is_null(iter->k)) {
-                    assign_int(iter->k, 0);
+                    set_int(iter->k, 0);
                 } else {
                     iter->k->u.i += 1;
                 }
@@ -558,7 +558,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         case LOOP_FN:
             if (iter->k != NULL) {
                 if (is_null(iter->k)) {
-                    assign_int(iter->k, 0);
+                    set_int(iter->k, 0);
                 } else {
                     iter->k->u.i += 1;
                 }
@@ -594,11 +594,11 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         int k = *ip == OP_ITERKV;
         new_iter(&sp[-1].v); 
         --sp;
-        assign_null(&sp++->v);
+        set_null(&sp++->v);
 
         // Reserve extra stack slot for k,v iterators
         if (k) {
-            assign_null(&sp++->v);
+            set_null(&sp++->v);
             iter->k = &sp[-2].v;
         } else {
             iter->k = NULL;
@@ -658,10 +658,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     case TYPE_INT: sp[-1].a->u.i += x; break; \
     case TYPE_FLT: sp[-1].a->u.f += x; break; \
     case TYPE_STR: \
-        assign_flt(sp[-1].a, str2flt(sp[-1].a->u.s) + x); \
+        set_flt(sp[-1].a, str2flt(sp[-1].a->u.s) + x); \
         break; \
     default: \
-        assign_int(sp[-1].a, x); \
+        set_int(sp[-1].a, x); \
         break; \
     } \
     sp[-1].v = *sp[-1].a; \
@@ -682,10 +682,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     case TYPE_INT: tp->u.i += x; break; \
     case TYPE_FLT: tp->u.f += x; break; \
     case TYPE_STR: \
-        assign_flt(tp, str2flt(tp->u.s) + x); \
+        set_flt(tp, str2flt(tp->u.s) + x); \
         break; \
     default: \
-        assign_int(tp, x); \
+        set_int(tp, x); \
         break; \
     } \
     unop(num);
@@ -723,11 +723,11 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     z_case(POPI) sp -= ip[1]; ip += 2; z_break;
 
     // Push null literal on stack
-    z_case(NULL) assign_null(&sp++->v); ++ip; z_break;
+    z_case(NULL) set_null(&sp++->v); ++ip; z_break;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
-#define imm(x) assign_int(&sp++->v, x);
+#define imm(x) set_int(&sp++->v, x);
 
     z_case(IMM8)  imm(ip[1]);              ip += 2; z_break;
     z_case(IMM16) imm((ip[1]<<8) + ip[2]); ip += 3; z_break;
@@ -827,7 +827,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // create stack space and nullify slots
             if (ar2 > ar1) {
                 while (ar1++ < ar2)
-                    assign_null(&sp++->v);
+                    set_null(&sp++->v);
             }
 
             // Else, if the current frame is too large for the next
@@ -841,7 +841,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // space and nullify slots
             else if (nargs <= ar2) {
                 while (nargs++ <= ar2)
-                    assign_null(&sp++->v);
+                    set_null(&sp++->v);
             }
             c  = fn->code;
             ip = c->code;
@@ -873,7 +873,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // nullify stack slots and increment SP.
             if (nargs < arity) {
                 for (int i = nargs; i < arity; ++i) {
-                    assign_null(&sp++->v);
+                    set_null(&sp++->v);
                 }
             }
             
@@ -912,7 +912,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 // If user called function with too few arguments,
                 // nullify stack slots.
                 for (int i = nargs; i < arity; ++i) {
-                    assign_null(&sp[i].v);
+                    set_null(&sp[i].v);
                 }
             }
             // Decrement SP to serve as the FP for the function
@@ -927,7 +927,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
         // skip over the instruction. This facilitates user
         // functions which conditionally return something.
         if (!nret) { 
-            assign_null(&sp[-1].v);
+            set_null(&sp[-1].v);
             if (*ip == OP_PRINT1) {
                 ++ip;
                 --sp;

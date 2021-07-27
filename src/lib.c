@@ -23,73 +23,73 @@ static void err(const char *msg) {
 // abs(x)
 static int l_abs(rf_val *fp, int argc) {
     if (is_int(fp))
-        assign_int(fp-1, llabs(fp->u.i));
+        set_int(fp-1, llabs(fp->u.i));
     else
-        assign_flt(fp-1, fabs(fltval(fp)));
+        set_flt(fp-1, fabs(fltval(fp)));
     return 1;
 }
 
 // atan(y[,x])
 static int l_atan(rf_val *fp, int argc) {
     if (argc == 1)
-        assign_flt(fp-1, atan(fltval(fp)));
+        set_flt(fp-1, atan(fltval(fp)));
     else if (argc > 1)
-        assign_flt(fp-1, atan2(fltval(fp), fltval(fp+1)));
+        set_flt(fp-1, atan2(fltval(fp), fltval(fp+1)));
     return 1;
 }
 
 // ceil(x)
 static int l_ceil(rf_val *fp, int argc) {
-    assign_int(fp-1, (rf_int) ceil(fltval(fp)));
+    set_int(fp-1, (rf_int) ceil(fltval(fp)));
     return 1;
 }
 
 // cos(x)
 static int l_cos(rf_val *fp, int argc) {
-    assign_flt(fp-1, cos(fltval(fp)));
+    set_flt(fp-1, cos(fltval(fp)));
     return 1;
 }
 
 // exp(x)
 static int l_exp(rf_val *fp, int argc) {
-    assign_flt(fp-1, exp(fltval(fp)));
+    set_flt(fp-1, exp(fltval(fp)));
     return 1;
 }
 
 // int(x)
 static int l_int(rf_val *fp, int argc) {
-    assign_int(fp-1, intval(fp));
+    set_int(fp-1, intval(fp));
     return 1;
 }
 
 // log(x[,b])
 static int l_log(rf_val *fp, int argc) {
     if (argc == 1)
-        assign_flt(fp-1, log(fltval(fp)));
+        set_flt(fp-1, log(fltval(fp)));
     else if (fltval(fp+1) == 2.0)
-        assign_flt(fp-1, log2(fltval(fp)));
+        set_flt(fp-1, log2(fltval(fp)));
     else if (fltval(fp+1) == 10.0)
-        assign_flt(fp-1, log10(fltval(fp)));
+        set_flt(fp-1, log10(fltval(fp)));
     else
-        assign_flt(fp-1, log(fltval(fp)) / log(fltval(fp+1)));
+        set_flt(fp-1, log(fltval(fp)) / log(fltval(fp+1)));
     return 1;
 }
 
 // sin(x)
 static int l_sin(rf_val *fp, int argc) {
-    assign_flt(fp-1, sin(fltval(fp)));
+    set_flt(fp-1, sin(fltval(fp)));
     return 1;
 }
 
 // sqrt(x)
 static int l_sqrt(rf_val *fp, int argc) {
-    assign_flt(fp-1, sqrt(fltval(fp)));
+    set_flt(fp-1, sqrt(fltval(fp)));
     return 1;
 }
 
 // tan(x)
 static int l_tan(rf_val *fp, int argc) {
-    assign_flt(fp-1, tan(fltval(fp)));
+    set_flt(fp-1, tan(fltval(fp)));
     return 1;
 }
 
@@ -128,7 +128,7 @@ static int l_rand(rf_val *fp, int argc) {
     uint64_t rand = prng_next();
     if (!argc) {
         rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((uint64_t)1 << 52)));
-        assign_flt(fp-1, f);
+        set_flt(fp-1, f);
     }
 
     // If first argument is a range/sequence, ignore any succeeding
@@ -163,7 +163,7 @@ static int l_rand(rf_val *fp, int argc) {
                 offset = to + (range % itvl);
             }
         } else {
-            assign_int(fp-1, from);
+            set_int(fp-1, from);
             return 1;
         }
         range /= itvl;
@@ -171,19 +171,19 @@ static int l_rand(rf_val *fp, int argc) {
         rand  %= range;
         rand  *= itvl;
         rand  += offset;
-        assign_int(fp-1, rand);
+        set_int(fp-1, rand);
     }
 
     // 1 argument (0..n)
     else if (argc == 1) {
         int64_t n1 = intval(fp);
         if (n1 == 0) {
-            assign_int(fp-1, rand);
+            set_int(fp-1, rand);
         } else {
             if (n1 > 0) {
-                assign_int(fp-1,   rand %  (n1 + 1));
+                set_int(fp-1,   rand %  (n1 + 1));
             } else {
-                assign_int(fp-1, -(rand % -(n1 - 1)));
+                set_int(fp-1, -(rand % -(n1 - 1)));
             }
         }
     }
@@ -200,11 +200,11 @@ static int l_rand(rf_val *fp, int argc) {
             range  = n1 - n2;
             offset = n2;
         } else {
-            assign_int(fp-1, n1);
+            set_int(fp-1, n1);
             return 1;
         }
         range += !(range == UINT64_MAX);
-        assign_int(fp-1, (rand % range) + offset);
+        set_int(fp-1, (rand % range) + offset);
     }
     return 1;
 }
@@ -249,11 +249,11 @@ static int l_byte(rf_val *fp, int argc) {
     if (is_str(fp)) {
         if (idx > fp->u.s->l)
             idx = fp->u.s->l;
-        assign_int(fp-1, (uint8_t) fp->u.s->str[idx]);
+        set_int(fp-1, (uint8_t) fp->u.s->str[idx]);
     } else if (is_rfn(fp)) {
         if (idx > fp->u.fn->code->n)
             idx = fp->u.fn->code->n;
-        assign_int(fp-1, fp->u.fn->code->code[idx]);
+        set_int(fp-1, fp->u.fn->code->code[idx]);
     } else {
         return 0;
     }
@@ -281,7 +281,7 @@ static int l_char(rf_val *fp, int argc) {
             }
         }
     }
-    assign_str(fp-1, s_newstr(buf, n, 0));
+    set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
 
@@ -617,7 +617,7 @@ redir_flt:
         buf[n++] = *fstr++;
     }
 
-    assign_str(fp-1, s_newstr(buf, n, 0));
+    set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
 
@@ -720,7 +720,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // Store capture substrings in the global fields table
     re_store_numbered_captures(md);
     pcre2_match_data_free(md);
-    assign_str(fp-1, s_newstr(buf, n, 0));
+    set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
 
@@ -740,7 +740,7 @@ static int l_hex(rf_val *fp, int argc) {
     rf_int i = intval(fp);
     char buf[20];
     int len = sprintf(buf, "0x%"PRIx64, i);
-    assign_str(fp-1, s_newstr(buf, len, 0));
+    set_str(fp-1, s_newstr(buf, len, 0));
     return 1;
 }
 
@@ -752,7 +752,7 @@ static int allxcase(rf_val *fp, int c) {
                    : tolower(fp->u.s->str[i]);
     }
     str[len] = '\0';
-    assign_str(fp-1, s_newstr(str, len, 0));
+    set_str(fp-1, s_newstr(str, len, 0));
     return 1;
 }
 
@@ -771,11 +771,11 @@ static int l_lower(rf_val *fp, int argc) {
 static int l_num(rf_val *fp, int argc) {
     if (!is_str(fp)) {
         if (is_int(fp)) {
-            assign_int(fp-1, fp->u.i);
+            set_int(fp-1, fp->u.i);
         } else if (is_flt(fp)) {
-            assign_flt(fp-1, fp->u.f);
+            set_flt(fp-1, fp->u.f);
         } else {
-            assign_int(fp-1, 0);
+            set_int(fp-1, 0);
         }
         return 1;
     }
@@ -796,10 +796,10 @@ static int l_num(rf_val *fp, int argc) {
     } else if (base == 16 && (*end == 'p' || *end == 'P')) {
         goto ret_flt;
     }
-    assign_int(fp-1, i);
+    set_int(fp-1, i);
     return 1;
 ret_flt:
-    assign_flt(fp-1, u_str2d(fp->u.s->str, &end, base));
+    set_flt(fp-1, u_str2d(fp->u.s->str, &end, base));
     return 1;
 }
 
@@ -930,7 +930,7 @@ static int l_type(rf_val *fp, int argc) {
     case TYPE_CFN:  str = "function"; len = 8; break;
     default: break;
     }
-    assign_str(fp-1, s_newstr(str, len, 0));
+    set_str(fp-1, s_newstr(str, len, 0));
     return 1;
 }
 

@@ -97,10 +97,10 @@ typedef struct {
 } rf_val;
 
 // Assign value x to rf_val *p
-#define assign_null(p)   (p)->type = TYPE_NULL
-#define assign_int(p, x) *(p) = (rf_val) {TYPE_INT, .u.i = (x)}
-#define assign_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .u.f = (x)}
-#define assign_str(p, x) *(p) = (rf_val) {TYPE_STR, .u.s = (x)}
+#define set_null(p)   (p)->type = TYPE_NULL
+#define set_int(p, x) *(p) = (rf_val) {TYPE_INT, .u.i = (x)}
+#define set_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .u.f = (x)}
+#define set_str(p, x) *(p) = (rf_val) {TYPE_STR, .u.s = (x)}
 
 #define numval(x) (is_int(x) ? (x)->u.i : \
                    is_flt(x) ? (x)->u.f : \
@@ -115,34 +115,34 @@ typedef struct {
 // == and != operators
 #define cmp_eq(l,r,op) \
     if (is_null(l) ^ is_null(r)) { \
-        assign_int(l, !(0 op 0)); \
+        set_int(l, !(0 op 0)); \
     } else if (is_str(l) && is_str(r)) { \
         if (!l->u.s->hash) l->u.s->hash = u_strhash(l->u.s->str); \
         if (!r->u.s->hash) r->u.s->hash = u_strhash(r->u.s->str); \
-        assign_int(l, (l->u.s->hash op r->u.s->hash)); \
+        set_int(l, (l->u.s->hash op r->u.s->hash)); \
     } else if (is_str(l) && !is_str(r)) { \
         if (!l->u.s->l) { \
-            assign_int(l, !(0 op 0)); \
+            set_int(l, !(0 op 0)); \
             return; \
         } \
         char *end; \
         rf_flt f = u_str2d(l->u.s->str, &end, 0); \
         if (*end != '\0') { \
-            assign_int(l, 0); \
+            set_int(l, 0); \
         } else { \
-            assign_int(l, (f op numval(r))); \
+            set_int(l, (f op numval(r))); \
         } \
     } else if (!is_str(l) && is_str(r)) { \
         if (!r->u.s->l) { \
-            assign_int(l, !(0 op 0)); \
+            set_int(l, !(0 op 0)); \
             return; \
         } \
         char *end; \
         rf_flt f = u_str2d(r->u.s->str, &end, 0); \
         if (*end != '\0') { \
-            assign_int(l, 0); \
+            set_int(l, 0); \
         } else { \
-            assign_int(l, (numval(l) op f)); \
+            set_int(l, (numval(l) op f)); \
         } \
     } else { \
         num_arith(l,r,op); \
