@@ -481,19 +481,11 @@ static inline void destroy_iter(void) {
     free(old);
 }
 
-// TODO
 static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) {
     t_init(t);
     for (rf_int i = 0; i < rf_argc; ++i) {
-        rf_str *s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 1);
-        // TODO - this doesn't work correctly without directly
-        // deferring to h_insert for negative indices NOR without
-        // forcing insertion for non-negeative indices.
-        if (i-os-1 < 0)
-            h_insert(t->h, s_int2str(i-os-1), v_newstr(s), 1);
-        else
-            t_insert_int(t, (rf_int)i-os-1, v_newstr(s), 1, 1);
-        m_freestr(s);
+        // TODO force parameter should not be set
+        t_insert_int(t, (rf_int)i-os-1, v_newstr(&(rf_str){strlen(rf_argv[i]), 0, rf_argv[i]}), 1, 1);
     }
 }
 

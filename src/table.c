@@ -89,10 +89,9 @@ static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
         (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
         return t_insert_int(t, k, v_newnull(), set, 0);
     } else {
-        rf_str *ik = s_int2str(k);
-        rf_val *v  = h_lookup(t->h, ik, set);
-        m_freestr(ik);
-        return v;
+        char temp[32];
+        size_t temp_l = u_int2str(k, temp, 32);
+        return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
     }
 }
 
@@ -129,10 +128,9 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
         return t->nullv;
     case TYPE_INT:
         if (k->u.i < 0) {
-            rf_str *ik = s_int2str(k->u.i);
-            rf_val *v  = h_lookup(t->h, ik, set);
-            m_freestr(ik);
-            return v;
+            char temp[32];
+            size_t temp_l = u_int2str(k->u.i, temp, 32);
+            return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
         }
         else
             return t_lookup_int(t, k->u.i, set);
@@ -141,10 +139,9 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
             ((rf_int) k->u.f >= 0))
             return t_lookup_int(t, (rf_int) k->u.f, set);
         else {
-            rf_str *fk = s_flt2str(k->u.f);
-            rf_val *v  = h_lookup(t->h, fk, set);
-            m_freestr(fk);
-            return v;
+            char temp[32];
+            size_t temp_l = u_flt2str(k->u.f, temp, 32);
+            return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
         }
     case TYPE_STR: {
         rf_int si = str2intidx(k->u.s);
@@ -154,10 +151,9 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
     }
     // TODO monitor
     case TYPE_TBL: {
-        rf_str *tk = s_int2str((rf_int) k->u.t);
-        rf_val *v  = h_lookup(t->h, s_int2str((rf_int) k->u.t), set);
-        m_freestr(tk);
-        return v;
+        char temp[32];
+        size_t temp_l = u_int2str((rf_int) k->u.t, temp, 32);
+        return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
     }
     case TYPE_RFN: // TODO
     default: break;
@@ -194,12 +190,12 @@ rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
 
             // Collect valid integer keys from the hash part and move
             // them to the newly allocated array part
-            for (int i = oc; i < nc; ++i) {
+            for (rf_int i = oc; i < nc; ++i) {
                 if (exists(t,i)) continue;
-                rf_str *ik = s_int2str(i);
-                t->v[i] = h_delete(t->h, ik);
+                char temp[32];
+                size_t temp_l = u_int2str(i, temp, 32);
+                t->v[i] = h_delete(t->h, &(rf_str){temp_l, 0, temp});
                 if (t->v[i]) t->an++;
-                m_freestr(ik);
             }
             t->cap = nc;
         }
@@ -216,10 +212,13 @@ rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
         return t->v[k];
     }
     else {
-        rf_str *ik = s_int2str(k);
-        rf_val *rv = h_lookup(t->h, ik, set); // TODO?
-        m_freestr(ik);
-        return rv;
+        char temp[32];
+        size_t temp_l = u_int2str(k, temp, 32);
+        // TODO
+        if (force)
+            return h_insert(t->h, &(rf_str){temp_l, 0, temp}, v, set);
+        else
+            return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
     }
 }
 
@@ -235,19 +234,17 @@ rf_val *t_insert(rf_tbl *t, rf_val *k, rf_val *v, int set) {
         if (k->u.f == (rf_int) k->u.f)
             return t_insert_int(t, (rf_int) k->u.f, v, set, 0);
         else {
-            rf_str *fk = s_flt2str(k->u.f);
-            rf_val *rv = h_insert(t->h, fk, v, set);
-            m_freestr(fk);
-            return rv;
+            char temp[32];
+            size_t temp_l = u_flt2str(k->u.f, temp, 32);
+            return h_insert(t->h, &(rf_str){temp_l, 0, temp}, v, set);
         }
     case TYPE_STR: return h_insert(t->h, k->u.s, v, set);
 
     // TODO monitor
     case TYPE_TBL: {
-        rf_str *tk = s_int2str((rf_int) k->u.t);
-        rf_val *rv = h_insert(t->h, tk, v, set);
-        m_freestr(tk);
-        return rv;
+        char temp[32];
+        size_t temp_l = u_int2str((rf_int) k->u.t, temp, 32);
+        return h_insert(t->h, &(rf_str){temp_l, 0, temp}, v, set);
     }
     case TYPE_RFN: // TODO
     default: break;
