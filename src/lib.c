@@ -98,15 +98,15 @@ static int l_tan(rf_val *fp, int argc) {
 // xoshiro256**
 // Source: https://prng.di.unimi.it
 
-static inline uint64_t rol(const uint64_t x, int k) {
+static inline rf_uint rol(const rf_uint x, int k) {
     return (x << k) | (x >> (64 - k));
 }
 
-static uint64_t prngs[4];
+static rf_uint prngs[4];
 
-static uint64_t prng_next(void) {
-    const uint64_t res = rol(prngs[1] * 5, 7) * 9;
-    const uint64_t t   = prngs[1] << 17;
+static rf_uint prng_next(void) {
+    const rf_uint res = rol(prngs[1] * 5, 7) * 9;
+    const rf_uint t   = prngs[1] << 17;
 
     prngs[2] ^= prngs[0];
     prngs[3] ^= prngs[1];
@@ -125,19 +125,19 @@ static uint64_t prng_next(void) {
 //   rand(m,n)  | random int ∈ [m..n]
 //   rand(seq)  | random int ∈ (range/sequence)
 static int l_rand(rf_val *fp, int argc) {
-    uint64_t rand = prng_next();
+    rf_uint rand = prng_next();
     if (!argc) {
-        rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((uint64_t)1 << 52)));
+        rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((rf_uint)1 << 52)));
         set_flt(fp-1, f);
     }
 
     // If first argument is a range/sequence, ignore any succeeding
     // args
     else if (is_seq(fp)) {
-        int64_t from = fp->u.q->from;
-        int64_t to   = fp->u.q->to;
-        int64_t itvl = fp->u.q->itvl;
-        uint64_t range, offset;
+        rf_int from = fp->u.q->from;
+        rf_int to   = fp->u.q->to;
+        rf_int itvl = fp->u.q->itvl;
+        rf_uint range, offset;
         if (from < to) {
             //           <<<
             // [i64min..from] ∪ [to..i64max]
@@ -176,7 +176,7 @@ static int l_rand(rf_val *fp, int argc) {
 
     // 1 argument (0..n)
     else if (argc == 1) {
-        int64_t n1 = intval(fp);
+        rf_int n1 = intval(fp);
         if (n1 == 0) {
             set_int(fp-1, rand);
         } else {
@@ -190,9 +190,9 @@ static int l_rand(rf_val *fp, int argc) {
 
     // 2 arguments (m..n)
     else {
-        int64_t n1 = intval(fp);
-        int64_t n2 = intval(fp+1);
-        uint64_t range, offset;
+        rf_int n1 = intval(fp);
+        rf_int n2 = intval(fp+1);
+        rf_uint range, offset;
         if (n1 < n2) {
             range  = n2 - n1;
             offset = n1;
@@ -211,7 +211,7 @@ static int l_rand(rf_val *fp, int argc) {
 
 // I believe this is how you would utilize splitmix64 to initialize
 // the PRNG state
-static void prng_seed(uint64_t seed) {
+static void prng_seed(rf_uint seed) {
     prngs[0] = seed + 0x9e3779b97f4a7c15u;
     prngs[1] = (prngs[0] ^ (prngs[0] >> 30)) * 0xbf58476d1ce4e5b9u;
     prngs[2] = (prngs[1] ^ (prngs[1] >> 27)) * 0x94d049bb133111ebu;

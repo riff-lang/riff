@@ -66,7 +66,7 @@ static inline int test(rf_val *v) {
     case TYPE_STR: {
         char *end;
         rf_flt f = u_str2d(v->u.s->str, &end, 0);
-        if (*end == '\0')
+        if (!*end)
             return !!f;
         return !!v->u.s->l;
     }
@@ -110,7 +110,9 @@ static inline void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
 
 static inline void z_num(rf_val *v) {
     switch (v->type) {
-    case TYPE_INT: case TYPE_FLT: break;
+    case TYPE_INT:
+    case TYPE_FLT:
+        break;
     case TYPE_STR:
         set_flt(v, str2flt(v->u.s));
         break;
@@ -141,6 +143,52 @@ static inline void z_not(rf_val *v) {
     set_int(v, ~intval(v));
 }
 
+// == and != operators
+#define cmp_eq(l,r,op) \
+    if (is_int(l) && is_int(r)) { \
+        l->u.i = (l->u.i op r->u.i); \
+    } else if (is_null(l) ^ is_null(r)) { \
+        set_int(l, !(0 op 0)); \
+    } else if (is_str(l) && is_str(r)) { \
+        if (!l->u.s->hash) l->u.s->hash = u_strhash(l->u.s->str); \
+        if (!r->u.s->hash) r->u.s->hash = u_strhash(r->u.s->str); \
+        set_int(l, (l->u.s->hash op r->u.s->hash)); \
+    } else if (is_str(l) && !is_str(r)) { \
+        if (!l->u.s->l) { \
+            set_int(l, !(0 op 0)); \
+            return; \
+        } \
+        char *end; \
+        rf_flt f = u_str2d(l->u.s->str, &end, 0); \
+        if (*end) { \
+            set_int(l, 0); \
+        } else { \
+            set_int(l, (f op numval(r))); \
+        } \
+    } else if (!is_str(l) && is_str(r)) { \
+        if (!r->u.s->l) { \
+            set_int(l, !(0 op 0)); \
+            return; \
+        } \
+        char *end; \
+        rf_flt f = u_str2d(r->u.s->str, &end, 0); \
+        if (*end) { \
+            set_int(l, 0); \
+        } else { \
+            set_int(l, (numval(l) op f)); \
+        } \
+    } else { \
+        num_arith(l,r,op); \
+    }
+
+// >, <, >= and <= operators
+#define cmp_rel(l,r,op) \
+    if (is_int(l) && is_int(r)) { \
+        l->u.i = (l->u.i op r->u.i); \
+    } else { \
+        set_int(l, (numval(l) op numval(r))); \
+    }
+
 static inline void z_eq(rf_val *l, rf_val *r) { cmp_eq(l,r,==);  }
 static inline void z_ne(rf_val *l, rf_val *r) { cmp_eq(l,r,!=);  }
 static inline void z_gt(rf_val *l, rf_val *r) { cmp_rel(l,r,>);  }
@@ -162,7 +210,8 @@ static inline void z_len(rf_val *v) {
     case TYPE_INT:
         l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
             v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
-        break;
+        v->u.i = l;
+        return;
     case TYPE_FLT:
         l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;

@@ -34,8 +34,9 @@ enum types {
 #define is_num(x)  ((x)->type == TYPE_INT || (x)->type == TYPE_FLT)
 #define is_fn(x)   ((x)->type == TYPE_RFN || (x)->type == TYPE_CFN)
 
-typedef double  rf_flt;
-typedef int64_t rf_int;
+typedef int64_t  rf_int;
+typedef uint64_t rf_uint;
+typedef double   rf_flt;
 
 typedef struct {
     size_t    l;
@@ -111,45 +112,6 @@ typedef struct {
 #define fltval(x) (is_flt(x) ? (x)->u.f : \
                    is_int(x) ? (rf_flt) (x)->u.i : \
                    is_str(x) ? str2flt((x)->u.s) : 0)
-
-// == and != operators
-#define cmp_eq(l,r,op) \
-    if (is_null(l) ^ is_null(r)) { \
-        set_int(l, !(0 op 0)); \
-    } else if (is_str(l) && is_str(r)) { \
-        if (!l->u.s->hash) l->u.s->hash = u_strhash(l->u.s->str); \
-        if (!r->u.s->hash) r->u.s->hash = u_strhash(r->u.s->str); \
-        set_int(l, (l->u.s->hash op r->u.s->hash)); \
-    } else if (is_str(l) && !is_str(r)) { \
-        if (!l->u.s->l) { \
-            set_int(l, !(0 op 0)); \
-            return; \
-        } \
-        char *end; \
-        rf_flt f = u_str2d(l->u.s->str, &end, 0); \
-        if (*end != '\0') { \
-            set_int(l, 0); \
-        } else { \
-            set_int(l, (f op numval(r))); \
-        } \
-    } else if (!is_str(l) && is_str(r)) { \
-        if (!r->u.s->l) { \
-            set_int(l, !(0 op 0)); \
-            return; \
-        } \
-        char *end; \
-        rf_flt f = u_str2d(r->u.s->str, &end, 0); \
-        if (*end != '\0') { \
-            set_int(l, 0); \
-        } else { \
-            set_int(l, (numval(l) op f)); \
-        } \
-    } else { \
-        num_arith(l,r,op); \
-    }
-
-// >, <, >= and <= operators
-#define cmp_rel(l,r,op) num_arith(l,r,op);
 
 rf_int  str2int(rf_str *);
 rf_flt  str2flt(rf_str *);
