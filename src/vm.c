@@ -66,8 +66,17 @@ static inline int test(rf_val *v) {
     case TYPE_STR: {
         char *end;
         rf_flt f = u_str2d(v->u.s->str, &end, 0);
-        if (!*end)
-            return !!f;
+        if (!*end) {
+            // Check for literal '0' character in string
+            if (f == 0.0) {
+                for (int i = 0; i < v->u.s->l; ++i) {
+                    if (v->u.s->str[i] == '0')
+                        return 0;
+                }
+            } else {
+                return !!f;
+            }
+        }
         return !!v->u.s->l;
     }
     case TYPE_TBL: return !!t_length(v->u.t);
