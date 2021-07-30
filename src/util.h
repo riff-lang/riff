@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define u_int2str(i,b,n) snprintf(b, n, "%"PRId64, i)
 #define u_flt2str(f,b,n) snprintf(b, n, "%g", f)

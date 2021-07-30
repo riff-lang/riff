@@ -3,9 +3,7 @@
 #include "types.h"
 #include "util.h"
 
-#include <stdio.h> // Debug purposes
-
-#define LOAD_FACTOR 0.6
+#define LOAD_FACTOR 0.49
 
 #define set(f)   h->f = 1
 #define unset(f) h->f = 0
@@ -60,8 +58,10 @@ static ht_node *new_node(rf_str *k, rf_val *v) {
 static uint32_t node_slot(ht_node **e, uint32_t cap, uint32_t hash) {
     cap -= 1;
     uint32_t i = hash & cap;
-    while (e[i] && e[i]->key->hash != hash) {
-        i = (i + 1) & cap; // Linear probing
+    for (uint32_t j = 1; j <= cap; ++j) {
+        if (!e[i] || e[i]->key->hash == hash)
+            break;
+        i = (i + j * j) & cap;
     }
     return i;
 }
@@ -74,14 +74,11 @@ static int exists(rf_htbl *h, rf_str *k) {
     return h->nodes[i] && h->nodes[i]->key->hash == k->hash;
 }
 
-#include <inttypes.h>
-
 int h_exists_int(rf_htbl *h, rf_int k) {
     if (!h->cap) return 0;
-    char str[32];
-    size_t len = sprintf(str, "%"PRId64, k);
-    str[len] = '\0';
-    return exists(h, &(rf_str){len,u_strhash(str),str});
+    char str[21];
+    size_t len = u_int2str(k, str, sizeof str);
+    return exists(h, &(rf_str){len, u_strhash(str), str});
 }
 
 
