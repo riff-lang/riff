@@ -14,10 +14,10 @@ playground](https://riff.run) featuring sample programs.
 ## Building
 
 Riff depends on the [Perl Compatible Regular
-Expressions](http://pcre.org) (PCRE2) library. PCRE2 will need to be
-installed on your system. Specifically `pcre2-config`, which retrieves
-the installation location of PCRE2. PCRE2 can be easily installed via
-many popular package managers.
+Expressions](http://pcre.org) (PCRE2) library. PCRE2 10.35 or higher
+will need to be installed on your system. Specifically `pcre2-config`,
+which retrieves the installation location of PCRE2.  PCRE2 can be
+easily installed via many popular package managers.
 
 Running `make` in the root directory of the repository will compile
 the source code and place the executable locally at `bin/riff`.
