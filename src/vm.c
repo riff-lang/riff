@@ -489,7 +489,11 @@ static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) 
     t_init(t);
     for (rf_int i = 0; i < rf_argc; ++i) {
         // TODO force parameter should not be set
-        t_insert_int(t, (rf_int)i-os-1, v_newstr(&(rf_str){strlen(rf_argv[i]), 0, rf_argv[i]}), 1, 1);
+        rf_val v = (rf_val) {
+            TYPE_STR,
+            .u.s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 0)
+        };
+        t_insert_int(t, i-os-1, &v, 1, 1);
     }
 }
 
