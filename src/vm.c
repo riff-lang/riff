@@ -217,8 +217,12 @@ static inline void z_len(rf_val *v) {
     //   #x = ⌊log10(x)⌋  + 1 for x > 0
     //        ⌊log10(-x)⌋ + 2 for x < 0
     case TYPE_INT:
-        l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
-            v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
+        if (v->u.i == INT64_MIN) {
+            l = 20;
+        } else {
+            l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
+                v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
+        }
         v->u.i = l;
         return;
     case TYPE_FLT:
