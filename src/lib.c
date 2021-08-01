@@ -21,7 +21,7 @@ static void err(const char *msg) {
 // Arithmetic functions
 
 // abs(x)
-static int l_abs(rf_val *fp, int argc) {
+RIFF_LIB_FN(abs) {
     if (is_int(fp))
         set_int(fp-1, llabs(fp->u.i));
     else
@@ -30,7 +30,7 @@ static int l_abs(rf_val *fp, int argc) {
 }
 
 // atan(y[,x])
-static int l_atan(rf_val *fp, int argc) {
+RIFF_LIB_FN(atan) {
     if (argc == 1)
         set_flt(fp-1, atan(fltval(fp)));
     else if (argc > 1)
@@ -39,31 +39,31 @@ static int l_atan(rf_val *fp, int argc) {
 }
 
 // ceil(x)
-static int l_ceil(rf_val *fp, int argc) {
+RIFF_LIB_FN(ceil) {
     set_int(fp-1, (rf_int) ceil(fltval(fp)));
     return 1;
 }
 
 // cos(x)
-static int l_cos(rf_val *fp, int argc) {
+RIFF_LIB_FN(cos) {
     set_flt(fp-1, cos(fltval(fp)));
     return 1;
 }
 
 // exp(x)
-static int l_exp(rf_val *fp, int argc) {
+RIFF_LIB_FN(exp) {
     set_flt(fp-1, exp(fltval(fp)));
     return 1;
 }
 
 // int(x)
-static int l_int(rf_val *fp, int argc) {
+RIFF_LIB_FN(int) {
     set_int(fp-1, intval(fp));
     return 1;
 }
 
 // log(x[,b])
-static int l_log(rf_val *fp, int argc) {
+RIFF_LIB_FN(log) {
     if (argc == 1)
         set_flt(fp-1, log(fltval(fp)));
     else if (fltval(fp+1) == 2.0)
@@ -76,19 +76,19 @@ static int l_log(rf_val *fp, int argc) {
 }
 
 // sin(x)
-static int l_sin(rf_val *fp, int argc) {
+RIFF_LIB_FN(sin) {
     set_flt(fp-1, sin(fltval(fp)));
     return 1;
 }
 
 // sqrt(x)
-static int l_sqrt(rf_val *fp, int argc) {
+RIFF_LIB_FN(sqrt) {
     set_flt(fp-1, sqrt(fltval(fp)));
     return 1;
 }
 
 // tan(x)
-static int l_tan(rf_val *fp, int argc) {
+RIFF_LIB_FN(tan) {
     set_flt(fp-1, tan(fltval(fp)));
     return 1;
 }
@@ -124,7 +124,7 @@ static rf_uint prng_next(void) {
 //   rand(n)    | random int ∈ [0..n]
 //   rand(m,n)  | random int ∈ [m..n]
 //   rand(seq)  | random int ∈ (range/sequence)
-static int l_rand(rf_val *fp, int argc) {
+RIFF_LIB_FN(rand) {
     rf_uint rand = prng_next();
     if (!argc) {
         rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((rf_uint)1 << 52)));
@@ -224,7 +224,7 @@ static void prng_seed(rf_uint seed) {
 // Initializes the PRNG with seed `x` or time(0) if no argument given.
 // rand() will produce the same sequence when srand is initialized
 // with a given seed every time.
-static int l_srand(rf_val *fp, int argc) {
+RIFF_LIB_FN(srand) {
     if (!argc)
         prng_seed(time(0));
     else if (is_null(fp))
@@ -244,7 +244,7 @@ static int l_srand(rf_val *fp, int argc) {
 // If a user-defined function is passed, the byte at index `i` in the
 // function's bytecode array is returned. This is the same as
 // subscripting the function, i.e. byte(f,0) == f[0] for function f.
-static int l_byte(rf_val *fp, int argc) {
+RIFF_LIB_FN(byte) {
     int idx = argc > 1 ? intval(fp+1) : 0;
     if (is_str(fp)) {
         if (idx > fp->u.s->l)
@@ -265,7 +265,7 @@ static int l_byte(rf_val *fp, int argc) {
 // character codes of each respective argument in order
 // Ex:
 //   char(114, 105, 102, 102) -> "riff"
-static int l_char(rf_val *fp, int argc) {
+RIFF_LIB_FN(char) {
     if (!argc) return 0;
     char buf[STR_BUF_SZ];
     int n = 0;
@@ -405,7 +405,7 @@ static int fmt_bin_itoa(char *buf, rf_int num, unsigned int flags, int width, in
 //   o              | Octal integer
 //   s              | String
 //   x / X          | Hex integer (lowercase/uppercase)
-static int l_fmt(rf_val *fp, int argc) {
+RIFF_LIB_FN(fmt) {
     if (!is_str(fp))
         return 0;
     --argc;
@@ -727,7 +727,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
 // gsub(s,p[,r])
 // Returns a copy of string `s` where all occurrences of pattern `p`
 // are replaced by string `r`
-static int l_gsub(rf_val *fp, int argc) {
+RIFF_LIB_FN(gsub) {
     return xsub(fp, argc, PCRE2_SUBSTITUTE_GLOBAL);
 }
 
@@ -736,7 +736,7 @@ static int l_gsub(rf_val *fp, int argc) {
 // with the leading "0x"
 // Ex:
 //   hex(255) -> "0xff"
-static int l_hex(rf_val *fp, int argc) {
+RIFF_LIB_FN(hex) {
     rf_int i = intval(fp);
     char buf[20];
     int len = sprintf(buf, "0x%"PRIx64, i);
@@ -757,7 +757,7 @@ static int allxcase(rf_val *fp, int c) {
 }
 
 // lower(s)
-static int l_lower(rf_val *fp, int argc) {
+RIFF_LIB_FN(lower) {
     if (!is_str(fp))
         return 0;
     return allxcase(fp, 0);
@@ -768,7 +768,7 @@ static int l_lower(rf_val *fp, int argc) {
 // interpreted num. The base can be 0 or an integer in the range
 // {2..36}. The default base is 0. This function is more or less a
 // direct interface to `strtoll()`.
-static int l_num(rf_val *fp, int argc) {
+RIFF_LIB_FN(num) {
     if (!is_str(fp)) {
         if (is_int(fp)) {
             set_int(fp-1, fp->u.i);
@@ -809,7 +809,7 @@ ret_flt:
 // the regular expression /\s+/ (whitespace) is used. If the delimiter
 // is the empty string (""), the string is split into a table of
 // single-byte strings.
-static int l_split(rf_val *fp, int argc) {
+RIFF_LIB_FN(split) {
     char *str;
     size_t len;
     char temp_s[20];
@@ -908,12 +908,12 @@ split_chars: {
 // sub(s,p[,r])
 // Returns a copy of string `s` where only the first occurrence of
 // pattern `p` is replaced by string `r`
-static int l_sub(rf_val *fp, int argc) {
+RIFF_LIB_FN(sub) {
     return xsub(fp, argc, 0);
 }
 
 // type(x)
-static int l_type(rf_val *fp, int argc) {
+RIFF_LIB_FN(type) {
     if (!argc)
         return 0;
     char *str;
@@ -935,7 +935,7 @@ static int l_type(rf_val *fp, int argc) {
 }
 
 // upper(s)
-static int l_upper(rf_val *fp, int argc) {
+RIFF_LIB_FN(upper) {
     if (!is_str(fp))
         return 0;
     return allxcase(fp, 1);
@@ -946,32 +946,32 @@ static struct {
     c_fn        fn;
 } lib_fn[] = {
     // Arithmetic
-    { "abs",   { 1, l_abs }   },
-    { "atan",  { 1, l_atan }  },
-    { "ceil",  { 1, l_ceil }  },
-    { "cos",   { 1, l_cos }   },
-    { "exp",   { 1, l_exp }   },
-    { "int",   { 1, l_int }   },
-    { "log",   { 1, l_log }   },
-    { "sin",   { 1, l_sin }   },
-    { "sqrt",  { 1, l_sqrt }  },
-    { "tan",   { 1, l_tan }   },
+    RIFF_LIB_REG(abs,   1),
+    RIFF_LIB_REG(atan,  1),
+    RIFF_LIB_REG(ceil,  1),
+    RIFF_LIB_REG(cos,   1),
+    RIFF_LIB_REG(exp,   1),
+    RIFF_LIB_REG(int,   1),
+    RIFF_LIB_REG(log,   1),
+    RIFF_LIB_REG(sin,   1),
+    RIFF_LIB_REG(sqrt,  1),
+    RIFF_LIB_REG(tan,   1),
     // PRNG
-    { "rand",  { 0, l_rand }  },
-    { "srand", { 0, l_srand } },
+    RIFF_LIB_REG(rand,  0),
+    RIFF_LIB_REG(srand, 0),
     // Strings
-    { "byte",  { 1, l_byte }  },
-    { "char",  { 0, l_char }  },
-    { "fmt",   { 1, l_fmt }   },
-    { "gsub",  { 2, l_gsub }  },
-    { "hex",   { 1, l_hex }   },
-    { "lower", { 1, l_lower } },
-    { "num",   { 1, l_num }   },
-    { "split", { 1, l_split } },
-    { "sub",   { 2, l_sub }   },
-    { "type",  { 1, l_type }  },
-    { "upper", { 1, l_upper } },
-    { NULL,    { 0, NULL }    }
+    RIFF_LIB_REG(byte,  1),
+    RIFF_LIB_REG(char,  0),
+    RIFF_LIB_REG(fmt,   1),
+    RIFF_LIB_REG(gsub,  2),
+    RIFF_LIB_REG(hex,   1),
+    RIFF_LIB_REG(lower, 1),
+    RIFF_LIB_REG(num,   1),
+    RIFF_LIB_REG(split, 1),
+    RIFF_LIB_REG(sub,   2),
+    RIFF_LIB_REG(type,  1),
+    RIFF_LIB_REG(upper, 1),
+    { NULL, { 0, NULL } }
 };
 
 void l_register(rf_htbl *g) {

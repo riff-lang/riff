@@ -87,37 +87,35 @@ static inline int test(rf_val *v) {
     }
 }
 
+#define Z_UOP(op)   static inline void z_##op(rf_val *v)
+#define Z_BINOP(op) static inline void z_##op(rf_val *l, rf_val *r)
 
-static inline void z_add(rf_val *l, rf_val *r) { num_arith(l,r,+); }
-static inline void z_sub(rf_val *l, rf_val *r) { num_arith(l,r,-); }
-static inline void z_mul(rf_val *l, rf_val *r) { num_arith(l,r,*); }
+Z_BINOP(add) { num_arith(l,r,+); }
+Z_BINOP(sub) { num_arith(l,r,-); }
+Z_BINOP(mul) { num_arith(l,r,*); }
 
 // Language comparison for division by zero:
 // 0/0 = nan; 1/0 = inf : lua, mawk
 // error: pretty much all others
-static inline void z_div(rf_val *l, rf_val *r) {
-    flt_arith(l,r,/);
-}
+Z_BINOP(div) { flt_arith(l,r,/); }
 
 // Language comparison for modulus by zero:
 // `nan`: mawk
 // error: pretty much all others
-static inline void z_mod(rf_val *l, rf_val *r) {
+Z_BINOP(mod) {
     rf_flt res = fmod(numval(l), numval(r));
     set_flt(l, res < 0 ? res + numval(r) : res);
 }
 
-static inline void z_pow(rf_val *l, rf_val *r) {
-    set_flt(l, pow(fltval(l), fltval(r)));
-}
+Z_BINOP(pow) { set_flt(l, pow(fltval(l), fltval(r))); }
 
-static inline void z_and(rf_val *l, rf_val *r) { int_arith(l,r,&);  }
-static inline void z_or(rf_val *l, rf_val *r)  { int_arith(l,r,|);  }
-static inline void z_xor(rf_val *l, rf_val *r) { int_arith(l,r,^);  }
-static inline void z_shl(rf_val *l, rf_val *r) { int_arith(l,r,<<); }
-static inline void z_shr(rf_val *l, rf_val *r) { int_arith(l,r,>>); }
+Z_BINOP(and) { int_arith(l,r,&);  }
+Z_BINOP(or)  { int_arith(l,r,|);  }
+Z_BINOP(xor) { int_arith(l,r,^);  }
+Z_BINOP(shl) { int_arith(l,r,<<); }
+Z_BINOP(shr) { int_arith(l,r,>>); }
 
-static inline void z_num(rf_val *v) {
+Z_UOP(num) {
     switch (v->type) {
     case TYPE_INT:
     case TYPE_FLT:
@@ -131,7 +129,7 @@ static inline void z_num(rf_val *v) {
     }
 }
 
-static inline void z_neg(rf_val *v) {
+Z_UOP(neg) {
     switch (v->type) {
     case TYPE_INT:
         v->u.i = -v->u.i;
@@ -148,9 +146,7 @@ static inline void z_neg(rf_val *v) {
     }
 }
 
-static inline void z_not(rf_val *v) {
-    set_int(v, ~intval(v));
-}
+Z_UOP(not) { set_int(v, ~intval(v)); }
 
 // == and != operators
 #define cmp_eq(l,r,op) \
@@ -198,18 +194,16 @@ static inline void z_not(rf_val *v) {
         set_int(l, (numval(l) op numval(r))); \
     }
 
-static inline void z_eq(rf_val *l, rf_val *r) { cmp_eq(l,r,==);  }
-static inline void z_ne(rf_val *l, rf_val *r) { cmp_eq(l,r,!=);  }
-static inline void z_gt(rf_val *l, rf_val *r) { cmp_rel(l,r,>);  }
-static inline void z_ge(rf_val *l, rf_val *r) { cmp_rel(l,r,>=); }
-static inline void z_lt(rf_val *l, rf_val *r) { cmp_rel(l,r,<);  }
-static inline void z_le(rf_val *l, rf_val *r) { cmp_rel(l,r,<=); }
+Z_BINOP(eq) { cmp_eq(l,r,==);  }
+Z_BINOP(ne) { cmp_eq(l,r,!=);  }
+Z_BINOP(gt) { cmp_rel(l,r,>);  }
+Z_BINOP(ge) { cmp_rel(l,r,>=); }
+Z_BINOP(lt) { cmp_rel(l,r,<);  }
+Z_BINOP(le) { cmp_rel(l,r,<=); }
 
-static inline void z_lnot(rf_val *v) {
-    set_int(v, !test(v));
-}
+Z_UOP(lnot) { set_int(v, !test(v)); }
 
-static inline void z_len(rf_val *v) {
+Z_UOP(len) {
     rf_int l = 0;
     switch (v->type) {
 
@@ -241,11 +235,9 @@ static inline void z_len(rf_val *v) {
     set_int(v, l);
 }
 
-static inline void z_test(rf_val *v) {
-    set_int(v, test(v));
-}
+Z_UOP(test) { set_int(v, test(v)); }
 
-static inline void z_cat(rf_val *l, rf_val *r) {
+Z_BINOP(cat) {
     char *lhs, *rhs;
     char temp_lhs[32];
     char temp_rhs[32];
@@ -319,15 +311,10 @@ do_match:
     }
 }
 
-static inline void z_match(rf_val *l, rf_val *r) {
-    set_int(l, match(l, r));
-}
+Z_BINOP(match)  { set_int(l,  match(l, r)); }
+Z_BINOP(nmatch) { set_int(l, !match(l, r)); }
 
-static inline void z_nmatch(rf_val *l, rf_val *r) {
-    set_int(l, !match(l, r));
-}
-
-static inline void z_idx(rf_val *l, rf_val *r) {
+Z_BINOP(idx) {
     char temp[32];
     switch (l->type) {
     case TYPE_INT: {
@@ -394,8 +381,7 @@ static inline void z_idx(rf_val *l, rf_val *r) {
     }
 }
 
-// OP_PRINT functionality
-static inline void z_print(rf_val *v) {
+Z_UOP(print) {
     switch (v->type) {
     case TYPE_NULL: printf("null");                 break;
     case TYPE_INT:  printf("%"PRId64, v->u.i);      break;
@@ -1172,10 +1158,10 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 //   seqf:  x..         SP[-1]..INT_MAX
 //   seqt:  ..y         0..SP[-1]
 //   seqe:  ..          0..INT_MAX
-//   sseq:  x..y,z      SP[-3]..SP[-2],SP[-1]
-//   sseqf: x..,z       SP[-2]..INT_MAX,SP[-1]
-//   sseqt: ..y,z       0..SP[-2],SP[-1]
-//   sseqe: ..,z        0..INT_MAX,SP[-1]
+//   sseq:  x..y:z      SP[-3]..SP[-2],SP[-1]
+//   sseqf: x..:z       SP[-2]..INT_MAX,SP[-1]
+//   sseqt: ..y:z       0..SP[-2],SP[-1]
+//   sseqe: ..:z        0..INT_MAX,SP[-1]
 // If `z` is not provided, the interval is set to -1 if x > y (downward
 // sequences). Otherwise, the interval is set to 1 (upward
 // sequences).
