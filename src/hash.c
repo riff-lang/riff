@@ -77,7 +77,7 @@ static int exists(rf_htbl *h, rf_str *k) {
 int h_exists_int(rf_htbl *h, rf_int k) {
     if (!h->cap) return 0;
     char str[21];
-    size_t len = u_int2str(k, str, sizeof str);
+    size_t len = u_int2str(k, str);
     return exists(h, &(rf_str){len, u_strhash(str), str});
 }
 

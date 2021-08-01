@@ -243,8 +243,8 @@ Z_BINOP(cat) {
     char temp_rhs[32];
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: u_int2str(l->u.i, temp_lhs, 32); break;
-        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs, 32); break;
+        case TYPE_INT: u_int2str(l->u.i, temp_lhs); break;
+        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs); break;
         default:       temp_lhs[0] = '\0';              break;
         }
         lhs = temp_lhs;
@@ -254,8 +254,8 @@ Z_BINOP(cat) {
 
     if (!is_str(r)) {
         switch (r->type) {
-        case TYPE_INT: u_int2str(r->u.i, temp_rhs, 32); break;
-        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs, 32); break;
+        case TYPE_INT: u_int2str(r->u.i, temp_rhs); break;
+        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
         default:       temp_rhs[0] = '\0';              break;
         }
         rhs = temp_rhs;
@@ -278,8 +278,8 @@ static rf_int match(rf_val *l, rf_val *r) {
 
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: u_int2str(l->u.i, temp_lhs, 32); break;
-        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs, 32); break;
+        case TYPE_INT: u_int2str(l->u.i, temp_lhs); break;
+        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs); break;
         default:       temp_lhs[0] = '\0'; break;
         }
         lhs = temp_lhs;
@@ -293,8 +293,8 @@ static rf_int match(rf_val *l, rf_val *r) {
         int errcode;
         int capture = 0;
         switch (r->type) {
-        case TYPE_INT: u_int2str(r->u.i, temp_rhs, 32); break;
-        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs, 32); break;
+        case TYPE_INT: u_int2str(r->u.i, temp_rhs); break;
+        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
         case TYPE_STR:
             capture = 1;
             temp_re = re_compile(r->u.s->str, 0, &errcode);
@@ -318,7 +318,7 @@ Z_BINOP(idx) {
     char temp[32];
     switch (l->type) {
     case TYPE_INT: {
-        u_int2str(l->u.i, temp, 32);
+        u_int2str(l->u.i, temp);
         if (is_seq(r)) {
             set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {
@@ -334,7 +334,7 @@ Z_BINOP(idx) {
         break;
     }
     case TYPE_FLT: {
-        u_flt2str(l->u.f, temp, 32);
+        u_flt2str(l->u.f, temp);
         if (is_seq(r)) {
             set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {

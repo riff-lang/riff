@@ -632,9 +632,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // String `s`
     if (!is_str(fp)) {
         if (is_int(fp))
-            u_int2str(fp->u.i, temp_s, 32);
+            u_int2str(fp->u.i, temp_s);
         else if (is_flt(fp))
-            u_flt2str(fp->u.f, temp_s, 32);
+            u_flt2str(fp->u.f, temp_s);
         else
             return 0;
         s = temp_s;
@@ -648,9 +648,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
         if (is_num(fp+1)) {
             char temp_p[32];
             if (is_int(fp+1))
-                u_int2str(fp[1].u.i, temp_p, 32);
+                u_int2str(fp[1].u.i, temp_p);
             else if (is_flt(fp+1))
-                u_flt2str(fp[1].u.f, temp_p, 32);
+                u_flt2str(fp[1].u.f, temp_p);
             p = re_compile(temp_p, 0, &errcode);
         } else if (is_str(fp+1)) {
             p = re_compile(fp[1].u.s->str, 0, &errcode);
@@ -665,9 +665,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
     if (argc > 2) {
         if (!is_str(fp+2)) {
             if (is_int(fp+2))
-                u_int2str(fp[2].u.i, temp_r, 32);
+                u_int2str(fp[2].u.i, temp_r);
             else if (is_flt(fp+2))
-                u_flt2str(fp[2].u.f, temp_r, 32);
+                u_flt2str(fp[2].u.f, temp_r);
             else
                 temp_r[0] = '\0';
             r = temp_r;
@@ -836,8 +836,8 @@ RIFF_LIB_FN(split) {
     } else if (!is_re(fp+1)) {
         char temp[32];
         switch (fp[1].type) {
-        case TYPE_INT: u_int2str(fp[1].u.i, temp, 32); break;
-        case TYPE_FLT: u_flt2str(fp[1].u.f, temp, 32); break;
+        case TYPE_INT: u_int2str(fp[1].u.i, temp); break;
+        case TYPE_FLT: u_flt2str(fp[1].u.f, temp); break;
         case TYPE_STR:
             if (!fp[1].u.s->l)
                 goto split_chars;

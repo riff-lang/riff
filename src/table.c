@@ -90,7 +90,7 @@ static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
         return t_insert_int(t, k, &(rf_val){TYPE_NULL}, set, 0);
     } else {
         char temp[21];
-        size_t temp_l = u_int2str(k, temp, sizeof temp);
+        size_t temp_l = u_int2str(k, temp);
         return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
     }
 }
@@ -129,7 +129,7 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
     case TYPE_INT:
         if (k->u.i < 0) {
             char temp[21];
-            size_t temp_l = u_int2str(k->u.i, temp, sizeof temp);
+            size_t temp_l = u_int2str(k->u.i, temp);
             return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
         }
         else
@@ -140,7 +140,7 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
             return t_lookup_int(t, (rf_int) k->u.f, set);
         else {
             char temp[32];
-            size_t temp_l = u_flt2str(k->u.f, temp, sizeof temp);
+            size_t temp_l = u_flt2str(k->u.f, temp);
             return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
         }
     case TYPE_STR: {
@@ -152,7 +152,7 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
     // TODO monitor
     case TYPE_TBL: {
         char temp[21];
-        size_t temp_l = u_int2str((rf_int) k->u.t, temp, sizeof temp);
+        size_t temp_l = u_int2str((rf_int) k->u.t, temp);
         return h_lookup(t->h, &(rf_str){temp_l, 0, temp}, set);
     }
     case TYPE_RFN: // TODO
@@ -193,7 +193,7 @@ rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
             for (rf_int i = oc; i < nc; ++i) {
                 if (exists(t,i)) continue;
                 char temp[21];
-                size_t temp_l = u_int2str(i, temp, sizeof temp);
+                size_t temp_l = u_int2str(i, temp);
                 t->v[i] = h_delete(t->h, &(rf_str){temp_l, 0, temp});
                 if (t->v[i]) t->an++;
             }
@@ -213,7 +213,7 @@ rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
     }
     else {
         char temp[21];
-        size_t temp_l = u_int2str(k, temp, sizeof temp);
+        size_t temp_l = u_int2str(k, temp);
         // TODO
         if (force)
             return h_insert(t->h, &(rf_str){temp_l, 0, temp}, v, set);
@@ -235,7 +235,7 @@ rf_val *t_insert(rf_tbl *t, rf_val *k, rf_val *v, int set) {
             return t_insert_int(t, (rf_int) k->u.f, v, set, 0);
         else {
             char temp[32];
-            size_t temp_l = u_flt2str(k->u.f, temp, sizeof temp);
+            size_t temp_l = u_flt2str(k->u.f, temp);
             return h_insert(t->h, &(rf_str){temp_l, 0, temp}, v, set);
         }
     case TYPE_STR: return h_insert(t->h, k->u.s, v, set);
@@ -243,7 +243,7 @@ rf_val *t_insert(rf_tbl *t, rf_val *k, rf_val *v, int set) {
     // TODO monitor
     case TYPE_TBL: {
         char temp[21];
-        size_t temp_l = u_int2str((rf_int) k->u.t, temp, sizeof temp);
+        size_t temp_l = u_int2str((rf_int) k->u.t, temp);
         return h_insert(t->h, &(rf_str){temp_l, 0, temp}, v, set);
     }
     case TYPE_RFN: // TODO

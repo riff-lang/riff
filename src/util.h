@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define u_int2str(i,b,n) snprintf(b, n, "%"PRId64, i)
-#define u_flt2str(f,b,n) snprintf(b, n, "%g", f)
+#define u_int2str(i,b) snprintf(b, sizeof b, "%"PRId64, i)
+#define u_flt2str(f,b) snprintf(b, sizeof b, "%g", f)
 
 char     *u_file2str(const char *);
 uint32_t  u_strhash(const char *);
