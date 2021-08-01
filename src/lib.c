@@ -93,6 +93,58 @@ RIFF_LIB_FN(tan) {
     return 1;
 }
 
+// I/O
+
+// put(...)
+RIFF_LIB_FN(put) {
+    for (int i = 0; i < argc; ++i) {
+        switch(fp[i].type) {
+        case TYPE_NULL: printf("null");                    break;
+        case TYPE_INT:  printf("%"PRId64, fp[i].u.i);      break;
+        case TYPE_FLT:  printf(FLT_PRINT_FMT, fp[i].u.f);  break;
+        case TYPE_STR:  printf("%s", fp[i].u.s->str);      break;
+        case TYPE_RE:   printf("regex: %p", fp[i].u.r);    break;
+        case TYPE_SEQ:
+            printf("seq: %"PRId64"..%"PRId64":%"PRId64,
+                    fp[i].u.q->from, fp[i].u.q->to, fp[i].u.q->itvl);
+            break;
+        case TYPE_TBL:  printf("table: %p", fp[i].u.t);    break;
+        case TYPE_RFN:  printf("fn: %p", fp[i].u.fn);      break;
+        case TYPE_CFN:  printf("fn: %p", fp[i].u.cfn);     break;
+        }
+    }
+    return 0;
+}
+
+// Common algo for char()/putc()
+static int build_char_str(rf_val *fp, int argc, char *buf) {
+    int n = 0;
+    for (int i = 0; i < argc; ++i) {
+        uint32_t c = (uint32_t) intval(fp+i);
+        if (c <= 0x7f)
+            buf[n++] = (char) c;
+        else {
+            char ubuf[8];
+            int j = 8 - u_unicode2utf8(ubuf, c);
+            for (; j < 8; ++j) {
+                buf[n++] = ubuf[j];
+            }
+        }
+    }
+    return n;
+}
+
+// putc(...)
+RIFF_LIB_FN(putc) {
+    if (!argc)
+        return 0;
+    char buf[STR_BUF_SZ];
+    int n = build_char_str(fp, argc, buf);
+    buf[n] = '\0';
+    fputs(buf, stdout);
+    return 0;
+}
+
 // Pseudo-random number generation
 
 // xoshiro256**
@@ -266,21 +318,10 @@ RIFF_LIB_FN(byte) {
 // Ex:
 //   char(114, 105, 102, 102) -> "riff"
 RIFF_LIB_FN(char) {
-    if (!argc) return 0;
+    if (!argc)
+        return 0;
     char buf[STR_BUF_SZ];
-    int n = 0;
-    for (int i = 0; i < argc; ++i) {
-        uint32_t c = (uint32_t) intval(fp+i);
-        if (c <= 0x7f)
-            buf[n++] = (char) c;
-        else {
-            char ubuf[8];
-            int j = 8 - u_unicode2utf8(ubuf, c);
-            for (; j < 8; ++j) {
-                buf[n++] = ubuf[j];
-            }
-        }
-    }
+    int n = build_char_str(fp, argc, buf);
     set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
@@ -956,6 +997,9 @@ static struct {
     RIFF_LIB_REG(sin,   1),
     RIFF_LIB_REG(sqrt,  1),
     RIFF_LIB_REG(tan,   1),
+    // I/O
+    RIFF_LIB_REG(put,   0),
+    RIFF_LIB_REG(putc,  0),
     // PRNG
     RIFF_LIB_REG(rand,  0),
     RIFF_LIB_REG(srand, 0),
