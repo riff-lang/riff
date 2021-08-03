@@ -95,6 +95,19 @@ RIFF_LIB_FN(tan) {
 
 // I/O
 
+// get()
+// TODO allow single argument as a prompt string; defer to l_put()?
+RIFF_LIB_FN(get) {
+    char buf[STR_BUF_SZ];
+    if (!fgets(buf, sizeof buf, stdin)) {
+        err("[get] error reading from stdin");
+    }
+    // NOTE: strcspn(buf, "\n") instead of strlen(buf)-1 would also be
+    // acceptable 
+    set_str(fp-1, s_newstr(buf, strlen(buf) - 1, 0));
+    return 1;
+}
+
 // put(...)
 RIFF_LIB_FN(put) {
     for (int i = 0; i < argc; ++i) {
@@ -998,6 +1011,7 @@ static struct {
     RIFF_LIB_REG(sqrt,  1),
     RIFF_LIB_REG(tan,   1),
     // I/O
+    RIFF_LIB_REG(get,   0),
     RIFF_LIB_REG(put,   0),
     RIFF_LIB_REG(putc,  0),
     // PRNG
