@@ -24,7 +24,6 @@ char *u_file2str(const char *path) {
                 c = fgetc(file);
                 --s;
             } while (c != EOF && c != '\n');
-            fgetc(file);
         } else {
             rewind(file);
         }
