@@ -100,7 +100,7 @@ RIFF_LIB_FN(tan) {
 RIFF_LIB_FN(get) {
     char buf[STR_BUF_SZ];
     if (!fgets(buf, sizeof buf, stdin)) {
-        err("[get] error reading from stdin");
+        return 0;
     }
     set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
     return 1;
