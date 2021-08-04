@@ -102,9 +102,7 @@ RIFF_LIB_FN(get) {
     if (!fgets(buf, sizeof buf, stdin)) {
         err("[get] error reading from stdin");
     }
-    // NOTE: strcspn(buf, "\n") instead of strlen(buf)-1 would also be
-    // acceptable 
-    set_str(fp-1, s_newstr(buf, strlen(buf) - 1, 0));
+    set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
     return 1;
 }
 
