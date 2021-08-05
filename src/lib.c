@@ -18,7 +18,19 @@ static void err(const char *msg) {
     exit(1);
 }
 
-// Arithmetic functions
+// Basic arithmetic functions
+// Strict arity of 1 where argument is uncondtionally coerced.
+RIFF_LIB_FN(ceil) {
+    set_int(fp-1, (rf_int) ceil(fltval(fp)));
+    return 1;
+}
+
+RIFF_LIB_FN(cos)  { set_flt(fp-1, cos(fltval(fp)));  return 1; }
+RIFF_LIB_FN(exp)  { set_flt(fp-1, exp(fltval(fp)));  return 1; }
+RIFF_LIB_FN(int)  { set_int(fp-1, intval(fp));       return 1; }
+RIFF_LIB_FN(sin)  { set_flt(fp-1, sin(fltval(fp)));  return 1; }
+RIFF_LIB_FN(sqrt) { set_flt(fp-1, sqrt(fltval(fp))); return 1; }
+RIFF_LIB_FN(tan)  { set_flt(fp-1, tan(fltval(fp)));  return 1; }
 
 // abs(x)
 RIFF_LIB_FN(abs) {
@@ -38,30 +50,6 @@ RIFF_LIB_FN(atan) {
     return 1;
 }
 
-// ceil(x)
-RIFF_LIB_FN(ceil) {
-    set_int(fp-1, (rf_int) ceil(fltval(fp)));
-    return 1;
-}
-
-// cos(x)
-RIFF_LIB_FN(cos) {
-    set_flt(fp-1, cos(fltval(fp)));
-    return 1;
-}
-
-// exp(x)
-RIFF_LIB_FN(exp) {
-    set_flt(fp-1, exp(fltval(fp)));
-    return 1;
-}
-
-// int(x)
-RIFF_LIB_FN(int) {
-    set_int(fp-1, intval(fp));
-    return 1;
-}
-
 // log(x[,b])
 RIFF_LIB_FN(log) {
     if (argc == 1)
@@ -74,26 +62,6 @@ RIFF_LIB_FN(log) {
         set_flt(fp-1, log(fltval(fp)) / log(fltval(fp+1)));
     return 1;
 }
-
-// sin(x)
-RIFF_LIB_FN(sin) {
-    set_flt(fp-1, sin(fltval(fp)));
-    return 1;
-}
-
-// sqrt(x)
-RIFF_LIB_FN(sqrt) {
-    set_flt(fp-1, sqrt(fltval(fp)));
-    return 1;
-}
-
-// tan(x)
-RIFF_LIB_FN(tan) {
-    set_flt(fp-1, tan(fltval(fp)));
-    return 1;
-}
-
-// I/O
 
 // put(...)
 RIFF_LIB_FN(put) {
@@ -128,7 +96,6 @@ RIFF_LIB_FN(get) {
     return 1;
 }
 
-// Common algo for char()/putc()
 static int build_char_str(rf_val *fp, int argc, char *buf) {
     int n = 0;
     for (int i = 0; i < argc; ++i) {
@@ -146,7 +113,20 @@ static int build_char_str(rf_val *fp, int argc, char *buf) {
     return n;
 }
 
-// putc(...)
+// char/putc(...)
+// Takes zero or more integers and returns/prints a string composed of
+// the character codes of each respective argument in order
+// Ex:
+//   char(114, 105, 102, 102) -> "riff"
+RIFF_LIB_FN(char) {
+    if (!argc)
+        return 0;
+    char buf[STR_BUF_SZ];
+    int n = build_char_str(fp, argc, buf);
+    set_str(fp-1, s_newstr(buf, n, 0));
+    return 1;
+}
+
 RIFF_LIB_FN(putc) {
     if (!argc)
         return 0;
@@ -156,8 +136,6 @@ RIFF_LIB_FN(putc) {
     fputs(buf, stdout);
     return 0;
 }
-
-// Pseudo-random number generation
 
 // xoshiro256**
 // Source: https://prng.di.unimi.it
@@ -299,8 +277,6 @@ RIFF_LIB_FN(srand) {
     return 0;
 }
 
-// String functions
-
 // byte(s[,i])
 // Takes one string and an optional index argument `i` and returns the
 // numeric ASCII code associated with that character. The default
@@ -321,20 +297,6 @@ RIFF_LIB_FN(byte) {
     } else {
         return 0;
     }
-    return 1;
-}
-
-// char(...)
-// Takes zero or more integers and returns a string composed of the
-// character codes of each respective argument in order
-// Ex:
-//   char(114, 105, 102, 102) -> "riff"
-RIFF_LIB_FN(char) {
-    if (!argc)
-        return 0;
-    char buf[STR_BUF_SZ];
-    int n = build_char_str(fp, argc, buf);
-    set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
 
@@ -400,7 +362,7 @@ RIFF_LIB_FN(char) {
     }
 
 // %b
-static int fmt_bin_itoa(char *buf, rf_int num, unsigned int flags, int width, int prec) {
+static int fmt_bin_itoa(char *buf, rf_int num, uint32_t flags, int width, int prec) {
 
     if (!num && !prec)
         return 0;
@@ -483,7 +445,7 @@ RIFF_LIB_FN(fmt) {
         }
 
         // Flags and specifiers
-        unsigned int flags = 0;
+        uint32_t flags = 0;
         int width = -1;
 
         // Both clang and gcc seem to allow -1 to be used as a
@@ -777,12 +739,11 @@ static int xsub(rf_val *fp, int argc, int flags) {
     return 1;
 }
 
-// gsub(s,p[,r])
-// Returns a copy of string `s` where all occurrences of pattern `p`
-// are replaced by string `r`
-RIFF_LIB_FN(gsub) {
-    return xsub(fp, argc, PCRE2_SUBSTITUTE_GLOBAL);
-}
+// [g]sub(s,p[,r])
+// Returns a copy of string `s` where all occurrences (gsub) or the
+// first occurrence (sub) of pattern `p` are replaced by string `r`
+RIFF_LIB_FN(gsub) { return xsub(fp, argc, PCRE2_SUBSTITUTE_GLOBAL); }
+RIFF_LIB_FN(sub)  { return xsub(fp, argc, 0);                       }
 
 // hex(x)
 // Returns a string of `x` as an integer in hexadecimal (lowercase)
@@ -798,6 +759,8 @@ RIFF_LIB_FN(hex) {
 }
 
 static int allxcase(rf_val *fp, int c) {
+    if (!is_str(fp))
+        return 0;
     size_t len = fp->u.s->l;
     char str[len + 1];
     for (int i = 0; i < len; ++i) {
@@ -809,12 +772,9 @@ static int allxcase(rf_val *fp, int c) {
     return 1;
 }
 
-// lower(s)
-RIFF_LIB_FN(lower) {
-    if (!is_str(fp))
-        return 0;
-    return allxcase(fp, 0);
-}
+// lower/upper(s)
+RIFF_LIB_FN(lower) { return allxcase(fp, 0); }
+RIFF_LIB_FN(upper) { return allxcase(fp, 1); }
 
 // num(s[,b])
 // Takes a string `s` and an optional base `b` and returns the
@@ -958,13 +918,6 @@ split_chars: {
     }
 }
 
-// sub(s,p[,r])
-// Returns a copy of string `s` where only the first occurrence of
-// pattern `p` is replaced by string `r`
-RIFF_LIB_FN(sub) {
-    return xsub(fp, argc, 0);
-}
-
 // type(x)
 RIFF_LIB_FN(type) {
     if (!argc)
@@ -985,13 +938,6 @@ RIFF_LIB_FN(type) {
     }
     set_str(fp-1, s_newstr(str, len, 0));
     return 1;
-}
-
-// upper(s)
-RIFF_LIB_FN(upper) {
-    if (!is_str(fp))
-        return 0;
-    return allxcase(fp, 1);
 }
 
 static struct {
