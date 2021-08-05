@@ -80,11 +80,11 @@ typedef struct rf_fn  rf_fn;
 typedef struct c_fn   c_fn;
 
 typedef struct {
-    // Type tag is aligned to the 64-bit boundary to accommodate an
-    // implicit type tag in the VM stack element. This is necessary
+    // Type tag is aligned to the word-sized boundary to accommodate
+    // an implicit type tag in the VM stack element. This is necessary
     // for distinguishing values from addresses on the VM stack for
     // instructions which operate on both. E.g. array subscripting.
-    uint64_t type;
+    uintptr_t type;
     union {
         rf_flt  f;
         rf_int  i;

@@ -438,7 +438,7 @@ static inline void new_iter(rf_val *set) {
         if (iter->on <= 0)
             iter->n = UINT64_MAX; // TODO "Infinite" loop
         else
-            iter->n = (uint64_t) ceil(fabs(iter->on / (double) iter->set.itvl));
+            iter->n = (rf_uint) ceil(fabs(iter->on / (double) iter->set.itvl));
         iter->st = set->u.q->from;
         break;
     case TYPE_TBL:
