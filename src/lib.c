@@ -95,17 +95,6 @@ RIFF_LIB_FN(tan) {
 
 // I/O
 
-// get()
-// TODO allow single argument as a prompt string; defer to l_put()?
-RIFF_LIB_FN(get) {
-    char buf[STR_BUF_SZ];
-    if (!fgets(buf, sizeof buf, stdin)) {
-        return 0;
-    }
-    set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
-    return 1;
-}
-
 // put(...)
 RIFF_LIB_FN(put) {
     for (int i = 0; i < argc; ++i) {
@@ -125,6 +114,18 @@ RIFF_LIB_FN(put) {
         }
     }
     return 0;
+}
+
+// get(...)
+RIFF_LIB_FN(get) {
+    // Print arguments as specified by put()
+    l_put(fp, argc);
+    char buf[STR_BUF_SZ];
+    if (!fgets(buf, sizeof buf, stdin)) {
+        return 0;
+    }
+    set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
+    return 1;
 }
 
 // Common algo for char()/putc()
