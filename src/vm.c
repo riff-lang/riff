@@ -886,7 +886,8 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 while (nargs++ <= ar2)
                     set_null(&sp++->v);
             }
-            ip = ep;
+            ip = ep = fn->code->code;
+            k  = fn->code->k;
             z_break;
         }
 
