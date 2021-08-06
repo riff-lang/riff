@@ -483,7 +483,7 @@ static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) 
     }
 }
 
-static int exec(rf_code *c, rf_stack *sp, rf_stack *fp);
+static int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
 
 // VM entry point/initialization
 int z_exec(rf_env *e) {
@@ -507,7 +507,7 @@ int z_exec(rf_env *e) {
         h_insert(&globals, e->fn[i]->name, fn, 1);
     }
 
-    return exec(e->main.code, stack, stack);
+    return exec(e->main.code->code, e->main.code->k, stack, stack);
 }
 
 #ifndef COMPUTED_GOTO
@@ -517,12 +517,12 @@ int z_exec(rf_env *e) {
 #endif
 
 // VM interpreter loop
-static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
+static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     if (sp - stack >= VM_STACK_SIZE)
         err("stack overflow");
     rf_stack *retp = sp; // Save original SP
-    rf_val *tp; // Temp pointer
-    register uint8_t *ip = c->code;
+    rf_val   *tp;        // Temp pointer
+    register uint8_t *ip = ep;
 
 #ifndef COMPUTED_GOTO
 // Use standard while loop with switch/case if computed goto is
@@ -782,7 +782,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 // Push constant
 // Copy constant x from code object's constant table to the top of the
 // stack.
-#define pushk(x) sp++->v = c->k[(x)];
+#define pushk(x) sp++->v = k[(x)];
 
     z_case(PUSHK)  pushk(ip[1]); ip += 2; z_break;
     z_case(PUSHK0) pushk(0);     ++ip;    z_break;
@@ -795,7 +795,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 // h_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-#define gbla(x) sp++->a = h_lookup(&globals, c->k[(x)].u.s, 1);
+#define gbla(x) sp++->a = h_lookup(&globals, k[(x)].u.s, 1);
 
     z_case(GBLA)  gbla(ip[1]); ip += 2; z_break;
     z_case(GBLA0) gbla(0);     ++ip;    z_break;
@@ -808,7 +808,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
-#define gblv(x) sp++->v = *h_lookup(&globals, c->k[(x)].u.s, 0);
+#define gblv(x) sp++->v = *h_lookup(&globals, k[(x)].u.s, 0);
 
     z_case(GBLV)  gblv(ip[1]); ip += 2; z_break;
     z_case(GBLV0) gblv(0);     ++ip;    z_break;
@@ -832,7 +832,6 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     z_case(LCLV0) lclv(0);    ++ip;    z_break;
     z_case(LCLV1) lclv(1);    ++ip;    z_break;
     z_case(LCLV2) lclv(2);    ++ip;    z_break;
-
 
     // Tailcalls
     // Recycle current call frame
@@ -862,8 +861,8 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // In the case of direct recursion and no call frame
             // adjustments needed, quickly reset IP and dispatch
             // control
-            if (c == fn->code && ar1 == ar2) {
-                ip = c->code;
+            if (ep == fn->code->code && ar1 == ar2) {
+                ip = ep;
                 z_break;
             }
 
@@ -887,8 +886,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
                 while (nargs++ <= ar2)
                     set_null(&sp++->v);
             }
-            c  = fn->code;
-            ip = c->code;
+            ip = ep;
             z_break;
         }
 
@@ -935,7 +933,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
             // itself without any other work required from the VM
             // here. This is completely necessary for local named
             // functions, but globals benefit as well.
-            nret = exec(fn->code, sp, sp - arity - 1);
+            nret = exec(fn->code->code, fn->code->k, sp, sp - arity - 1);
             sp -= arity;
 
             // Copy the function's return value to the stack top -
@@ -1004,7 +1002,7 @@ static int exec(rf_code *c, rf_stack *sp, rf_stack *fp) {
     z_case(TBL0) new_tbl(0);    ++ip;    z_break;
     z_case(TBL)  new_tbl(ip[1]) ip += 2; z_break;
     z_case(TBLK)
-        new_tbl(c->k[ip[1]].u.i);
+        new_tbl(k[ip[1]].u.i);
         ip += 2;
         z_break;
 
