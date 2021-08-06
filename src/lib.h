@@ -4,12 +4,6 @@
 #include "hash.h"
 #include "types.h"
 
-// Type signature for library functions
-#define RIFF_LIB_FN(name) static int l_##name(rf_val *fp, int argc)
-
-// Registry info for a given library function
-#define RIFF_LIB_REG(name, arity) { #name , { (arity), l_##name } }
-
 // Each library function takes a frame pointer and an argument count,
 // which allows the functions to be variadic.
 //

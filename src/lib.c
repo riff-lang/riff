@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "conf.h"
+#include "fmt.h"
 #include "fn.h"
 #include "lib.h"
 #include "mem.h"
@@ -18,22 +19,21 @@ static void err(const char *msg) {
     exit(1);
 }
 
+// Common type signature for library functions
+#define LIB_FN(name) static int l_##name(rf_val *fp, int argc)
+
 // Basic arithmetic functions
 // Strict arity of 1 where argument is uncondtionally coerced.
-RIFF_LIB_FN(ceil) {
-    set_int(fp-1, (rf_int) ceil(fltval(fp)));
-    return 1;
-}
-
-RIFF_LIB_FN(cos)  { set_flt(fp-1, cos(fltval(fp)));  return 1; }
-RIFF_LIB_FN(exp)  { set_flt(fp-1, exp(fltval(fp)));  return 1; }
-RIFF_LIB_FN(int)  { set_int(fp-1, intval(fp));       return 1; }
-RIFF_LIB_FN(sin)  { set_flt(fp-1, sin(fltval(fp)));  return 1; }
-RIFF_LIB_FN(sqrt) { set_flt(fp-1, sqrt(fltval(fp))); return 1; }
-RIFF_LIB_FN(tan)  { set_flt(fp-1, tan(fltval(fp)));  return 1; }
+LIB_FN(ceil) { set_int(fp-1, (rf_int) ceil(fltval(fp))); return 1; }
+LIB_FN(cos)  { set_flt(fp-1, cos(fltval(fp)));           return 1; }
+LIB_FN(exp)  { set_flt(fp-1, exp(fltval(fp)));           return 1; }
+LIB_FN(int)  { set_int(fp-1, intval(fp));                return 1; }
+LIB_FN(sin)  { set_flt(fp-1, sin(fltval(fp)));           return 1; }
+LIB_FN(sqrt) { set_flt(fp-1, sqrt(fltval(fp)));          return 1; }
+LIB_FN(tan)  { set_flt(fp-1, tan(fltval(fp)));           return 1; }
 
 // abs(x)
-RIFF_LIB_FN(abs) {
+LIB_FN(abs) {
     if (is_int(fp))
         set_int(fp-1, llabs(fp->u.i));
     else
@@ -42,7 +42,7 @@ RIFF_LIB_FN(abs) {
 }
 
 // atan(y[,x])
-RIFF_LIB_FN(atan) {
+LIB_FN(atan) {
     if (argc == 1)
         set_flt(fp-1, atan(fltval(fp)));
     else if (argc > 1)
@@ -51,7 +51,7 @@ RIFF_LIB_FN(atan) {
 }
 
 // log(x[,b])
-RIFF_LIB_FN(log) {
+LIB_FN(log) {
     if (argc == 1)
         set_flt(fp-1, log(fltval(fp)));
     else if (fltval(fp+1) == 2.0)
@@ -64,7 +64,7 @@ RIFF_LIB_FN(log) {
 }
 
 // put(...)
-RIFF_LIB_FN(put) {
+LIB_FN(put) {
     for (int i = 0; i < argc; ++i) {
         switch(fp[i].type) {
         case TYPE_NULL: printf("null");                    break;
@@ -85,7 +85,7 @@ RIFF_LIB_FN(put) {
 }
 
 // get(...)
-RIFF_LIB_FN(get) {
+LIB_FN(get) {
     // Print arguments as specified by put()
     l_put(fp, argc);
     char buf[STR_BUF_SZ];
@@ -118,7 +118,7 @@ static int build_char_str(rf_val *fp, int argc, char *buf) {
 // the character codes of each respective argument in order
 // Ex:
 //   char(114, 105, 102, 102) -> "riff"
-RIFF_LIB_FN(char) {
+LIB_FN(char) {
     if (!argc)
         return 0;
     char buf[STR_BUF_SZ];
@@ -127,7 +127,7 @@ RIFF_LIB_FN(char) {
     return 1;
 }
 
-RIFF_LIB_FN(putc) {
+LIB_FN(putc) {
     if (!argc)
         return 0;
     char buf[STR_BUF_SZ];
@@ -166,7 +166,7 @@ static rf_uint prng_next(void) {
 //   rand(n)    | random int ∈ [0..n]
 //   rand(m,n)  | random int ∈ [m..n]
 //   rand(seq)  | random int ∈ (range/sequence)
-RIFF_LIB_FN(rand) {
+LIB_FN(rand) {
     rf_uint rand = prng_next();
     if (!argc) {
         rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((rf_uint)1 << 52)));
@@ -266,7 +266,7 @@ static void prng_seed(rf_uint seed) {
 // Initializes the PRNG with seed `x` or time(0) if no argument given.
 // rand() will produce the same sequence when srand is initialized
 // with a given seed every time.
-RIFF_LIB_FN(srand) {
+LIB_FN(srand) {
     if (!argc)
         prng_seed(time(0));
     else if (is_null(fp))
@@ -284,7 +284,7 @@ RIFF_LIB_FN(srand) {
 // If a user-defined function is passed, the byte at index `i` in the
 // function's bytecode array is returned. This is the same as
 // subscripting the function, i.e. byte(f,0) == f[0] for function f.
-RIFF_LIB_FN(byte) {
+LIB_FN(byte) {
     int idx = argc > 1 ? intval(fp+1) : 0;
     if (is_str(fp)) {
         if (idx > fp->u.s->l)
@@ -300,338 +300,13 @@ RIFF_LIB_FN(byte) {
     return 1;
 }
 
-#define FMT_ZERO  1
-#define FMT_SIGN  2
-#define FMT_SPACE 4
-#define FMT_LEFT  8
-
-// %c
-#define fmt_char(b, n, c) \
-    if (flags & FMT_LEFT) { \
-        n += sprintf(b + n, "%-*c", width, c); \
-    } else { \
-        n += sprintf(b + n, "%*c", width, c); \
-    }
-
-// %s
-#define fmt_str(b, n, s) \
-    if (flags & FMT_LEFT) { \
-        n += sprintf(b + n, "%-*.*s", width, prec, s); \
-    } else { \
-        n += sprintf(b + n, "%*.*s", width, prec, s); \
-    }
-
-// Signed fmt conversions: floats, decimal integers
-// NOTE: gcc complains about `0` flag with precision
-#define fmt_signed(b, n, i, fmt) \
-    if (flags & FMT_LEFT) { \
-        if (flags & FMT_SIGN) { \
-            n += sprintf(b + n, "%-+*.*"fmt, width, prec, i); \
-        } else if (flags & FMT_SPACE) { \
-            n += sprintf(b + n, "%- *.*"fmt, width, prec, i); \
-        } else { \
-            n += sprintf(b + n, "%-*.*"fmt, width, prec, i); \
-        } \
-    } else if ((prec < 0) && (flags & FMT_ZERO)) { \
-        if (flags & FMT_SIGN) { \
-            n += sprintf(b + n, "%+0*"fmt, width, i); \
-        } else if (flags & FMT_SPACE) { \
-            n += sprintf(b + n, "% 0*"fmt, width, i); \
-        } else { \
-            n += sprintf(b + n, "%0*"fmt, width, i); \
-        } \
-    } else if (flags & FMT_SIGN) { \
-        n += sprintf(b + n, "%+*.*"fmt, width, prec, i); \
-    } else if (flags & FMT_SPACE) { \
-        n += sprintf(b + n, "% *.*"fmt, width, prec, i); \
-    } else { \
-        n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
-    }
-
-// Unsigned fmt conversions: hex and octal integers
-// Only difference is absence of space flag, since numbers are
-// converted to unsigned anyway. clang also throws a warning
-// about UB for octal/hex conversions with the space flag.
-#define fmt_unsigned(b, n, i, fmt) \
-    if (flags & FMT_LEFT) { \
-        n += sprintf(b + n, "%-*.*"fmt, width, prec, i); \
-    } else if ((prec < 0) && (flags & FMT_ZERO)) { \
-        n += sprintf(b + n, "%0*"fmt, width, i); \
-    } else { \
-        n += sprintf(b + n, "%*.*"fmt, width, prec, i); \
-    }
-
-// %b
-static int fmt_bin_itoa(char *buf, rf_int num, uint32_t flags, int width, int prec) {
-
-    if (!num && !prec)
-        return 0;
-
-    int  size = width > 64 ? width : 64;
-    char temp[size];
-    int  len = 0;
-    do {
-        temp[size-(++len)] = '0' + (num & 1);
-        num >>= 1;
-    } while (num && len < size);
-
-    while (len < prec) {
-        temp[size-(++len)] = '0';
-    }
-
-    if (!(flags & FMT_LEFT)) {
-        char padc = flags & FMT_ZERO ? '0' : ' ';
-        while (len < width) {
-            temp[size-(++len)] = padc;
-        }
-        memcpy(buf, temp + (size-len), len);
-    } else {
-        memcpy(buf, temp + (size-len), len);
-        if (len < width) {
-            memset(buf + len, ' ', width - len);
-            len = width;
-        }
-    }
-    return len;
-}
-
 // fmt(...)
-// Riff's `sprintf()` implementation. Doubles as `printf()` due to the
-// implicit printing functionality of the language.
-//
-// Optional modifiers (zero or more):
-//   +              | Prepend with sign
-//   -              | Left-justified
-//   <space>        | Space-padded (ignored if left-justified)
-//   0              | Zero-padded (ignored if left-justified)
-//   <integer> / *  | Field width
-//   .              | Precision specifier
-//
-// Format specifiers:
-//   %              | Literal `%`
-//   a / A          | Hex float (exp notation; lowercase/uppercase)
-//   b              | Binary integer
-//   c              | Single character
-//   d / i          | Decimal integer
-//   e / E          | Decimal float (exp notation)
-//   f / F          | Decimal float
-//   g              | `e` or `f` conversion (whichever is shorter)
-//   G              | `E` or `F` conversion (whichever is shorter)
-//   o              | Octal integer
-//   s              | String
-//   x / X          | Hex integer (lowercase/uppercase)
-RIFF_LIB_FN(fmt) {
+LIB_FN(fmt) {
     if (!is_str(fp))
         return 0;
     --argc;
-    int arg = 1;
-
-    const char *fstr = fp->u.s->str;
-
     char buf[STR_BUF_SZ];
-    int  n = 0;
-
-    while (*fstr && argc && n <= STR_BUF_SZ) {
-        if (*fstr != '%') {
-            buf[n++] = *fstr++;
-            continue;
-        }
-
-        // Advance pointer and check for literal '%'
-        if (*++fstr == '%') {
-            buf[n++] = '%';
-            ++fstr;
-            continue;
-        }
-
-        // Flags and specifiers
-        uint32_t flags = 0;
-        int width = -1;
-
-        // Both clang and gcc seem to allow -1 to be used as a
-        // precision modifier without throwing warnings, so this is a
-        // useful default
-        int prec = -1;
-
-capture_flags:
-        switch (*fstr) {
-        case '0': flags |= FMT_ZERO;  ++fstr; goto capture_flags;
-        case '+': flags |= FMT_SIGN;  ++fstr; goto capture_flags;
-        case ' ': flags |= FMT_SPACE; ++fstr; goto capture_flags;
-        case '-': flags |= FMT_LEFT;  ++fstr; goto capture_flags;
-        default:  break;
-        }
-
-        // Evaluate field width
-        if (isdigit(*fstr)) {
-            char *end;
-            width = (int) strtol(fstr, &end, 10);
-            fstr = end;
-        } else if (*fstr == '*') {
-            ++fstr;
-            if (argc--) {
-                width = (int) intval(fp+arg);
-                ++arg;
-            }
-        }
-
-        // Evaluate precision modifier
-        if (*fstr == '.') {
-            ++fstr;
-            if (isdigit(*fstr)) {
-                char *end;
-                prec = (int) strtol(fstr, &end, 10);
-                fstr = end;
-            } else if (*fstr == '*') {
-                ++fstr;
-                if (argc--) {
-                    prec = (int) intval(fp+arg);
-                    ++arg;
-                }
-            } else {
-                prec = 0;
-            }
-        }
-
-        rf_int i;
-        rf_flt f;
-
-        // Evaluate format specifier
-        switch (*fstr++) {
-        case 'c': {
-            if (argc--) {
-                int c = (int) intval(fp+arg);
-                fmt_char(buf, n, c);
-                ++arg;
-            }
-            break;
-        }
-        case 'd': case 'i': {
-            if (argc--) {
-redir_int:
-                i = intval(fp+arg);
-                fmt_signed(buf, n, i, PRId64);
-                ++arg;
-            }
-            break;
-        }
-        case 'o':
-            if (argc--) {
-                i = intval(fp+arg);
-                fmt_unsigned(buf, n, i, PRIo64);
-                ++arg;
-            }
-            break;
-        case 'x':
-            if (argc--) {
-                i = intval(fp+arg);
-                fmt_unsigned(buf, n, i, PRIx64);
-                ++arg;
-            }
-            break;
-        case 'X':
-            if (argc--) {
-                i = intval(fp+arg);
-                fmt_unsigned(buf, n, i, PRIX64);
-                ++arg;
-            }
-            break;
-        case 'b':
-            if (argc--) {
-                n += fmt_bin_itoa(buf + n, intval(fp+arg), flags, width, prec);
-                ++arg;
-            }
-            break;
-        case 'a':
-            if (argc--) {
-                f = fltval(fp+arg);
-                // Default precision left as -1 for `a`
-                fmt_signed(buf, n, f, "a");
-                ++arg;
-            }
-            break;
-        case 'A':
-            if (argc--) {
-                f = fltval(fp+arg);
-                // Default precision left as -1 for `A`
-                fmt_signed(buf, n, f, "A");
-                ++arg;
-            }
-            break;
-        case 'e':
-            if (argc--) {
-                f = fltval(fp+arg);
-                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, f, "e");
-                ++arg;
-            }
-            break;
-        case 'E':
-            if (argc--) {
-                f = fltval(fp+arg);
-                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, f, "E");
-                ++arg;
-            }
-            break;
-        case 'f': case 'F':
-            if (argc--) {
-                f = fltval(fp+arg);
-                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, f, "f");
-                ++arg;
-            }
-            break;
-        case 'g':
-            if (argc--) {
-redir_flt:
-                f = fltval(fp+arg);
-                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, f, "g");
-                ++arg;
-            }
-            break;
-        case 'G':
-            if (argc--) {
-                f = fltval(fp+arg);
-                prec = prec < 0 ? DEFAULT_FLT_PREC : prec;
-                fmt_signed(buf, n, f, "G");
-                ++arg;
-            }
-            break;
-
-        // %s should accept any type; redirect as needed
-        case 's':
-            if (argc--) {
-                if (is_str(fp+arg)) {
-                    fmt_str(buf, n, fp[arg].u.s->str);
-                } else if (is_int(fp+arg)) {
-                    goto redir_int;
-                } else if (is_flt(fp+arg)) {
-                    goto redir_flt;
-                }
-
-                // TODO handle other types
-                else {
-                    fmt_str(buf, n, "");
-                }
-                ++arg;
-            }
-            break;
-        default:
-            // Throw error
-            err("[fmt] invalid format specifier");
-        }
-
-        if (n >= STR_BUF_SZ)
-            err("[fmt] string length exceeds maximum buffer size");
-    }
-
-    // Copy rest of string after exhausting user-provided args
-    while (*fstr && n <= STR_BUF_SZ) {
-        buf[n++] = *fstr++;
-    }
-
+    int n = fmt_snprintf(buf, sizeof buf, fp->u.s->str, fp + 1, argc);
     set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
@@ -742,15 +417,15 @@ static int xsub(rf_val *fp, int argc, int flags) {
 // [g]sub(s,p[,r])
 // Returns a copy of string `s` where all occurrences (gsub) or the
 // first occurrence (sub) of pattern `p` are replaced by string `r`
-RIFF_LIB_FN(gsub) { return xsub(fp, argc, PCRE2_SUBSTITUTE_GLOBAL); }
-RIFF_LIB_FN(sub)  { return xsub(fp, argc, 0);                       }
+LIB_FN(gsub) { return xsub(fp, argc, PCRE2_SUBSTITUTE_GLOBAL); }
+LIB_FN(sub)  { return xsub(fp, argc, 0);                       }
 
 // hex(x)
 // Returns a string of `x` as an integer in hexadecimal (lowercase)
 // with the leading "0x"
 // Ex:
 //   hex(255) -> "0xff"
-RIFF_LIB_FN(hex) {
+LIB_FN(hex) {
     rf_int i = intval(fp);
     char buf[20];
     int len = sprintf(buf, "0x%"PRIx64, i);
@@ -773,15 +448,15 @@ static int allxcase(rf_val *fp, int c) {
 }
 
 // lower/upper(s)
-RIFF_LIB_FN(lower) { return allxcase(fp, 0); }
-RIFF_LIB_FN(upper) { return allxcase(fp, 1); }
+LIB_FN(lower) { return allxcase(fp, 0); }
+LIB_FN(upper) { return allxcase(fp, 1); }
 
 // num(s[,b])
 // Takes a string `s` and an optional base `b` and returns the
 // interpreted num. The base can be 0 or an integer in the range
 // {2..36}. The default base is 0. This function is more or less a
 // direct interface to `strtoll()`.
-RIFF_LIB_FN(num) {
+LIB_FN(num) {
     if (!is_str(fp)) {
         if (is_int(fp)) {
             set_int(fp-1, fp->u.i);
@@ -822,7 +497,7 @@ ret_flt:
 // the regular expression /\s+/ (whitespace) is used. If the delimiter
 // is the empty string (""), the string is split into a table of
 // single-byte strings.
-RIFF_LIB_FN(split) {
+LIB_FN(split) {
     char *str;
     size_t len;
     char temp_s[20];
@@ -919,7 +594,7 @@ split_chars: {
 }
 
 // type(x)
-RIFF_LIB_FN(type) {
+LIB_FN(type) {
     if (!argc)
         return 0;
     char *str;
@@ -940,40 +615,43 @@ RIFF_LIB_FN(type) {
     return 1;
 }
 
+// Registry info for a given library function
+#define LIB_REG(name, arity) { #name , { (arity), l_##name } }
+
 static struct {
     const char *name;
     c_fn        fn;
 } lib_fn[] = {
     // Arithmetic
-    RIFF_LIB_REG(abs,   1),
-    RIFF_LIB_REG(atan,  1),
-    RIFF_LIB_REG(ceil,  1),
-    RIFF_LIB_REG(cos,   1),
-    RIFF_LIB_REG(exp,   1),
-    RIFF_LIB_REG(int,   1),
-    RIFF_LIB_REG(log,   1),
-    RIFF_LIB_REG(sin,   1),
-    RIFF_LIB_REG(sqrt,  1),
-    RIFF_LIB_REG(tan,   1),
+    LIB_REG(abs,   1),
+    LIB_REG(atan,  1),
+    LIB_REG(ceil,  1),
+    LIB_REG(cos,   1),
+    LIB_REG(exp,   1),
+    LIB_REG(int,   1),
+    LIB_REG(log,   1),
+    LIB_REG(sin,   1),
+    LIB_REG(sqrt,  1),
+    LIB_REG(tan,   1),
     // I/O
-    RIFF_LIB_REG(get,   0),
-    RIFF_LIB_REG(put,   0),
-    RIFF_LIB_REG(putc,  0),
+    LIB_REG(get,   0),
+    LIB_REG(put,   0),
+    LIB_REG(putc,  0),
     // PRNG
-    RIFF_LIB_REG(rand,  0),
-    RIFF_LIB_REG(srand, 0),
+    LIB_REG(rand,  0),
+    LIB_REG(srand, 0),
     // Strings
-    RIFF_LIB_REG(byte,  1),
-    RIFF_LIB_REG(char,  0),
-    RIFF_LIB_REG(fmt,   1),
-    RIFF_LIB_REG(gsub,  2),
-    RIFF_LIB_REG(hex,   1),
-    RIFF_LIB_REG(lower, 1),
-    RIFF_LIB_REG(num,   1),
-    RIFF_LIB_REG(split, 1),
-    RIFF_LIB_REG(sub,   2),
-    RIFF_LIB_REG(type,  1),
-    RIFF_LIB_REG(upper, 1),
+    LIB_REG(byte,  1),
+    LIB_REG(char,  0),
+    LIB_REG(fmt,   1),
+    LIB_REG(gsub,  2),
+    LIB_REG(hex,   1),
+    LIB_REG(lower, 1),
+    LIB_REG(num,   1),
+    LIB_REG(split, 1),
+    LIB_REG(sub,   2),
+    LIB_REG(type,  1),
+    LIB_REG(upper, 1),
     { NULL, { 0, NULL } }
 };
 
