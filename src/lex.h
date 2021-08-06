@@ -9,13 +9,13 @@
 // Lexical Analyzer
 
 typedef struct {
-    int kind;
     union {
         rf_flt  f;
         rf_int  i;
         rf_str *s;
         rf_re  *r;
     } lexeme;
+    int kind;
 } rf_token;
 
 enum tokens {
@@ -79,16 +79,16 @@ enum tokens {
 };
 
 typedef struct {
+    rf_token    tk;     // Current token
+    rf_token    la;     // Lookahead token
     int         mode;
-    int         ln; // Current line of the source
-    rf_token    tk; // Current token
-    rf_token    la; // Lookahead token
-    const char *p;  // Pointer to the current position in the source
+    int         ln;     // Current line of the source
+    const char *p;      // Pointer to the current position in the source
     struct {
         int   n;
         int   cap;
         char *c;
-    } buf;          // String buffer
+    } buf;              // String buffer
 } rf_lexer;
 
 int  x_init(rf_lexer *, const char *);

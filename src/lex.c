@@ -614,11 +614,11 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
 }
 
 int x_init(rf_lexer *x, const char *src) {
+    x->tk.kind = 0;
+    x->la.kind = 0;
     x->mode    = 0;
     x->ln      = 1;
     x->p       = src;
-    x->tk.kind = 0;
-    x->la.kind = 0;
     x->buf.n   = 0;
     x->buf.cap = 0;
     x->buf.c   = NULL;

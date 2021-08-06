@@ -5,9 +5,9 @@
 #include "types.h"
 
 struct rf_fn {
+    rf_code *code;
     rf_str  *name;
     uint8_t  arity;
-    rf_code *code;
 };
 
 void f_init(rf_fn *, rf_str *);

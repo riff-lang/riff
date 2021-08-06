@@ -9,11 +9,11 @@ typedef struct {
 } ht_node;
 
 typedef struct {
-    uint32_t n;
-    uint32_t an;
-    uint32_t cap;
-    int lx: 1;
-    ht_node **nodes;
+    ht_node  **nodes;
+    uint32_t   n;
+    uint32_t   an;
+    uint32_t   cap;
+    int        lx: 1;
 } rf_htbl;
 
 void      h_init(rf_htbl *);

@@ -129,12 +129,17 @@ enum jumps {
 };
 
 typedef struct {
+    uint8_t *code;  // Bytecode array
+    rf_val  *k;     // Constants pool
+
+    // TODO array sizes/capacities can be discarded after
+    // compilation. If a global constants pool is used at some point
+    // in the future, the rf_code array in the rf_env struct can be
+    // flattened to an array of bytecode chunks.
     int      n;     // Number of bytes in bytecode array
     int      cap;   // Bytecode array capacity
-    uint8_t *code;  // Bytecode array
     int      nk;    // Number of constants in pool
     int      kcap;  // Constants pool capacity
-    rf_val  *k;     // Constants pool
 } rf_code;
 
 void c_init(rf_code *);

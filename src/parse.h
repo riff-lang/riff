@@ -20,10 +20,9 @@ typedef struct {
 } p_list;
 
 typedef struct {
-    rf_env *e;      // Global environment struct
-
     rf_lexer *x;    // Parser controls lexical analysis
     rf_code  *c;    // Current code object
+    rf_env   *e;    // Global environment struct
 
     int    nlcl;    // Number of locals in scope
     int    lcap;

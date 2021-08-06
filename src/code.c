@@ -11,12 +11,12 @@ static void err(rf_code *c, const char *msg) {
 }
 
 void c_init(rf_code *c) {
+    c->code = NULL;
+    c->k    = NULL;
     c->n    = 0;
     c->cap  = 0;
-    c->code = NULL;
     c->nk   = 0;
     c->kcap = 0;
-    c->k    = NULL;
 }
 
 void c_push(rf_code *c, uint8_t b) {

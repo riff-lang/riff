@@ -5,16 +5,14 @@
 #include "types.h"
 
 struct rf_tbl {
-    int n;          // Number of elements (excluding null values)
-    int an;         // Number of elements (including null values)
-    int cap;
-
-    int nullx: 1;   // null flag ("null" index set?)
-    int lx:    1;   // Re-calculate length?
-
-    rf_val  *nullv; // Special slot for the "null" index in an array
-    rf_val **v;
-    rf_htbl *h;
+    rf_val   **v;
+    rf_htbl   *h;
+    rf_val    *nullv;    // Special slot for the "null" index in an array
+    uint32_t   n;        // Number of elements (excluding null values)
+    uint32_t   an;       // Number of elements (including null values)
+    uint32_t   cap;
+    int        nullx: 1; // null flag ("null" index set?)
+    int        lx:    1; // Re-calculate length?
 };
 
 void    t_init(rf_tbl *);
