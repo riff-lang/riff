@@ -39,10 +39,13 @@ typedef uint64_t rf_uint;
 typedef double   rf_flt;
 
 typedef struct {
-    size_t    l;
     uint32_t  hash;
+    size_t    l;
     char     *str;
 } rf_str;
+
+#define TEMP_HASHED_STR(s,h,l) &(rf_str){(h), (l), (s)}
+#define TEMP_STR(s,l)          &(rf_str){0,   (l), (s)}
 
 typedef pcre2_code rf_re;
 

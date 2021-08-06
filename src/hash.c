@@ -78,7 +78,8 @@ int h_exists_int(rf_htbl *h, rf_int k) {
     if (!h->cap) return 0;
     char str[21];
     size_t len = u_int2str(k, str);
-    return exists(h, &(rf_str){len, u_strhash(str), str});
+    uint32_t hash = u_strhash(str);
+    return exists(h, TEMP_HASHED_STR(str, hash, len));
 }
 
 
