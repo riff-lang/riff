@@ -1,14 +1,15 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include "util.h"
+
 // Must precede pcre2.h inclusion
 #define PCRE2_CODE_UNIT_WIDTH 8
 
 #include <pcre2.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
-
-#include "util.h"
 
 enum types {
     TYPE_NULL,
@@ -16,6 +17,7 @@ enum types {
     TYPE_FLT,
     TYPE_STR,
     TYPE_RE,
+    TYPE_FH,
     TYPE_SEQ,
     TYPE_TBL,
     TYPE_RFN,
@@ -27,6 +29,7 @@ enum types {
 #define is_flt(x)  ((x)->type == TYPE_FLT)
 #define is_str(x)  ((x)->type == TYPE_STR)
 #define is_re(x)   ((x)->type == TYPE_RE)
+#define is_fh(x)   ((x)->type == TYPE_FH)
 #define is_seq(x)  ((x)->type == TYPE_SEQ)
 #define is_tbl(x)  ((x)->type == TYPE_TBL)
 #define is_rfn(x)  ((x)->type == TYPE_RFN)
@@ -71,6 +74,11 @@ typedef pcre2_code rf_re;
 // Default compile options for regular expressions
 #define RE_CFLAGS          RE_DUPNAMES
 #define RE_CFLAGS_EXTRA    RE_IGNORE_BAD_ESC
+
+typedef struct {
+    FILE     *p;
+    uint32_t  flags;
+} rf_fh;
 
 typedef struct {
     rf_int from;
@@ -118,16 +126,17 @@ typedef struct {
 
 rf_int  str2int(rf_str *);
 rf_flt  str2flt(rf_str *);
-void    re_register_fldv(rf_tbl *);
-rf_re  *re_compile(char *, uint32_t, int *);
-void    re_free(rf_re *);
-int     re_store_numbered_captures(pcre2_match_data *);
-rf_int  re_match(char *, rf_re *, int);
 rf_str *s_newstr(const char *, size_t, int);
 rf_str *s_newstr_concat(char *, char *, int);
 rf_str *s_substr(char *, rf_int, rf_int, rf_int);
 rf_str *s_int2str(rf_int);
 rf_str *s_flt2str(rf_flt);
+void    re_register_fldv(rf_tbl *);
+rf_re  *re_compile(char *, uint32_t, int *);
+void    re_free(rf_re *);
+int     re_store_numbered_captures(pcre2_match_data *);
+rf_int  re_match(char *, rf_re *, int);
+rf_fh  *io_fopen(char *, char *);
 rf_val *v_newnull(void);
 rf_val *v_newint(rf_int);
 rf_val *v_newflt(rf_flt);
