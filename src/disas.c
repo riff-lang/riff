@@ -1,8 +1,8 @@
+#include "disas.h"
+
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
-
-#include "disas.h"
 
 static struct {
     const char *mnemonic;

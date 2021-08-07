@@ -1,7 +1,8 @@
-#include <stdio.h>
-
 #include "code.h"
+
 #include "mem.h"
+
+#include <stdio.h>
 
 #define push(x) c_push(c, x)
 

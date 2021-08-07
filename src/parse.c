@@ -1,7 +1,8 @@
-#include <stdio.h>
+#include "parse.h"
 
 #include "mem.h"
-#include "parse.h"
+
+#include <stdio.h>
 
 #define adv()       x_adv(y->x)
 #define peek()      x_peek(y->x)

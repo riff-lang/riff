@@ -1,13 +1,14 @@
+#include "lex.h"
+
+#include "mem.h"
+#include "util.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "lex.h"
-#include "mem.h"
-#include "util.h"
 
 #define adv() (++x->p)
 

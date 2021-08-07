@@ -1,3 +1,11 @@
+#include "lib.h"
+
+#include "conf.h"
+#include "fmt.h"
+#include "fn.h"
+#include "mem.h"
+#include "table.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -6,13 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#include "conf.h"
-#include "fmt.h"
-#include "fn.h"
-#include "lib.h"
-#include "mem.h"
-#include "table.h"
 
 static void err(const char *msg) {
     fprintf(stderr, "riff: %s\n", msg);
@@ -605,6 +606,7 @@ LIB_FN(type) {
     case TYPE_FLT:  str = "float";    len = 5; break;
     case TYPE_STR:  str = "string";   len = 6; break;
     case TYPE_RE:   str = "regex";    len = 5; break;
+    case TYPE_FH:   str = "file";     len = 4; break;
     case TYPE_SEQ:  str = "sequence"; len = 8; break;
     case TYPE_TBL:  str = "table";    len = 5; break;
     case TYPE_RFN:

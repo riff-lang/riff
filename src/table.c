@@ -1,8 +1,9 @@
+#include "table.h"
+
+#include "mem.h"
+
 #include <ctype.h>
 #include <stdio.h>
-
-#include "table.h"
-#include "mem.h"
 
 #define set(f)   t->f = 1
 #define unset(f) t->f = 0

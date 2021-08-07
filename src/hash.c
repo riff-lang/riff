@@ -1,5 +1,6 @@
-#include "mem.h"
 #include "hash.h"
+
+#include "mem.h"
 #include "types.h"
 #include "util.h"
 

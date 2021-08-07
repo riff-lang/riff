@@ -1,5 +1,6 @@
-#include "table.h"
 #include "types.h"
+
+#include "table.h"
 
 rf_val *v_newnull(void) {
     rf_val *v = malloc(sizeof(rf_val));

@@ -1,10 +1,11 @@
+#include "fmt.h"
+
+#include "conf.h"
+
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "conf.h"
-#include "fmt.h"
 
 static void err(const char *msg) {
     fprintf(stderr, "riff: [fmt] %s\n", msg);

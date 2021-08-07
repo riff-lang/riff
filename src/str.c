@@ -1,11 +1,12 @@
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
+#include "types.h"
+
+#include "util.h"
+
 #include <stdlib.h>
 #include <string.h>
-
-#include "types.h"
-#include "util.h"
 
 rf_str *s_newstr(const char *start, size_t l, int h) {
     char *str = malloc(l * sizeof(char) + 1);

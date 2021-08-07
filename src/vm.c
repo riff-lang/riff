@@ -1,15 +1,16 @@
+#include "vm.h"
+
+#include "conf.h"
+#include "lib.h"
+#include "mem.h"
+#include "table.h"
+
 #include <inttypes.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "conf.h"
-#include "lib.h"
-#include "mem.h"
-#include "table.h"
-#include "vm.h"
 
 static void err(const char *msg) {
     fprintf(stderr, "riff: [vm] %s\n", msg);

@@ -1,11 +1,11 @@
 #ifndef CODE_H
 #define CODE_H
 
-#include <stdint.h>
-#include <stdlib.h>
-
 #include "lex.h"
 #include "types.h"
+
+#include <stdint.h>
+#include <stdlib.h>
 
 enum opcodes {
     OP_JMP8,    // Jump (1-byte offset)

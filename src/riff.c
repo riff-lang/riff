@@ -1,8 +1,3 @@
-#include <getopt.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "code.h"
 #include "disas.h"
 #include "env.h"
@@ -10,6 +5,11 @@
 #include "types.h"
 #include "util.h"
 #include "vm.h"
+
+#include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Entry point for the Emscripten-compiled WASM/JS module
 #ifdef __EMSCRIPTEN__

@@ -1,8 +1,9 @@
-#include <inttypes.h>
-#include <stdio.h>
+#include "types.h"
 
 #include "table.h"
-#include "types.h"
+
+#include <inttypes.h>
+#include <stdio.h>
 
 static rf_tbl *fldv;
 static pcre2_compile_context *context = NULL;

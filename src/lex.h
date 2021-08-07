@@ -1,10 +1,10 @@
 #ifndef LEX_H
 #define LEX_H
 
+#include "types.h"
+
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "types.h"
 
 // Lexical Analyzer
 

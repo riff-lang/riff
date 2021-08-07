@@ -1,8 +1,8 @@
+#include "util.h"
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
-
-#include "util.h"
 
 char *u_file2str(const char *path) {
     FILE *file = fopen(path, "rb");
