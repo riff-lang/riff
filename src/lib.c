@@ -98,28 +98,30 @@ static int valid_fmode(char *mode) {
            (strspn(mode, "b") == strlen(mode)));
 }
 
-static rf_fh *open_file(char *filename, char *mode) {
-    FILE *fp = fopen(filename, mode);
-    if (!fp) {
-        perror("riff: open() failure");
-        exit(1);
-    }
-    rf_fh *fh = malloc(sizeof(rf_fh));
-    fh->p = fp;
-    fh->flags = 0;
-    return fh;
-}
-
 // open(s[,m])
 LIB_FN(open) {
     if (!is_str(fp))
         return 0;
-    rf_fh *fh;
+    FILE *p;
+    errno = 0;
     if (argc == 1 || !is_str(fp+1)) {
-        fh = open_file(fp[0].u.s->str, "r");
+        p = fopen(fp[0].u.s->str, "r");
     } else {
-        fh = open_file(fp[0].u.s->str, fp[1].u.s->str);
+        if (!valid_fmode(fp[1].u.s->str)) {
+            fprintf(stderr, "riff: error opening '%s': invalid file mode: '%s'\n",
+                    fp[0].u.s->str, fp[1].u.s->str);
+            exit(1);
+        }
+        p = fopen(fp[0].u.s->str, fp[1].u.s->str);
     }
+    if (!p) {
+        fprintf(stderr, "riff: error opening '%s': %s\n",
+                fp[0].u.s->str, strerror(errno));
+        exit(1);
+    }
+    rf_fh *fh = malloc(sizeof(rf_fh));
+    fh->p = p;
+    fh->flags = 0;
     fp[-1] = (rf_val) {TYPE_FH, .u.fh = fh};
     return 1;
 }
