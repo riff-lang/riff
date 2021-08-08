@@ -101,6 +101,7 @@ typedef struct {
         rf_int  i;
         rf_str *s;
         rf_re  *r;
+        rf_fh  *fh;
         rf_seq *q;
         rf_tbl *t;
         rf_fn  *fn;
@@ -136,7 +137,6 @@ rf_re  *re_compile(char *, uint32_t, int *);
 void    re_free(rf_re *);
 int     re_store_numbered_captures(pcre2_match_data *);
 rf_int  re_match(char *, rf_re *, int);
-rf_fh  *io_fopen(char *, char *);
 rf_val *v_newnull(void);
 rf_val *v_newint(rf_int);
 rf_val *v_newflt(rf_flt);

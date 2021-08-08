@@ -39,7 +39,6 @@ SRC          += src/disas.c
 SRC          += src/fmt.c
 SRC          += src/fn.c
 SRC          += src/hash.c
-SRC          += src/io.c
 SRC          += src/lex.c
 SRC          += src/lib.c
 SRC          += src/parse.c

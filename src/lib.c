@@ -64,6 +64,66 @@ LIB_FN(log) {
     return 1;
 }
 
+// I/O functions
+
+// close(f)
+LIB_FN(close) {
+    if (is_fh(fp))
+        fclose(fp->u.fh->p);
+    return 0;
+}
+
+// flush(f)
+// LIB_FN(flush) {
+// }
+
+LIB_FN(put);
+
+// get(...)
+LIB_FN(get) {
+    // Print arguments as specified by put()
+    l_put(fp, argc);
+    char buf[STR_BUF_SZ];
+    if (!fgets(buf, sizeof buf, stdin)) {
+        return 0;
+    }
+    set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
+    return 1;
+}
+
+
+static int valid_fmode(char *mode) {
+    return (*mode && strchr("rwa", *(mode++)) &&
+           (*mode != '+' || ((void)(++mode), 1)) &&
+           (strspn(mode, "b") == strlen(mode)));
+}
+
+static rf_fh *open_file(char *filename, char *mode) {
+    FILE *fp = fopen(filename, mode);
+    if (!fp) {
+        perror("riff: open() failure");
+        exit(1);
+    }
+    rf_fh *fh = malloc(sizeof(rf_fh));
+    fh->p = fp;
+    fh->flags = 0;
+    return fh;
+}
+
+// open(s[,m])
+LIB_FN(open) {
+    if (!is_str(fp))
+        return 0;
+    rf_fh *fh;
+    if (argc == 1 || !is_str(fp+1)) {
+        fh = open_file(fp[0].u.s->str, "r");
+    } else {
+        fh = open_file(fp[0].u.s->str, fp[1].u.s->str);
+    }
+    fp[-1] = (rf_val) {TYPE_FH, .u.fh = fh};
+    return 1;
+}
+
 // put(...)
 LIB_FN(put) {
     for (int i = 0; i < argc; ++i) {
@@ -85,18 +145,6 @@ LIB_FN(put) {
     return 0;
 }
 
-// get(...)
-LIB_FN(get) {
-    // Print arguments as specified by put()
-    l_put(fp, argc);
-    char buf[STR_BUF_SZ];
-    if (!fgets(buf, sizeof buf, stdin)) {
-        return 0;
-    }
-    set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
-    return 1;
-}
-
 static int build_char_str(rf_val *fp, int argc, char *buf) {
     int n = 0;
     for (int i = 0; i < argc; ++i) {
@@ -114,20 +162,11 @@ static int build_char_str(rf_val *fp, int argc, char *buf) {
     return n;
 }
 
-// char/putc(...)
-// Takes zero or more integers and returns/prints a string composed of
-// the character codes of each respective argument in order
+// putc(...)
+// Takes zero or more integers and prints a string composed of the
+// character codes of each respective argument in order
 // Ex:
 //   char(114, 105, 102, 102) -> "riff"
-LIB_FN(char) {
-    if (!argc)
-        return 0;
-    char buf[STR_BUF_SZ];
-    int n = build_char_str(fp, argc, buf);
-    set_str(fp-1, s_newstr(buf, n, 0));
-    return 1;
-}
-
 LIB_FN(putc) {
     if (!argc)
         return 0;
@@ -137,6 +176,35 @@ LIB_FN(putc) {
     fputs(buf, stdout);
     return 0;
 }
+
+// read()
+LIB_FN(read) {
+    FILE *f = stdin;
+    char buf[STR_BUF_SZ];
+    size_t count = sizeof buf; // TODO
+    if (argc) {
+        if (is_fh(fp))
+            f = fp->u.fh->p;
+        // else
+        //     f = stdin;
+    }
+
+    if (argc > 1) {
+        if (is_num(fp+1))
+            count = (size_t) intval(fp+1);
+        // else
+        //     count = sizeof buf; // TODO
+    }
+    size_t nread = fread(buf, sizeof *buf, count, f);
+    set_str(fp-1, s_newstr(buf, nread, 0));
+    return 1;
+}
+
+// write(s[,f])
+// LIB_FN(write) {
+// }
+
+// Pseudo-random number generation
 
 // xoshiro256**
 // Source: https://prng.di.unimi.it
@@ -278,6 +346,8 @@ LIB_FN(srand) {
     return 0;
 }
 
+// String functions
+
 // byte(s[,i])
 // Takes one string and an optional index argument `i` and returns the
 // numeric ASCII code associated with that character. The default
@@ -298,6 +368,20 @@ LIB_FN(byte) {
     } else {
         return 0;
     }
+    return 1;
+}
+
+// char(...)
+// Takes zero or more integers and returns a string composed of the
+// character codes of each respective argument in order
+// Ex:
+//   char(114, 105, 102, 102) -> "riff"
+LIB_FN(char) {
+    if (!argc)
+        return 0;
+    char buf[STR_BUF_SZ];
+    int n = build_char_str(fp, argc, buf);
+    set_str(fp-1, s_newstr(buf, n, 0));
     return 1;
 }
 
@@ -636,9 +720,14 @@ static struct {
     LIB_REG(sqrt,  1),
     LIB_REG(tan,   1),
     // I/O
+    LIB_REG(close, 1),
+    // LIB_REG(flush, 1),
     LIB_REG(get,   0),
+    LIB_REG(open,  1),
     LIB_REG(put,   0),
     LIB_REG(putc,  0),
+    LIB_REG(read,  0),
+    // LIB_REG(write, 0),
     // PRNG
     LIB_REG(rand,  0),
     LIB_REG(srand, 0),
