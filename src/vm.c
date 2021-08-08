@@ -389,6 +389,7 @@ Z_UOP(print) {
     case TYPE_FLT:  printf(FLT_PRINT_FMT, v->u.f);  break;
     case TYPE_STR:  printf("%s", v->u.s->str);      break;
     case TYPE_RE:   printf("regex: %p", v->u.r);    break;
+    case TYPE_FH:   printf("file: %p", v->u.fh->p); break;
     case TYPE_SEQ:
         printf("seq: %"PRId64"..%"PRId64":%"PRId64,
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
@@ -495,6 +496,9 @@ int z_exec(rf_env *e) {
     init_argv(&argv, e->ff, e->argc, e->argv);
     h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1);
 
+    h_insert(&globals, s_newstr("stdin",  5, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdin,  FH_STD}}, 1);
+    h_insert(&globals, s_newstr("stdout", 6, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdout, FH_STD}}, 1);
+    h_insert(&globals, s_newstr("stderr", 6, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stderr, FH_STD}}, 1);
     l_register(&globals);
 
     // Add user-defined functions to the global hash table

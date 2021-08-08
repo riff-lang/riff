@@ -75,6 +75,8 @@ typedef pcre2_code rf_re;
 #define RE_CFLAGS          RE_DUPNAMES
 #define RE_CFLAGS_EXTRA    RE_IGNORE_BAD_ESC
 
+#define FH_STD 1
+
 typedef struct {
     FILE     *p;
     uint32_t  flags;

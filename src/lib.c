@@ -69,7 +69,8 @@ LIB_FN(log) {
 // close(f)
 LIB_FN(close) {
     if (is_fh(fp))
-        fclose(fp->u.fh->p);
+        if (!(fp->u.fh->flags & FH_STD))
+            fclose(fp->u.fh->p);
     return 0;
 }
 
@@ -135,6 +136,7 @@ LIB_FN(put) {
         case TYPE_FLT:  printf(FLT_PRINT_FMT, fp[i].u.f);  break;
         case TYPE_STR:  printf("%s", fp[i].u.s->str);      break;
         case TYPE_RE:   printf("regex: %p", fp[i].u.r);    break;
+        case TYPE_FH:   printf("file: %p", fp[i].u.fh->p); break;
         case TYPE_SEQ:
             printf("seq: %"PRId64"..%"PRId64":%"PRId64,
                     fp[i].u.q->from, fp[i].u.q->to, fp[i].u.q->itvl);
@@ -203,8 +205,22 @@ LIB_FN(read) {
 }
 
 // write(s[,f])
-// LIB_FN(write) {
-// }
+LIB_FN(write) {
+    FILE *f;
+    if (!argc)
+        return 0;
+    if (argc > 1 && is_fh(fp+1))
+        f = fp[1].u.fh->p;
+    else
+        f = stdout;
+    switch (fp->type) {
+    case TYPE_INT: fprintf(f, "%"PRId64, fp->u.i); break;
+    case TYPE_FLT: fprintf(f, FLT_PRINT_FMT, fp->u.f); break;
+    case TYPE_STR: fprintf(f, "%s", fp->u.s->str); break;
+    default: break;
+    }
+    return 0;
+}
 
 // Pseudo-random number generation
 
@@ -729,7 +745,7 @@ static struct {
     LIB_REG(put,   0),
     LIB_REG(putc,  0),
     LIB_REG(read,  0),
-    // LIB_REG(write, 0),
+    LIB_REG(write, 0),
     // PRNG
     LIB_REG(rand,  0),
     LIB_REG(srand, 0),
