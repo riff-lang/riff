@@ -14,7 +14,7 @@ void re_register_fldv(rf_tbl *t) {
     return;
 }
 
-rf_re *re_compile(char *pattern, uint32_t flags, int *errcode) {
+rf_re *re_compile(char *pattern, size_t len, uint32_t flags, int *errcode) {
     if (context == NULL) {
         context = pcre2_compile_context_create(NULL);
         pcre2_set_compile_extra_options(context, RE_CFLAGS_EXTRA);
@@ -23,7 +23,7 @@ rf_re *re_compile(char *pattern, uint32_t flags, int *errcode) {
     PCRE2_SIZE erroffset;
     rf_re *r = pcre2_compile(
             (PCRE2_SPTR) pattern,   // Raw pattern string
-            PCRE2_ZERO_TERMINATED,  // Length (or specify zero terminated)
+            len,                    // Length (or specify zero terminated)
             flags | RE_CFLAGS,      // Options/flags
             errcode,                // Error code
             &erroffset,             // Error offset
@@ -52,7 +52,7 @@ int re_store_numbered_captures(pcre2_match_data *md) {
     return 0;
 }
 
-rf_int re_match(char *s, rf_re *re, int capture) {
+rf_int re_match(char *s, size_t len, rf_re *re, int capture) {
 
     // Create PCRE2 match data block
     pcre2_match_data *md = pcre2_match_data_create_from_pattern(re, NULL);
@@ -61,7 +61,7 @@ rf_int re_match(char *s, rf_re *re, int capture) {
     int rc = pcre2_match(
             re,                     // Compiled regex
             (PCRE2_SPTR) s,         // String to match against
-            PCRE2_ZERO_TERMINATED,  // Length (or specify zero terminated)
+            len,                    // Length (or specify zero terminated)
             0,                      // Start offset
             0,                      // Options/flags
             md,                     // Match data block

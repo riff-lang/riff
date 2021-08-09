@@ -271,21 +271,23 @@ static rf_int match(rf_val *l, rf_val *r) {
 
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
-        return re_match(l->u.s->str, r->u.r, 1);
+        return re_match(l->u.s->str, l->u.s->l, r->u.r, 1);
 
     char *lhs;
+    size_t len;
     char temp_lhs[32];
     char temp_rhs[32];
 
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: u_int2str(l->u.i, temp_lhs); break;
-        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs); break;
+        case TYPE_INT: len = u_int2str(l->u.i, temp_lhs); break;
+        case TYPE_FLT: len = u_flt2str(l->u.f, temp_lhs); break;
         default:       temp_lhs[0] = '\0'; break;
         }
         lhs = temp_lhs;
     } else {
         lhs = l->u.s->str;
+        len = l->u.s->l;
     }
 
     if (!is_re(r)) {
@@ -298,17 +300,17 @@ static rf_int match(rf_val *l, rf_val *r) {
         case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
         case TYPE_STR:
             capture = 1;
-            temp_re = re_compile(r->u.s->str, 0, &errcode);
+            temp_re = re_compile(r->u.s->str, r->u.s->l, 0, &errcode);
             goto do_match;
         default:       temp_rhs[0] = '\0'; break;
         }
-        temp_re = re_compile(temp_rhs, 0, &errcode);
+        temp_re = re_compile(temp_rhs, PCRE2_ZERO_TERMINATED, 0, &errcode);
 do_match:
-        res = re_match(lhs, temp_re, capture);
+        res = re_match(lhs, len, temp_re, capture);
         re_free(temp_re);
         return res;
     } else {
-        return re_match(lhs, r->u.r, 1);
+        return re_match(lhs, len, r->u.r, 1);
     }
 }
 

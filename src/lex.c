@@ -321,8 +321,6 @@ re_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-    // Null terminate the RE string
-    x->buf.c[x->buf.n] = 0;
     uint32_t flags = 0;
     adv();
 
@@ -350,7 +348,7 @@ re_start:
         adv();
     }
     int errcode;
-    rf_re *r = re_compile(x->buf.c, flags, &errcode);
+    rf_re *r = re_compile(x->buf.c, x->buf.n, flags, &errcode);
 
     // Regex compilation error handling
     if (errcode != 100) {
