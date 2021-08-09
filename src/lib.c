@@ -408,6 +408,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
     char  *s;
     rf_re *p;
     char  *r;
+    size_t len;
 
     char temp_s[32];
     char temp_r[32];
@@ -415,14 +416,15 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // String `s`
     if (!is_str(fp)) {
         if (is_int(fp))
-            u_int2str(fp->u.i, temp_s);
+            len = u_int2str(fp->u.i, temp_s);
         else if (is_flt(fp))
-            u_flt2str(fp->u.f, temp_s);
+            len = u_flt2str(fp->u.f, temp_s);
         else
             return 0;
         s = temp_s;
     } else {
         s = fp->u.s->str;
+        len = fp->u.s->l;
     }
 
     // Pattern `p`
@@ -479,7 +481,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
     int m_res = pcre2_match(
             p,
             (PCRE2_SPTR) s,
-            PCRE2_ZERO_TERMINATED,
+            len,
             0,
             0,
             md,
@@ -489,7 +491,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
     int res = pcre2_substitute(
             p,                      // Compiled regex
             (PCRE2_SPTR) s,         // Original string pointer
-            PCRE2_ZERO_TERMINATED,  // Original string length
+            len,                    // Original string length
             0,                      // Start offset
             PCRE2_SUBSTITUTE_MATCHED
             | flags,                // Options/flags
@@ -521,7 +523,7 @@ LIB_FN(sub)  { return xsub(fp, argc, 0);                       }
 LIB_FN(hex) {
     rf_int i = intval(fp);
     char buf[20];
-    int len = sprintf(buf, "0x%"PRIx64, i);
+    size_t len = sprintf(buf, "0x%"PRIx64, i);
     set_str(fp-1, s_newstr(buf, len, 0));
     return 1;
 }
@@ -596,12 +598,11 @@ LIB_FN(split) {
     char temp_s[20];
     if (!is_str(fp)) {
         if (is_int(fp))
-            len = sprintf(temp_s, "%"PRId64, fp->u.i);
+            len = u_int2str(fp->u.i, temp_s);
         else if (is_flt(fp))
-            len = sprintf(temp_s, "%g", fp->u.f);
+            len = u_flt2str(fp->u.f, temp_s);
         else
             return 0;
-        temp_s[len] = '\0';
         str = temp_s;
     } else {
         str = fp->u.s->str;
@@ -641,7 +642,7 @@ do_split: {
     int rc = pcre2_substitute(
             delim,
             (PCRE2_SPTR) str,
-            PCRE2_ZERO_TERMINATED,
+            len,
             0,
             PCRE2_SUBSTITUTE_GLOBAL,
             NULL,
