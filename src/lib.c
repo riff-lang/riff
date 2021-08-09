@@ -74,6 +74,11 @@ LIB_FN(close) {
     return 0;
 }
 
+LIB_FN(eof) {
+    set_int(fp-1, !is_fh(fp) || feof(fp->u.fh->p));
+    return 1;
+}
+
 // flush(f)
 // LIB_FN(flush) {
 // }
@@ -125,6 +130,17 @@ LIB_FN(open) {
     fh->flags = 0;
     fp[-1] = (rf_val) {TYPE_FH, .u.fh = fh};
     return 1;
+}
+
+LIB_FN(printf) {
+    if (!is_str(fp))
+        return 0;
+    --argc;
+    char buf[STR_BUF_SZ];
+    int n = fmt_snprintf(buf, sizeof buf, fp->u.s->str, fp + 1, argc);
+    buf[n] = '\0';
+    fputs(buf, stdout);
+    return 0;
 }
 
 // put(...)
@@ -436,9 +452,9 @@ static int xsub(rf_val *fp, int argc, int flags) {
                 u_int2str(fp[1].u.i, temp_p);
             else if (is_flt(fp+1))
                 u_flt2str(fp[1].u.f, temp_p);
-            p = re_compile(temp_p, 0, &errcode);
+            p = re_compile(temp_p, PCRE2_ZERO_TERMINATED, 0, &errcode);
         } else if (is_str(fp+1)) {
-            p = re_compile(fp[1].u.s->str, 0, &errcode);
+            p = re_compile(fp[1].u.s->str, fp[1].u.s->l, 0, &errcode);
         } else {
             return 0;
         }
@@ -614,7 +630,7 @@ LIB_FN(split) {
     rf_re *delim;
     int errcode = 0;
     if (argc < 2) {
-        delim = re_compile("\\s+", 0, &errcode);
+        delim = re_compile("\\s+", PCRE2_ZERO_TERMINATED, 0, &errcode);
     } else if (!is_re(fp+1)) {
         char temp[32];
         switch (fp[1].type) {
@@ -623,12 +639,12 @@ LIB_FN(split) {
         case TYPE_STR:
             if (!fp[1].u.s->l)
                 goto split_chars;
-            delim = re_compile(fp[1].u.s->str, 0, &errcode);
+            delim = re_compile(fp[1].u.s->str, fp[1].u.s->l, 0, &errcode);
             goto do_split;
         default:
             goto split_chars;
         }
-        delim = re_compile(temp, 0, &errcode);
+        delim = re_compile(temp, PCRE2_ZERO_TERMINATED, 0, &errcode);
     } else {
         delim = fp[1].u.r;
     }
@@ -716,40 +732,42 @@ static struct {
     c_fn        fn;
 } lib_fn[] = {
     // Arithmetic
-    LIB_REG(abs,   1),
-    LIB_REG(atan,  1),
-    LIB_REG(ceil,  1),
-    LIB_REG(cos,   1),
-    LIB_REG(exp,   1),
-    LIB_REG(int,   1),
-    LIB_REG(log,   1),
-    LIB_REG(sin,   1),
-    LIB_REG(sqrt,  1),
-    LIB_REG(tan,   1),
+    LIB_REG(abs,    1),
+    LIB_REG(atan,   1),
+    LIB_REG(ceil,   1),
+    LIB_REG(cos,    1),
+    LIB_REG(exp,    1),
+    LIB_REG(int,    1),
+    LIB_REG(log,    1),
+    LIB_REG(sin,    1),
+    LIB_REG(sqrt,   1),
+    LIB_REG(tan,    1),
     // I/O
-    LIB_REG(close, 1),
-    // LIB_REG(flush, 1),
-    LIB_REG(get,   0),
-    LIB_REG(open,  1),
-    LIB_REG(put,   0),
-    LIB_REG(putc,  0),
-    LIB_REG(read,  0),
-    LIB_REG(write, 0),
+    LIB_REG(close,  1),
+    LIB_REG(eof,    0),
+    // LIB_REG(flush,  1),
+    LIB_REG(get,    0),
+    LIB_REG(open,   1),
+    LIB_REG(printf, 1),
+    LIB_REG(put,    0),
+    LIB_REG(putc,   0),
+    LIB_REG(read,   0),
+    LIB_REG(write,  0),
     // PRNG
-    LIB_REG(rand,  0),
-    LIB_REG(srand, 0),
+    LIB_REG(rand,   0),
+    LIB_REG(srand,  0),
     // Strings
-    LIB_REG(byte,  1),
-    LIB_REG(char,  0),
-    LIB_REG(fmt,   1),
-    LIB_REG(gsub,  2),
-    LIB_REG(hex,   1),
-    LIB_REG(lower, 1),
-    LIB_REG(num,   1),
-    LIB_REG(split, 1),
-    LIB_REG(sub,   2),
-    LIB_REG(type,  1),
-    LIB_REG(upper, 1),
+    LIB_REG(byte,   1),
+    LIB_REG(char,   0),
+    LIB_REG(fmt,    1),
+    LIB_REG(gsub,   2),
+    LIB_REG(hex,    1),
+    LIB_REG(lower,  1),
+    LIB_REG(num,    1),
+    LIB_REG(split,  1),
+    LIB_REG(sub,    2),
+    LIB_REG(type,   1),
+    LIB_REG(upper,  1),
     { NULL, { 0, NULL } }
 };
 
