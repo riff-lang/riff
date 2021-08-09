@@ -116,6 +116,7 @@ typedef struct {
 #define set_int(p, x) *(p) = (rf_val) {TYPE_INT, .u.i = (x)}
 #define set_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .u.f = (x)}
 #define set_str(p, x) *(p) = (rf_val) {TYPE_STR, .u.s = (x)}
+#define set_tbl(p, x) *(p) = (rf_val) {TYPE_TBL, .u.t = (x)}
 
 #define numval(x) (is_int(x) ? (x)->u.i : \
                    is_flt(x) ? (x)->u.f : \

@@ -104,7 +104,6 @@ LIB_FN(open) {
     if (!is_str(fp))
         return 0;
     FILE *p;
-    errno = 0;
     if (argc == 1 || !is_str(fp+1)) {
         p = fopen(fp[0].u.s->str, "r");
     } else {
@@ -115,6 +114,7 @@ LIB_FN(open) {
         }
         p = fopen(fp[0].u.s->str, fp[1].u.s->str);
     }
+    errno = 0;
     if (!p) {
         fprintf(stderr, "riff: error opening '%s': %s\n",
                 fp[0].u.s->str, strerror(errno));
@@ -170,7 +170,7 @@ static int build_char_str(rf_val *fp, int argc, char *buf) {
 // Takes zero or more integers and prints a string composed of the
 // character codes of each respective argument in order
 // Ex:
-//   char(114, 105, 102, 102) -> "riff"
+//   putc(114, 105, 102, 102) -> "riff"
 LIB_FN(putc) {
     if (!argc)
         return 0;
@@ -181,38 +181,28 @@ LIB_FN(putc) {
     return 0;
 }
 
-// read()
+// read(f[,n])
 LIB_FN(read) {
-    FILE *f = stdin;
     char buf[STR_BUF_SZ];
-    size_t count = sizeof buf; // TODO
-    if (argc) {
-        if (is_fh(fp))
-            f = fp->u.fh->p;
-        // else
-        //     f = stdin;
+    FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdin;
+    if (argc > 1 && is_num(fp+1)) {
+        size_t count = (size_t) intval(fp+1);
+        size_t nread = fread(buf, sizeof *buf, count, f);
+        set_str(fp-1, s_newstr(buf, nread, 0));
+    } else {
+        if (!fgets(buf, sizeof buf, f)) {
+            return 0;
+        }
+        set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
     }
-
-    if (argc > 1) {
-        if (is_num(fp+1))
-            count = (size_t) intval(fp+1);
-        // else
-        //     count = sizeof buf; // TODO
-    }
-    size_t nread = fread(buf, sizeof *buf, count, f);
-    set_str(fp-1, s_newstr(buf, nread, 0));
     return 1;
 }
 
 // write(s[,f])
 LIB_FN(write) {
-    FILE *f;
     if (!argc)
         return 0;
-    if (argc > 1 && is_fh(fp+1))
-        f = fp[1].u.fh->p;
-    else
-        f = stdout;
+    FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].u.fh->p : stdout;
     switch (fp->type) {
     case TYPE_INT: fprintf(f, "%"PRId64, fp->u.i); break;
     case TYPE_FLT: fprintf(f, FLT_PRINT_FMT, fp->u.f); break;
@@ -618,8 +608,8 @@ LIB_FN(split) {
         len = fp->u.s->l;
     }
     rf_str *s;
-    rf_val v;
-    rf_val *tbl = v_newtbl();
+    rf_tbl *t = malloc(sizeof(rf_tbl));
+    t_init(t);
     rf_re *delim;
     int errcode = 0;
     if (argc < 2) {
@@ -677,10 +667,9 @@ do_split: {
             p += l + 1;
             n -= l + 1;
         }
-        v = (rf_val) {TYPE_STR, .u.s = s};
-        t_insert_int(tbl->u.t, i, &v, 1, 1);
+        t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s}, 1, 1);
     }
-    fp[-1] = *tbl;
+    set_tbl(fp-1, t);
     return 1;
     }
 
@@ -688,10 +677,9 @@ do_split: {
 split_chars: {
     for (rf_int i = 0; i < len; ++i) {
         s = s_newstr(str + i, 1, 0);
-        v = (rf_val) {TYPE_STR, .u.s = s};
-        t_insert_int(tbl->u.t, i, &v, 1, 1);
+        t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s}, 1, 1);
     }
-    fp[-1] = *tbl;
+    set_tbl(fp-1, t);
     return 1;
     }
 }
