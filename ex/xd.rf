@@ -1,0 +1,48 @@
+// Reversible hexdump utility
+
+fn dump(f) {
+    while !eof(f) {
+        s = read(f,16)
+        if !#s break
+        printf("%07x0: ", ln++)
+        for i in #s-1 {
+            printf(i == 7 ? "%02x  " : "%02x ", byte(s,i))
+        }
+        if #s < 16 {
+            for i in #s..15 {
+                put(i == 7 ? "    " : "   ")
+             }
+        }
+        put(" ")
+        gsub(s, /[^ -~]/, ".")
+    }
+}
+
+fn rev(f) {
+    while !eof(f) {
+        s = read(f)
+        if s ~ /.*: (.{48})/ {
+            for i in split($1)
+                putc(num(i,16))
+        }
+    }
+}
+
+if arg[2] {
+    f = open(arg[2])
+    opt = arg[1] == "-r"
+} elif arg[1] {
+    if arg[1] == "-r" {
+        opt = 1
+        f = stdin
+    } else {
+        f = open(arg[1])
+    }
+} else {
+    f = stdin
+}
+if opt
+    rev(f)
+else
+    dump(f)
+close(f)
