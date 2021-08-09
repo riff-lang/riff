@@ -274,7 +274,7 @@ static rf_int match(rf_val *l, rf_val *r) {
         return re_match(l->u.s->str, l->u.s->l, r->u.r, 1);
 
     char *lhs;
-    size_t len;
+    size_t len = 0;
     char temp_lhs[32];
     char temp_rhs[32];
 

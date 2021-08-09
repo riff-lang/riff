@@ -424,7 +424,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
     char  *s;
     rf_re *p;
     char  *r;
-    size_t len;
+    size_t len = 0;
 
     char temp_s[32];
     char temp_r[32];
@@ -610,7 +610,7 @@ ret_flt:
 // single-byte strings.
 LIB_FN(split) {
     char *str;
-    size_t len;
+    size_t len = 0;
     char temp_s[20];
     if (!is_str(fp)) {
         if (is_int(fp))
