@@ -104,6 +104,7 @@ LIB_FN(open) {
     if (!is_str(fp))
         return 0;
     FILE *p;
+    errno = 0;
     if (argc == 1 || !is_str(fp+1)) {
         p = fopen(fp[0].u.s->str, "r");
     } else {
@@ -114,7 +115,6 @@ LIB_FN(open) {
         }
         p = fopen(fp[0].u.s->str, fp[1].u.s->str);
     }
-    errno = 0;
     if (!p) {
         fprintf(stderr, "riff: error opening '%s': %s\n",
                 fp[0].u.s->str, strerror(errno));
