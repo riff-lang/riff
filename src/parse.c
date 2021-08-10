@@ -193,7 +193,7 @@ static void literal(rf_parser *y) {
         err(y, "attempt to assign to constant value");
 }
 
-static int parenthesized_expr(rf_parser *y) {
+static int paren_expr(rf_parser *y) {
     save_and_unset(lhs);
     save_and_unset(ax);
     save_and_unset(ox);
@@ -217,18 +217,18 @@ static int conditional(rf_parser *y) {
     if (y->x->tk.kind == ':') {
         adv();
         l1 = c_prep_jump(y->c, XJNZ);
-        e = parenthesized_expr(y);
+        e = paren_expr(y);
         c_patch(y->c, l1);
     }
 
     // x ? y : z
     else {
         l1 = c_prep_jump(y->c, JZ);
-        parenthesized_expr(y);
+        paren_expr(y);
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         consume(y, ':', "expected ':' in ternary expression");
-        e = parenthesized_expr(y);
+        e = paren_expr(y);
         c_patch(y->c, l2);
     }
     return e;
@@ -241,6 +241,19 @@ static void logical(rf_parser *y, int tk) {
     expr(y, lbp(tk));
     push(OP_TEST);
     c_patch(y->c, l1);
+}
+
+static int paren_expr_list(rf_parser *y, int c) {
+    int n = 0;
+    while (y->x->tk.kind != c) {
+        paren_expr(y);
+        ++n;
+        if (y->x->tk.kind == ',')
+            adv();
+        else
+            break;
+    }
+    return n;
 }
 
 static int expr_list(rf_parser *y, int c) {
@@ -272,7 +285,7 @@ static void subscript(rf_parser *y) {
 }
 
 static void call(rf_parser *y) {
-    int n = expr_list(y, ')');
+    int n = paren_expr_list(y, ')');
     expect_led();
     consume(y, ')', "expected ')'");
     expect_nud();
@@ -382,7 +395,7 @@ static int nud(rf_parser *y) {
     case '(': {
         adv();
         y->pd++;
-        parenthesized_expr(y);
+        paren_expr(y);
         expect_led();
         consume(y, ')', "expected ')'");
         expect_nud();
