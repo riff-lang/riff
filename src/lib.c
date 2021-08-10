@@ -83,13 +83,15 @@ LIB_FN(eof) {
 // LIB_FN(flush) {
 // }
 
-LIB_FN(put);
-
-// get(...)
+// get([n])
 LIB_FN(get) {
-    // Print arguments as specified by put()
-    l_put(fp, argc);
     char buf[STR_BUF_SZ];
+    if (argc) {
+        size_t count = intval(fp);
+        size_t nread = fread(buf, sizeof *buf, count, stdin);
+        set_str(fp-1, s_newstr(buf, nread, 0));
+        return 1;
+    }
     if (!fgets(buf, sizeof buf, stdin)) {
         return 0;
     }
