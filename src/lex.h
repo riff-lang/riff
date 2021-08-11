@@ -53,7 +53,6 @@ enum tokens {
     TK_DO,
     TK_ELIF,
     TK_ELSE,
-    TK_EXIT,
     TK_FN,
     TK_FOR,
     TK_IF,

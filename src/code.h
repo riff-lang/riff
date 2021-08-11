@@ -116,8 +116,7 @@ enum opcodes {
     OP_SSEQE,   // Sequence: .. (empty/infinite) w/ interval SP[-1]
     OP_SET,     // Assignment
     OP_PRINT1,  // Print value at SP[-1]
-    OP_PRINT,   // Print (IP+1) values from stack
-    OP_EXIT     // exit(0)
+    OP_PRINT    // Print (IP+1) values from stack
 };
 
 enum jumps {

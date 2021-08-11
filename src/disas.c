@@ -18,7 +18,6 @@ static struct {
     [OP_DIVX]    = { "divx",     0 },
     [OP_DIV]     = { "div",      0 },
     [OP_EQ]      = { "eq",       0 },
-    [OP_EXIT]    = { "exit",     0 },
     [OP_FLDA]    = { "flda",     0 },
     [OP_FLDV]    = { "fldv",     0 },
     [OP_GBLA0]   = { "gbla   0", 0 },

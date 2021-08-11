@@ -1276,8 +1276,6 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         sp -= ip[1];
         ip += 2;
         z_break;
-    z_case(EXIT)
-        exit(0);
 #ifndef COMPUTED_GOTO
     } }
 #endif

@@ -677,10 +677,6 @@ static void do_stmt(rf_parser *y) {
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
-static void exit_stmt(rf_parser *y) {
-    push(OP_EXIT);
-}
-
 static void add_local(rf_parser *y, rf_str *id) {
     m_growarray(y->lcl, y->nlcl, y->lcap, local);
     y->lcl[y->nlcl++] = (local) {s_newstr(id->str, id->l, 1), y->ld};
@@ -1085,7 +1081,6 @@ static void stmt(rf_parser *y) {
     case TK_BREAK:  adv(); break_stmt(y); break;
     case TK_CONT:   adv(); cont_stmt(y);  break;
     case TK_DO:     adv(); do_stmt(y);    break;
-    case TK_EXIT:   adv(); exit_stmt(y);  break;
     case TK_FN:
         peek();
         if (y->x->la.kind == TK_ID) {
@@ -1102,7 +1097,7 @@ static void stmt(rf_parser *y) {
     case TK_PRINT:  adv(); print_stmt(y); break;
     case TK_RETURN: adv(); ret_stmt(y);   break;
     case TK_WHILE:  adv(); while_stmt(y); break;
-    default:             expr_stmt(y);  break;
+    default:               expr_stmt(y);  break;
     }
 
     // Skip token if semicolon used as a statement terminator

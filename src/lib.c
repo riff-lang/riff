@@ -108,6 +108,11 @@ LIB_FN(eval) {
     return 0;
 }
 
+// exit([n])
+LIB_FN(exit) {
+    exit(argc ? intval(fp) : 0);
+}
+
 // flush(f)
 // LIB_FN(flush) {
 // }
@@ -788,6 +793,7 @@ static struct {
     LIB_REG(close,  1),
     LIB_REG(eof,    0),
     LIB_REG(eval,   1),
+    LIB_REG(exit,   0),
     // LIB_REG(flush,  1),
     LIB_REG(get,    0),
     LIB_REG(getc,   0),
