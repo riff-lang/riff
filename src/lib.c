@@ -128,6 +128,17 @@ LIB_FN(get) {
     return 1;
 }
 
+// getc([f])
+LIB_FN(getc) {
+    rf_int c;
+    FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdin;
+    if ((c = fgetc(f)) != EOF) {
+        set_int(fp-1, c);
+        return 1;
+    }
+    return 0;
+}
+
 
 static int valid_fmode(char *mode) {
     return (*mode && strchr("rwa", *(mode++)) &&
@@ -779,6 +790,7 @@ static struct {
     LIB_REG(eval,   1),
     // LIB_REG(flush,  1),
     LIB_REG(get,    0),
+    LIB_REG(getc,   0),
     LIB_REG(open,   1),
     LIB_REG(printf, 1),
     LIB_REG(put,    0),

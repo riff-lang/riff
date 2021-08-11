@@ -1,13 +1,16 @@
-f[">"] = "p += 1;"
-f["<"] = "p -= 1;"
-f["+"] = "m[p] += 1;"
-f["-"] = "m[p] -= 1;"
-f["."] = "putc(m[p]);"
-f[","] = "m[p] = byte(get(1));"
-f["["] = "while m[p] {"
-f["]"] = "}"
+// Brainfuck interpreter
 
-prog = "p = 0;"
-for c in gsub(get(2048), /[^<>+\-.,\[\]]/)
-    prog #= f[c]
+op['>'] = "i++"
+op['<'] = "i--"
+op['+'] = "m[i]++"
+op['-'] = "m[i]--"
+op['.'] = "putc(m[i])"
+op[','] = "m[i]=getc()"
+op['['] = "while m[i]{"
+op[']'] = "}"
+
+file = open(arg[1])
+prog = "i=0"
+while !eof(file)
+    prog #= op[getc(file)]
 eval(prog)
