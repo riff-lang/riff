@@ -1,10 +1,13 @@
 #include "lib.h"
 
 #include "conf.h"
+#include "env.h"
 #include "fmt.h"
 #include "fn.h"
 #include "mem.h"
+#include "parse.h"
 #include "table.h"
+#include "vm.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -74,9 +77,35 @@ LIB_FN(close) {
     return 0;
 }
 
+// eof(f)
 LIB_FN(eof) {
     set_int(fp-1, !is_fh(fp) || feof(fp->u.fh->p));
     return 1;
+}
+
+// eval(s)
+LIB_FN(eval) {
+    if (!is_str(fp))
+        return 0;
+    rf_env e;
+    rf_fn  main;
+    rf_code c;
+    c_init(&c);
+    main.code  = &c;
+    main.arity = 0;
+    e.nf       = 0;
+    e.fcap     = 0;
+    e.fn       = NULL;
+    e.main     = main;
+    e.argc     = 0;
+    e.ff       = 0;
+    e.argv     = NULL;
+    e.pname    = NULL;
+    e.src      = fp->u.s->str;
+    main.name  = NULL;
+    y_compile(&e);
+    z_exec(&e);
+    return 0;
 }
 
 // flush(f)
@@ -747,6 +776,7 @@ static struct {
     // I/O
     LIB_REG(close,  1),
     LIB_REG(eof,    0),
+    LIB_REG(eval,   1),
     // LIB_REG(flush,  1),
     LIB_REG(get,    0),
     LIB_REG(open,   1),

@@ -29,7 +29,7 @@ int wasm_main(int flag, char *str) {
     e.argv     = NULL;
     e.pname    = "<playground>";
     e.src      = str;
-    main.name  = s_newstr(e.pname, strlen(e.pname), 1);
+    main.name  = TEMP_HASHED_STR((char *) e.pname, u_strhash(e.pname), strlen(e.pname));
     y_compile(&e);
     if (flag)
         z_exec(&e);
@@ -115,14 +115,16 @@ int main(int argc, char **argv) {
         e.src   = argv[optind];
     }
 
-    main.name = s_newstr(e.pname, strlen(e.pname), 1);
     y_compile(&e);
 
     // -l: List riff's arbitrary disassembly for the given program
-    if (lf)
+    if (lf) {
+        main.name = TEMP_HASHED_STR((char *) e.pname, u_strhash(e.pname), strlen(e.pname));
         d_prog(&e);
-    else
+    } else {
+        main.name = NULL;
         z_exec(&e);
+    }
     return 0;
 }
 #endif
