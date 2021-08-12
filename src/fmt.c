@@ -17,7 +17,7 @@ static void err(const char *msg) {
 #define FMT_SPACE 4
 #define FMT_LEFT  8
 
-// %c
+// %c (if c <= 0x7f)
 #define fmt_char(b, n, c) \
     if (flags & FMT_LEFT) { \
         n += sprintf(b + n, "%-*c", width, c); \
@@ -34,7 +34,6 @@ static void err(const char *msg) {
     }
 
 // Signed fmt conversions: floats, decimal integers
-// NOTE: gcc complains about `0` flag with precision
 #define fmt_signed(b, n, i, fmt) \
     if (flags & FMT_LEFT) { \
         if (flags & FMT_SIGN) { \
@@ -106,9 +105,6 @@ static int fmt_bin_itoa(char *buf, rf_int num, uint32_t flags, int width, int pr
     return len;
 }
 
-// Riff's `sprintf()` implementation. Doubles as `printf()` due to the
-// implicit printing functionality of the language.
-//
 // Optional modifiers (zero or more):
 //   +              | Prepend with sign
 //   -              | Left-justified
@@ -127,6 +123,7 @@ static int fmt_bin_itoa(char *buf, rf_int num, uint32_t flags, int width, int pr
 //   f / F          | Decimal float
 //   g              | `e` or `f` conversion (whichever is shorter)
 //   G              | `E` or `F` conversion (whichever is shorter)
+//   m              | Multichar string (reverse of multichar literals)
 //   o              | Octal integer
 //   s              | String
 //   x / X          | Hex integer (lowercase/uppercase)
@@ -203,8 +200,41 @@ capture_flags:
         switch (*fstr++) {
         case 'c': {
             if (argc--) {
-                int c = (int) intval(argv+arg);
-                fmt_char(buf, n, c);
+                uint32_t c = (uint32_t) intval(argv+arg);
+                if (c <= 0x7f) {
+                    fmt_char(buf, n, c);
+                } else {
+                    int n1 = 0;
+                    char ubuf[8];
+                    char tbuf[9];
+                    int j = 8 - u_unicode2utf8(ubuf, c);
+                    for (; j < 8; ++j) {
+                        tbuf[n1++] = ubuf[j];
+                    }
+                    tbuf[n1] = '\0';
+                    fmt_str(buf, n, tbuf);
+                }
+                ++arg;
+            }
+            break;
+        }
+        case 'm': {
+            if (argc--) {
+                rf_uint m = (rf_uint) intval(argv+arg);
+                char mbuf[9];
+                int k = 7;
+                for (int j = 7; j >= 0; --j) {
+                    mbuf[j] = (char) m & 0xff;
+                    m >>= 8;
+                    k = mbuf[j] ? j : k;
+                }
+                int n1 = 0;
+                for (int j = 0; k < 8; ++j, ++k) {
+                    mbuf[j] = mbuf[k];
+                    n1 = j + 1;
+                }
+                mbuf[n1] = '\0';
+                fmt_str(buf, n, mbuf);
                 ++arg;
             }
             break;
