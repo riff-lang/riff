@@ -437,7 +437,7 @@ LIB_FN(byte) {
             idx = fp->u.fn->code->n;
         set_int(fp-1, fp->u.fn->code->code[idx]);
     } else {
-        return 0;
+        set_int(fp-1, 0);
     }
     return 1;
 }
