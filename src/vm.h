@@ -40,6 +40,7 @@ struct rf_iter {
     rf_val  *keys; // Keys to look up tables with (fixed at loop start)
 };
 
-int  z_exec(rf_env *);
+int z_exec(rf_env *);
+int z_exec_reenter(rf_env *, rf_stack *);
 
 #endif

@@ -104,7 +104,7 @@ LIB_FN(eval) {
     e.src      = fp->u.s->str;
     main.name  = NULL;
     y_compile(&e);
-    z_exec(&e);
+    z_exec_reenter(&e, (rf_stack *) fp);
     return 0;
 }
 

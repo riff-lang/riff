@@ -517,6 +517,21 @@ int z_exec(rf_env *e) {
     return exec(e->main.code->code, e->main.code->k, stack, stack);
 }
 
+// Reentry point for eval()
+int z_exec_reenter(rf_env *e, rf_stack *fp) {
+    // Add user-defined functions to the global hash table
+    for (int i = 0; i < e->nf; ++i) {
+        // Don't add anonymous functions to globals (rf_str should not
+        // have a computed hash)
+        if (!e->fn[i]->name->hash)
+            continue;
+        rf_val *fn = malloc(sizeof(rf_val));
+        *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
+        h_insert(&globals, e->fn[i]->name, fn, 1);
+    }
+    return exec(e->main.code->code, e->main.code->k, fp, fp);
+}
+
 #ifndef COMPUTED_GOTO
 #ifdef __GNUC__
 #define COMPUTED_GOTO
