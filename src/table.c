@@ -156,8 +156,13 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
         size_t temp_l = u_int2str((rf_int) k->u.t, temp);
         return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
     }
-    case TYPE_RFN: // TODO
-    default: break;
+   // TODO Temp logic for unsupported types
+    default:
+        if (set && !t->nullx) {
+            set(nullx);
+            t->n++;
+        }
+        return t->nullv;
     }
     return NULL;
 }
