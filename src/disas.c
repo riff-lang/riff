@@ -340,7 +340,7 @@ static const char *tokenstr[] = {
     "&&", "--", "..", "==", ">=", "++", "<=", "!=", "!~", "||", "**",
     "<<", ">>", "+=", "&=", "#=", "/=", "%=", "*=", "|=", "**=",
     "<<=", ">>=", "-=", "^=",
-    "break", "continue", "do", "elif", "else", "exit", "fn", "for",
+    "break", "continue", "do", "elif", "else", "fn", "for",
     "if", "in", "local", "loop", "print", "return", "while"
 };
 
