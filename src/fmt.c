@@ -221,6 +221,10 @@ capture_flags:
         case 'm': {
             if (argc--) {
                 rf_uint m = (rf_uint) intval(argv+arg);
+                if (!m) {
+                    ++arg;
+                    break;
+                }
                 char mbuf[9];
                 int k = 7;
                 for (int j = 7; j >= 0; --j) {
