@@ -1,5 +1,7 @@
 #include "disas.h"
 
+#include "conf.h"
+
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
@@ -151,7 +153,7 @@ static void d_code_obj(rf_code *c, int ipw) {
     int sz  = c->n;
     int ip  = 0;
 
-    char s[80];
+    char s[STR_BUF_SZ];
     int b0, b1;
     while (ip < sz) {
         b0 = c->code[ip];
