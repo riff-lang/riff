@@ -113,9 +113,13 @@ LIB_FN(exit) {
     exit(argc ? intval(fp) : 0);
 }
 
-// flush(f)
-// LIB_FN(flush) {
-// }
+// flush([f])
+LIB_FN(flush) {
+    FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdout;
+    if (fflush(f))
+        err("error flushing stream");
+    return 0;
+}
 
 // get([n])
 LIB_FN(get) {
@@ -794,7 +798,7 @@ static struct {
     LIB_REG(eof,    0),
     LIB_REG(eval,   1),
     LIB_REG(exit,   0),
-    // LIB_REG(flush,  1),
+    LIB_REG(flush,  0),
     LIB_REG(get,    0),
     LIB_REG(getc,   0),
     LIB_REG(open,   1),
