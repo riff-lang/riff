@@ -8,21 +8,21 @@
 #define peek()      x_peek(y->x)
 #define push(b)     c_push(y->c, b)
 
-#define set(f)      y->f    = 1;
-#define unset(f)    y->f    = 0;
-#define restore(f)  y->f    = f;
+#define set(f)      y->f    = 1
+#define unset(f)    y->f    = 0
+#define restore(f)  y->f    = f
 #define unset_all() y->lhs  = 0; \
                     y->ax   = 0; \
                     y->ox   = 0; \
                     y->px   = 0; \
                     y->rx   = 0; \
                     y->ux   = 0; \
-                    y->retx = 0;
+                    y->retx = 0
 
-#define save_and_unset(f) int f = y->f; y->f = 0;
+#define save_and_unset(f) int f = y->f; y->f = 0
 
-#define expect_nud() y->x->mode = 0;
-#define expect_led() y->x->mode = 1;
+#define expect_nud() y->x->mode = 0
+#define expect_led() y->x->mode = 1
     
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned
 // up
