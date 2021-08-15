@@ -195,6 +195,7 @@ static void literal(rf_parser *y) {
 
 static int paren_expr(rf_parser *y) {
     save_and_unset(lhs);
+    save_and_unset(fld);
     save_and_unset(ax);
     save_and_unset(ox);
     save_and_unset(px);
@@ -202,6 +203,7 @@ static int paren_expr(rf_parser *y) {
     save_and_unset(ux);
     int e = expr(y, 0);
     restore(lhs);
+    restore(fld);
     restore(ax);
     restore(ox);
     restore(px);
