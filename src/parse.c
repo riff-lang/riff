@@ -277,7 +277,7 @@ static int expr_list(rf_parser *y, int c) {
 static void subscript(rf_parser *y) {
     y->sd++;
     save_and_unset(rx);
-    int n = expr_list(y, ']');
+    int n = paren_expr_list(y, ']');
     expect_led();
     consume(y, ']', "expected ']' following subscript expression");
     expect_nud();
