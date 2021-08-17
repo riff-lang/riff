@@ -4,9 +4,15 @@
 
 #include <stdio.h>
 
-#define adv()       x_adv(y->x)
-#define peek()      x_peek(y->x)
-#define push(b)     c_push(y->c, b)
+#define push(b) c_push(y->c, b)
+
+#define LEX_NUD 0
+#define LEX_LED 1
+    
+#define adv()        x_adv(y->x, 0)
+#define peek()       x_peek(y->x, 0)
+#define adv_mode(m)  x_adv(y->x, (m))
+#define peek_mode(m) x_peek(y->x, (m))
 
 #define set(f)      y->f    = 1
 #define unset(f)    y->f    = 0
@@ -15,21 +21,23 @@
                     y->ax   = 0; \
                     y->ox   = 0; \
                     y->px   = 0; \
-                    y->rx   = 0; \
-                    y->ux   = 0; \
                     y->retx = 0
 
 #define save_and_unset(f) int f = y->f; y->f = 0
 
-#define expect_nud() y->x->mode = 0
-#define expect_led() y->x->mode = 1
-    
+#define TK_KIND(t)   (y->x->tk.kind == (t))
+#define LA_KIND(t)   (y->x->la.kind == (t))
+
+#define EXPR_UNARY 1
+#define EXPR_FIELD 2
+#define EXPR_REF   4
+
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned
 // up
 // TODO Syntax error handling; parser should do as much heavy lifting
 // as possible
 
-static int  expr(rf_parser *y, int rbp);
+static int  expr(rf_parser *, uint32_t, int);
 static void stmt_list(rf_parser *);
 static void stmt(rf_parser *);
 static void add_local(rf_parser *, rf_str *);
@@ -58,13 +66,18 @@ static int const_follow_ok(int tk) {
 }
 
 static void check(rf_parser *y, int tk, const char *msg) {
-    if (y->x->tk.kind != tk)
+    if (!TK_KIND(tk))
         err(y, msg);
 }
 
 static void consume(rf_parser *y, int tk, const char *msg) {
     check(y, tk, msg);
     adv();
+}
+
+static void consume_mode(rf_parser *y, int mode, int tk, const char *msg) {
+    check(y, tk, msg);
+    adv_mode(mode);
 }
 
 // LBP for non-prefix operators
@@ -145,31 +158,28 @@ static int resolve_local(rf_parser *y, rf_str *s) {
     return -1;
 }
 
-static void identifier(rf_parser *y) {
+static void identifier(rf_parser *y, uint32_t flags) {
     int scope = resolve_local(y, y->x->tk.lexeme.s);
-    expect_led();
 
     // If symbol succeeds a prefix ++/-- operation, signal codegen
     // to push the address of the symbol
-    if (y->rx) {
+    if (flags & EXPR_REF) {
         if (scope >= 0)
             c_local(y->c, scope, 1);
         else
             c_global(y->c, &y->x->tk, 1);
-        adv();
-        expect_nud();
+        adv_mode(LEX_LED);
         return;
     }
 
     // Else, peek at the next token. If the following token is
     // assignment, ++/--, or '[', signal codegen to push the address
     // of the symbol. Otherwise, push the value itself.
-    peek();
-    expect_nud();
-    if ((!y->fld || y->ux) &&
+    peek_mode(LEX_LED);
+    if ((!(flags & EXPR_FIELD) || flags & EXPR_UNARY) &&
             (is_incdec(y->x->la.kind) ||
              is_asgmt(y->x->la.kind)  ||
-             y->x->la.kind == '[')) {
+             LA_KIND('['))) {
         if (scope >= 0)
             c_local(y->c, scope, 1);
         else
@@ -180,43 +190,33 @@ static void identifier(rf_parser *y) {
         else
             c_global(y->c, &y->x->tk, 0);
     }
-    adv();
+    adv_mode(LEX_NUD);
 }
 
-static void literal(rf_parser *y) {
+static void literal(rf_parser *y, uint32_t flags) {
     c_constant(y->c, &y->x->tk);
-    expect_led();
-    adv();
-    expect_nud();
+    adv_mode(LEX_LED);
     // Assert no assignment appears following a constant literal
-    if (!y->fld && is_asgmt(y->x->tk.kind))
+    if (!(flags & EXPR_FIELD) && is_asgmt(y->x->tk.kind))
         err(y, "attempt to assign to constant value");
 }
 
 static int paren_expr(rf_parser *y) {
     save_and_unset(lhs);
-    save_and_unset(fld);
     save_and_unset(ax);
     save_and_unset(ox);
-    save_and_unset(px);
-    save_and_unset(rx);
-    save_and_unset(ux);
-    int e = expr(y, 0);
+    int e = expr(y, 0, 0);
     restore(lhs);
-    restore(fld);
     restore(ax);
     restore(ox);
-    restore(px);
-    restore(rx);
-    restore(ux);
     return e;
 }
 
-static int conditional(rf_parser *y) {
+static int conditional(rf_parser *y, uint32_t flags) {
     int e, l1, l2;
 
     // x ?: y
-    if (y->x->tk.kind == ':') {
+    if (TK_KIND(':')) {
         adv();
         l1 = c_prep_jump(y->c, XJNZ);
         e = paren_expr(y);
@@ -237,20 +237,20 @@ static int conditional(rf_parser *y) {
 }
 
 // Short-circuiting logical operations (&&, ||)
-static void logical(rf_parser *y, int tk) {
+static void logical(rf_parser *y, uint32_t flags, int tk) {
     push(OP_TEST);
     int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
-    expr(y, lbp(tk));
+    expr(y, flags, lbp(tk));
     push(OP_TEST);
     c_patch(y->c, l1);
 }
 
-static int paren_expr_list(rf_parser *y, int c) {
+static int expr_list(rf_parser *y, int c) {
     int n = 0;
-    while (y->x->tk.kind != c) {
-        paren_expr(y);
+    while (!TK_KIND(c)) {
+        expr(y, 0, 0);
         ++n;
-        if (y->x->tk.kind == ',')
+        if (TK_KIND(','))
             adv();
         else
             break;
@@ -258,14 +258,12 @@ static int paren_expr_list(rf_parser *y, int c) {
     return n;
 }
 
-static int expr_list(rf_parser *y, int c) {
+static int paren_expr_list(rf_parser *y, int c) {
     int n = 0;
-    while (y->x->tk.kind != c) {
-        save_and_unset(rx);
-        expr(y, 0);
-        restore(rx);
+    while (!TK_KIND(c)) {
+        paren_expr(y);
         ++n;
-        if (y->x->tk.kind == ',')
+        if (TK_KIND(','))
             adv();
         else
             break;
@@ -274,23 +272,15 @@ static int expr_list(rf_parser *y, int c) {
 }
 
 // Retrieve index of a set (string/table, but works for numbers as well)
-static void subscript(rf_parser *y) {
-    y->sd++;
-    save_and_unset(rx);
+static void subscript(rf_parser *y, uint32_t flags) {
     int n = paren_expr_list(y, ']');
-    expect_led();
-    consume(y, ']', "expected ']' following subscript expression");
-    expect_nud();
-    c_index(y->c, n, rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || y->x->tk.kind == '[');
-    restore(rx);
-    y->sd--;
+    consume_mode(y, LEX_LED, ']', "expected ']' following subscript expression");
+    c_index(y->c, n, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('['));
 }
 
 static void call(rf_parser *y) {
     int n = paren_expr_list(y, ')');
-    expect_led();
-    consume(y, ')', "expected ')'");
-    expect_nud();
+    consume_mode(y, LEX_LED, ')', "expected ')'");
     push(OP_CALL);
     push((uint8_t) n);
 }
@@ -298,9 +288,7 @@ static void call(rf_parser *y) {
 // TODO Support arbitrary indexing a la C99 designators
 static void table(rf_parser *y) {
     int n = expr_list(y, '}');
-    expect_led();
-    consume(y, '}', "expected '}'");
-    expect_nud();
+    consume_mode(y, LEX_LED, '}', "expected '}'");
     c_table(y->c, n);
 }
 
@@ -324,7 +312,7 @@ static void anon_fn(rf_parser *y) {
 
 // type = 1 if called from led()
 // type = 0 if called from nud()
-static int sequence(rf_parser *y, int type) {
+static int sequence(rf_parser *y, uint32_t flags, int type) {
     int e, from, to, step;
     e    = 0;
     from = type;
@@ -332,13 +320,11 @@ static int sequence(rf_parser *y, int type) {
     step = 0;
 
     // No upper bound provided?
-    if (y->x->tk.kind == ':') {
+    if (TK_KIND(':')) {
         step = 1;
         adv();
-        e = expr(y, 0);
-    } else if (y->x->tk.kind == ')' ||
-               y->x->tk.kind == '}' ||
-               y->x->tk.kind == ']') {
+        e = expr(y, flags, 0);
+    } else if (TK_KIND(')') || TK_KIND('}') || TK_KIND(']')) {
         c_sequence(y->c, from, to, step);
         return e;
     }
@@ -346,11 +332,11 @@ static int sequence(rf_parser *y, int type) {
     // Consume next expr as upper bound in sequence
     else {
         to = 1;
-        expr(y, 0);
-        if (y->x->tk.kind == ':') {
+        expr(y, flags, 0);
+        if (TK_KIND(':')) {
             step = 1;
             adv();
-            e = expr(y, 0);
+            e = expr(y, flags, 0);
         }
     }
 
@@ -358,16 +344,13 @@ static int sequence(rf_parser *y, int type) {
     return e;
 }
 
-static int nud(rf_parser *y) {
+static int nud(rf_parser *y, uint32_t flags) {
     int tk = y->x->tk.kind;
     int e = 0;
     if (uop(tk)) {
-        set(ux);
-        if (!y->sd)
-            set(ox);
+        set(ox);
         adv();
-        e = expr(y, 13);
-        unset(ux);
+        e = expr(y, flags | EXPR_UNARY, 13);
         c_prefix(y->c, tk);
         return e;
     }
@@ -375,13 +358,10 @@ static int nud(rf_parser *y) {
 
     // TODO
     case '$': {
-        y->fld++;
         save_and_unset(ox);
-        save_and_unset(rx);
-        save_and_unset(ux);
         adv();
-        expr(y, 17);
-        if (rx || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
+        expr(y, EXPR_FIELD, 17);
+        if (flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
             set(ax);
             push(OP_FLDA);
         } else {
@@ -389,19 +369,13 @@ static int nud(rf_parser *y) {
         }
         set(lhs);
         restore(ox);
-        restore(rx);
-        restore(ux);
-        y->fld--;
         break;
     }
     case '(': {
         adv();
-        y->pd++;
         paren_expr(y);
-        expect_led();
-        consume(y, ')', "expected ')'");
-        expect_nud();
-        if (!y->fld || (y->fld != y->pd)) {
+        consume_mode(y, LEX_LED, ')', "expected ')'");
+        if (!(flags & EXPR_FIELD)) {
             if (is_asgmt(y->x->tk.kind))
                 err(y, "invalid operator following expr");
             // Hack to prevent parsing ++/-- as postfix following
@@ -409,7 +383,6 @@ static int nud(rf_parser *y) {
             else if (is_incdec(y->x->tk.kind))
                 return TK_INC;
         }
-        y->pd--;
         return ')';
     }
     case '{':
@@ -417,36 +390,32 @@ static int nud(rf_parser *y) {
         table(y);
         break;
     case TK_DOTS:
-        unset(rx);
-        if (!y->sd) set(ox);
+        set(ox);
         adv();
-        e = sequence(y, 0);
+        e = sequence(y, flags & ~EXPR_REF, 0);
         break;
     case TK_INC:
     case TK_DEC:
         if (adv())
             err(y, "expected symbol following prefix ++/--");
-        if (!(y->x->tk.kind == TK_ID ||
-              y->x->tk.kind == '$'))
+        if (!(TK_KIND(TK_ID) || TK_KIND('$')))
             err(y, "unexpected symbol following prefix ++/--");
-        set(rx);
-        expr(y, 14);
+        expr(y, flags | EXPR_REF, 14);
         c_prefix(y->c, tk);
-        if (!y->sd && !y->lhs) {
+        if (!y->lhs) {
             set(px);
             set(lhs);
         }
-        unset(rx);
         break;
     case TK_NULL:
     case TK_INT:
     case TK_FLT:
     case TK_STR:
     case TK_RE:
-        literal(y);
+        literal(y, flags);
         break;
     case TK_ID:
-        identifier(y);
+        identifier(y, flags);
         break;
     case TK_FN:
         adv();
@@ -463,65 +432,56 @@ static int nud(rf_parser *y) {
     return tk;
 }
 
-static int led(rf_parser *y, int p, int tk) {
+static int led(rf_parser *y, uint32_t flags, int p, int tk) {
     switch (tk) {
     case TK_DOTS:
-        unset(rx);
-        if (!y->sd)
-            set(ox);
+        set(ox);
         adv();
-        return sequence(y, 1);
-    case TK_INC: case TK_DEC:
-        if (is_const(p) || y->rx)
+        return sequence(y, flags & ~EXPR_REF, 1);
+    case TK_INC:
+    case TK_DEC:
+        if (is_const(p) || flags & EXPR_REF)
             return p;
-        if (!y->sd && !y->lhs) {
+        if (!y->lhs) {
             set(px);
             set(lhs);
         }
         c_postfix(y->c, tk);
-        expect_led();
-        adv();
-        expect_nud();
-        unset(rx);
+        adv_mode(LEX_LED);
         return y->x->tk.kind;
     case '?':
-        unset(rx);
-        if (!y->sd)
-            set(ox);
+        set(ox);
         adv();
-        return conditional(y);
-    case TK_AND: case TK_OR:
-        unset(rx);
-        if (!y->sd)
-            set(ox);
+        return conditional(y, flags & ~EXPR_REF);
+    case TK_AND:
+    case TK_OR:
+        set(ox);
         adv();
-        logical(y, tk);
+        logical(y, flags & ~EXPR_REF, tk);
         return y->x->tk.kind;
     case '[':
         adv();
-        subscript(y);
+        subscript(y, flags);
         return ']';
     case '(':
-        if (!y->sd)
-            set(ox);
         adv();
         call(y);
         return ')';
     default:
         if (lbop(tk) || rbop(tk)) {
-            if (!y->sd && !y->ax && !y->ox) {
-                set(lhs);
-                if (is_asgmt(tk)) {
-                    set(ax);
-                } else {
-                    set(ox);
-                }
-            } else if (y->lhs && !y->fld && y->ox && is_asgmt(tk)) {
+            if (y->lhs && !(flags & EXPR_FIELD) && y->ox && is_asgmt(tk)) {
                 err(y, "syntax error");
             }
-            unset(rx);
+            if (!y->ax && !y->ox) {
+                set(lhs);
+            }
+            if (is_asgmt(tk)) {
+                set(ax);
+            } else {
+                set(ox);
+            }
             adv();
-            p = expr(y, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
+            p = expr(y, flags & ~EXPR_REF, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
         }
         break;
@@ -529,8 +489,8 @@ static int led(rf_parser *y, int p, int tk) {
     return p;
 }
 
-static int expr(rf_parser *y, int rbp) {
-    int p  = nud(y);
+static int expr(rf_parser *y, uint32_t flags, int rbp) {
+    int p  = nud(y, flags);
     int tk = y->x->tk.kind;
 
     while (rbp < lbp(tk)) {
@@ -546,7 +506,7 @@ static int expr(rf_parser *y, int rbp) {
         // the following token is also ++/--. This would be an
         // invalid operation; this allows the ++/-- to be parsed as
         // a prefix op for the following expression.
-        if (y->rx && is_incdec(tk))
+        if (flags & EXPR_REF && is_incdec(tk))
             return p;
 
         // Prevent post-increments from being associated with function
@@ -554,7 +514,8 @@ static int expr(rf_parser *y, int rbp) {
         if (p == ')' && is_incdec(tk))
             return p;
 
-        p  = led(y, p, tk);
+
+        p  = led(y, flags, p, tk);
         tk = y->x->tk.kind;
     }
     return p;
@@ -655,7 +616,7 @@ static void do_stmt(rf_parser *y) {
     y->loop = y->ld++;
     enter_loop(y, &b, &c);
     int l1 = y->c->n;
-    if (y->x->tk.kind == '{') {
+    if (TK_KIND('{')) {
         adv();
         stmt_list(y);
         consume(y, '}', "expected '}'");
@@ -670,7 +631,7 @@ static void do_stmt(rf_parser *y) {
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
     }
-    expr(y, 0);
+    expr(y, 0, 0);
     c_jump(y->c, JNZ, l1);
     // Patch break stmts
     for (int i = 0; i < b.n; i++) {
@@ -689,18 +650,18 @@ static int compile_fn(rf_parser *y) {
     int arity = 0;
     uint8_t old_fd = y->fd;
     y->fd = ++y->ld;
-    if (y->x->tk.kind == '(') {
+    if (TK_KIND('(')) {
         adv();
 
         // Read parameter identifiers, reserving them as locals to the
         // function
         while (1) {
-            if (y->x->tk.kind == TK_ID) {
+            if (TK_KIND(TK_ID)) {
                 add_local(y, y->x->tk.lexeme.s);
                 ++arity;
                 adv();
             }
-            if (y->x->tk.kind == ',')
+            if (TK_KIND(','))
                 adv();
             else
                 break;
@@ -729,7 +690,7 @@ static int compile_fn(rf_parser *y) {
 //
 // Named local functions should be able to reference themselves
 static void local_fn(rf_parser *y) {
-    if (y->x->tk.kind != TK_ID)
+    if (!TK_KIND(TK_ID))
         err(y, "expected identifier for local function definition");
     rf_str *id = y->x->tk.lexeme.s;
     int idx = resolve_local(y, id);
@@ -778,7 +739,7 @@ static void local_fn(rf_parser *y) {
 static void fn_stmt(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
     rf_str *id;
-    if (y->x->tk.kind != TK_ID) {
+    if (!TK_KIND(TK_ID)) {
         err(y, "expected identifier for function definition");
     } else {
         id = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
@@ -807,7 +768,7 @@ static void fn_stmt(rf_parser *y) {
 
 static void for_stmt(rf_parser *y) {
     int paren = 0;
-    if (y->x->tk.kind == '(') {
+    if (TK_KIND('(')) {
         paren = 1;
         adv();
     }
@@ -820,23 +781,23 @@ static void for_stmt(rf_parser *y) {
     // Increment lexical depth once before adding locals [k,] v so
     // they're only visible to the loop
     y->ld++;
-    if (y->x->tk.kind != TK_ID)
+    if (!TK_KIND(TK_ID))
         err(y, "expected identifier");
     add_local(y, y->x->tk.lexeme.s);
     adv();
     int kv = 0;
-    if (y->x->tk.kind == ',') {
+    if (TK_KIND(',')) {
         set(fx);
         kv = 1;
         adv();
-        if (y->x->tk.kind != TK_ID)
+        if (!TK_KIND(TK_ID))
             err(y, "expected identifier following ','");
         add_local(y, y->x->tk.lexeme.s);
         adv();
     }
     set(lx);
     consume(y, TK_IN, "expected 'in'");
-    expr(y, 0);
+    expr(y, 0, 0);
     unset(fx);
     unset(lx);
     int l1 = c_prep_loop(y->c, kv);
@@ -848,7 +809,7 @@ static void for_stmt(rf_parser *y) {
     // don't pop k,v locals
     y->loop = y->ld++;
     enter_loop(y, &b, &c);
-    if (y->x->tk.kind == '{') {
+    if (TK_KIND('{')) {
         adv();
         stmt_list(y);
         consume(y, '}', "expected '}'");
@@ -892,11 +853,11 @@ static void for_stmt(rf_parser *y) {
 }
 
 static void if_stmt(rf_parser *y) {
-    expr(y, 0);
+    expr(y, 0, 0);
     int l1, l2;
     y->ld++;
     l1 = c_prep_jump(y->c, JZ);
-    if (y->x->tk.kind == '{') {
+    if (TK_KIND('{')) {
         adv();
         stmt_list(y);
         consume(y, '}', "expected '}'");
@@ -905,24 +866,24 @@ static void if_stmt(rf_parser *y) {
     }
     y->ld--;
     y->nlcl -= pop_locals(y, y->ld, 1);
-    if (y->x->tk.kind == TK_ELIF) {
+    if (TK_KIND(TK_ELIF)) {
 y_elif:
         adv();
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         if_stmt(y);
         c_patch(y->c, l2);
-    } else if (y->x->tk.kind == TK_ELSE) {
+    } else if (TK_KIND(TK_ELSE)) {
         adv();
         // Handle as `elif` for `else if`. This avoids the
         // non-breaking issue where lexical depth is double
         // incremented.
-        if (y->x->tk.kind == TK_IF)
+        if (TK_KIND(TK_IF))
             goto y_elif;
         y->ld++;
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
-        if (y->x->tk.kind == '{') {
+        if (TK_KIND('{')) {
             adv();
             stmt_list(y);
             consume(y, '}', "expected '}'");
@@ -938,7 +899,7 @@ y_elif:
 }
 
 static void local_stmt(rf_parser *y) {
-    if (y->x->tk.kind == TK_FN) {
+    if (TK_KIND(TK_FN)) {
         adv();
         local_fn(y);
         return;
@@ -946,9 +907,9 @@ static void local_stmt(rf_parser *y) {
     while (1) {
         unset_all();
         rf_str *id;
-        if (y->x->tk.kind != TK_ID) {
+        if (!TK_KIND(TK_ID)) {
             peek();
-            if (y->x->la.kind != TK_ID)
+            if (!LA_KIND(TK_ID))
                 err(y, "local declaration requires valid identifier");
             id = y->x->la.lexeme.s;
         } else {
@@ -964,11 +925,11 @@ static void local_stmt(rf_parser *y) {
             add_local(y, id);
             push(OP_NULL); // Reserve stack slot
         }
-        expr(y, 0);
+        expr(y, 0, 0);
         push(OP_POP);
 
         unset(lx);
-        if (y->x->tk.kind == ',')
+        if (TK_KIND(','))
             adv();
         else
             break;
@@ -983,7 +944,7 @@ static void loop_stmt(rf_parser *y) {
     y->loop = y->ld++;
     enter_loop(y, &b, &c);
     int l1 = y->c->n;
-    if (y->x->tk.kind == '{') {
+    if (TK_KIND('{')) {
         adv();
         stmt_list(y);
         consume(y, '}', "expected '}'");
@@ -1007,7 +968,7 @@ static void loop_stmt(rf_parser *y) {
 
 static void print_stmt(rf_parser *y) {
     int paren = 0;
-    if (y->x->tk.kind == '(') { // Parenthesized expr list?
+    if (TK_KIND('(')) { // Parenthesized expr list?
         adv();
         paren = ')';
     }
@@ -1029,13 +990,13 @@ static void ret_stmt(rf_parser *y) {
     }
     if (y->ld == y->fd)
         set(retx);
-    if (y->x->tk.kind == ';' || y->x->tk.kind == '}') {
+    if (TK_KIND(';') || TK_KIND('}')) {
         c_return(y->c, 0);
         return;
     }
 
     const char *p = y->x->p; // Save pointer
-    expr(y, 0);
+    expr(y, 0, 0);
 
     // p != y->x->p when a valid expression is parsed following the
     // `return` keyword
@@ -1048,12 +1009,12 @@ static void while_stmt(rf_parser *y) {
     p_list b, c;
     int l1, l2;
     l1 = y->c->n;
-    expr(y, 0);
+    expr(y, 0, 0);
     l2 = c_prep_jump(y->c, JZ);
     uint8_t old_loop = y->loop;
     y->loop = y->ld++;
     enter_loop(y, &b, &c);
-    if (y->x->tk.kind == '{') {
+    if (TK_KIND('{')) {
         adv();
         stmt_list(y);
         consume(y, '}', "expected '}'");
@@ -1085,7 +1046,7 @@ static void stmt(rf_parser *y) {
     case TK_DO:     adv(); do_stmt(y);    break;
     case TK_FN:
         peek();
-        if (y->x->la.kind == TK_ID) {
+        if (LA_KIND(TK_ID)) {
             adv();
             fn_stmt(y);
         } else {
@@ -1103,12 +1064,11 @@ static void stmt(rf_parser *y) {
     }
 
     // Skip token if semicolon used as a statement terminator
-    if (y->x->tk.kind == ';') adv();
+    if (TK_KIND(';')) adv();
 }
 
 static void stmt_list(rf_parser *y) {
-    while (!(y->x->tk.kind == TK_EOI ||
-             y->x->tk.kind == '}'))
+    while (!(TK_KIND(TK_EOI) || TK_KIND('}')))
         stmt(y);
 }
 
@@ -1121,12 +1081,9 @@ static void y_init(rf_parser *y) {
     y->lcap = 0;
     y->lcl  = NULL;
 
-    y->fld  = 0;
-    y->pd   = 0;
     y->ld   = 0;
     y->fd   = 0;
     y->id   = 0;
-    y->sd   = 0;
     y->loop = 0;
     y->brk  = NULL;
     y->cont = NULL;

@@ -80,7 +80,6 @@ enum tokens {
 typedef struct {
     rf_token    tk;     // Current token
     rf_token    la;     // Lookahead token
-    int         mode;
     int         ln;     // Current line of the source
     const char *p;      // Pointer to the current position in the source
     struct {
@@ -92,7 +91,7 @@ typedef struct {
 
 int  x_init(rf_lexer *, const char *);
 void x_free(rf_lexer *);
-int  x_adv(rf_lexer *);
-int  x_peek(rf_lexer *);
+int  x_adv(rf_lexer *, int);
+int  x_peek(rf_lexer *, int);
 
 #endif

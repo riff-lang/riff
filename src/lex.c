@@ -522,7 +522,7 @@ static void block_comment(rf_lexer *x) {
     }
 }
 
-static int tokenize(rf_lexer *x, rf_token *tk) {
+static int tokenize(rf_lexer *x, int mode, rf_token *tk) {
     int c;
     while (1) {
         switch (c = *x->p++) {
@@ -530,7 +530,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case '\n': case '\r': ++x->ln;
         case ' ': case '\t': break;
         case '!':
-            if (x->mode) {
+            if (mode) {
                 return test3(x, '=', TK_NE, '~', TK_NMATCH, '!');
             } else {
                 return test2(x, '=', TK_NE, '!');
@@ -542,7 +542,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
         case '*': return test4(x, '=', TK_MULX, '*', 
                                   '=', TK_POWX, TK_POW, '*');
         case '+':
-            if (x->mode)
+            if (mode)
                 return test3(x, '=', TK_ADDX, '+', TK_INC, '+');
             else {
                 // Allow `+` to be consumed when directly prefixing a
@@ -570,7 +570,7 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
             case '/': adv(); line_comment(x);  break;
             case '*': adv(); block_comment(x); break;
             default: 
-                if (x->mode)
+                if (mode)
                     return test2(x, '=', TK_DIVX, '/');
                 else
                     return read_re(x, tk, c);
@@ -605,13 +605,12 @@ static int tokenize(rf_lexer *x, rf_token *tk) {
 int x_init(rf_lexer *x, const char *src) {
     x->tk.kind = 0;
     x->la.kind = 0;
-    x->mode    = 0;
     x->ln      = 1;
     x->p       = src;
     x->buf.n   = 0;
     x->buf.cap = 0;
     x->buf.c   = NULL;
-    x_adv(x);
+    x_adv(x, 0);
     return 0;
 }
 
@@ -622,7 +621,7 @@ void x_free(rf_lexer *x) {
         free(x->buf.c);
 }
 
-int x_adv(rf_lexer *x) {
+int x_adv(rf_lexer *x, int mode) {
 
     // Free previous string object
     if (x->tk.kind == TK_STR || x->tk.kind == TK_ID) {
@@ -636,7 +635,7 @@ int x_adv(rf_lexer *x) {
         x->tk.kind   = x->la.kind;
         x->tk.lexeme = x->la.lexeme;
         x->la.kind   = 0;
-    } else if ((x->tk.kind = tokenize(x, &x->tk)) == 1) {
+    } else if ((x->tk.kind = tokenize(x, mode, &x->tk)) == 1) {
         x->tk.kind = TK_EOI;
         return 1;
     }
@@ -645,8 +644,8 @@ int x_adv(rf_lexer *x) {
 
 // Populate the lookahead rf_token, leaving the current rf_token
 // unchanged
-int x_peek(rf_lexer *x) {
-    if ((x->la.kind = tokenize(x, &x->la)) == 1) {
+int x_peek(rf_lexer *x, int mode) {
+    if ((x->la.kind = tokenize(x, mode, &x->la)) == 1) {
         x->la.kind = TK_EOI;
         return 1;
     }

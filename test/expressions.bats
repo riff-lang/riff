@@ -134,3 +134,23 @@
     run bin/riff 'null<1'
     [ "$output" -eq 1 ]
 }
+
+@test "Misc. edge case expressions" {
+    run bin/riff 'print a=b=7'
+    [ "$output" -eq 7 ]
+
+    run bin/riff 'b[1]=4;print a=b[c=1]'
+    [ "$output" -eq 4 ]
+    
+    run bin/riff 'c[1]=4;print a=b+c[d=1]'
+    [ "$output" -eq 4 ]
+    
+    run bin/riff 'print a=0+int(c=6,d=7)+1'
+    [ "$output" -eq 7 ]
+
+    run bin/riff 'a=7+c=1'
+    [ "$status" -eq 1 ]
+
+    run bin/riff 'print a=7+(c=1)'
+    [ "$output" -eq 8 ]
+}
