@@ -23,7 +23,6 @@ enum opcodes {
     OP_POPL,    // Pop (destroy) current iterator
     OP_ITERV,   // Initialize an iterator with only a value
     OP_ITERKV,  // Initialize an iterator with key/value pair
-    OP_TEST,    // Logical test
     OP_ADD,     // Add
     OP_SUB,     // Substract
     OP_MUL,     // Multiply

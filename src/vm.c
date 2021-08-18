@@ -55,7 +55,7 @@ inline rf_flt str2flt(rf_str *s) {
         set_flt(l, (numval(l) op numval(r))); \
     }
 
-// Return logical result of value
+// Return boolean result of value (0/1)
 static inline int test(rf_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->u.i);
@@ -235,8 +235,6 @@ Z_UOP(len) {
     }
     set_int(v, l);
 }
-
-Z_UOP(test) { set_int(v, test(v)); }
 
 Z_BINOP(cat) {
     char *lhs, *rhs;
@@ -685,7 +683,6 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     z_case(NEG)  unop(neg);  z_break;
     z_case(NOT)  unop(not);  z_break;
     z_case(NUM)  unop(num);  z_break;
-    z_case(TEST) unop(test); z_break;
 
 // Standard binary operations
 // sp[-2].v and sp[-1].v are assumed to be safe to overwrite

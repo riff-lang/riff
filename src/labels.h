@@ -20,7 +20,6 @@ static void *dispatch_labels[] = {
     &&L_POPL,
     &&L_ITERV,
     &&L_ITERKV,
-    &&L_TEST,
     &&L_ADD,
     &&L_SUB,
     &&L_MUL,

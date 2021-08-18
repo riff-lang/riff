@@ -238,10 +238,8 @@ static int conditional(rf_parser *y, uint32_t flags) {
 
 // Short-circuiting logical operations (&&, ||)
 static void logical(rf_parser *y, uint32_t flags, int tk) {
-    push(OP_TEST);
     int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
     expr(y, flags, lbp(tk));
-    push(OP_TEST);
     c_patch(y->c, l1);
 }
 
