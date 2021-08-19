@@ -11,5 +11,5 @@ a = { 1, 10, 35, 164, 284 }
 for i in a {
     local x
     while (i#x++)**.5 % 1; 
-    x - 1
+    print x - 1
 }

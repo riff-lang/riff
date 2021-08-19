@@ -32,4 +32,4 @@ fn popcount(x) {
 }
 
 for x in { 5, 7, 0x7fff_ffff_ffff_ffff }
-    fmt("popcount(%d) = %d", x, popcount(x))
+    printf("popcount(%d) = %d\n", x, popcount(x))

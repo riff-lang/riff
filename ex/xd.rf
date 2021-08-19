@@ -10,11 +10,11 @@ fn dump(f) {
         }
         if #s < 16 {
             for i in #s..15 {
-                put(i == 7 ? "    " : "   ")
+                write(i == 7 ? "    " : "   ")
              }
         }
-        put(" ")
-        gsub(s, /[^ -~]/, ".")
+        write(" ")
+        print gsub(s, /[^ -~]/, ".")
     }
 }
 
