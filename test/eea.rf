@@ -19,4 +19,4 @@ fn eea_(rg, rh, sg, sh, tg, th) {
     return eea_(rh, r, sh, s, th, t)
 }
 
-eea(1819, 3587)
+print eea(1819, 3587)

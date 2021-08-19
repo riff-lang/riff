@@ -28,4 +28,4 @@ for t in #input+1..number {
     }
 }
 
-spoken[number]
+print spoken[number]
