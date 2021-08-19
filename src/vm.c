@@ -395,9 +395,8 @@ Z_UOP(print) {
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
         break;
     case TYPE_TBL:  printf("table: %p", v->u.t);    break;
-    case TYPE_RFN:  printf("fn: %p", v->u.fn);      break;
-    case TYPE_CFN:  printf("fn: %p", v->u.cfn);     break;
-    default: break;
+    case TYPE_RFN:
+    case TYPE_CFN:  printf("fn: %p", v->u.fn);      break;
     }
 }
 

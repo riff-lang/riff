@@ -183,6 +183,7 @@ LIB_FN(open) {
     return 1;
 }
 
+// printf(s, ...)
 LIB_FN(printf) {
     if (!is_str(fp))
         return 0;
@@ -191,28 +192,6 @@ LIB_FN(printf) {
     int n = fmt_snprintf(buf, sizeof buf, fp->u.s->str, fp + 1, argc);
     buf[n] = '\0';
     fputs(buf, stdout);
-    return 0;
-}
-
-// put(...)
-LIB_FN(put) {
-    for (int i = 0; i < argc; ++i) {
-        switch(fp[i].type) {
-        case TYPE_NULL: printf("null");                    break;
-        case TYPE_INT:  printf("%"PRId64, fp[i].u.i);      break;
-        case TYPE_FLT:  printf(FLT_PRINT_FMT, fp[i].u.f);  break;
-        case TYPE_STR:  printf("%s", fp[i].u.s->str);      break;
-        case TYPE_RE:   printf("regex: %p", fp[i].u.r);    break;
-        case TYPE_FH:   printf("file: %p", fp[i].u.fh->p); break;
-        case TYPE_SEQ:
-            printf("seq: %"PRId64"..%"PRId64":%"PRId64,
-                    fp[i].u.q->from, fp[i].u.q->to, fp[i].u.q->itvl);
-            break;
-        case TYPE_TBL:  printf("table: %p", fp[i].u.t);    break;
-        case TYPE_RFN:  printf("fn: %p", fp[i].u.fn);      break;
-        case TYPE_CFN:  printf("fn: %p", fp[i].u.cfn);     break;
-        }
-    }
     return 0;
 }
 
@@ -271,10 +250,19 @@ LIB_FN(write) {
         return 0;
     FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].u.fh->p : stdout;
     switch (fp->type) {
-    case TYPE_INT: fprintf(f, "%"PRId64, fp->u.i); break;
-    case TYPE_FLT: fprintf(f, FLT_PRINT_FMT, fp->u.f); break;
-    case TYPE_STR: fprintf(f, "%s", fp->u.s->str); break;
-    default: break;
+    case TYPE_NULL: fprintf(f, "null");                  break;
+    case TYPE_INT:  fprintf(f, "%"PRId64, fp->u.i);      break;
+    case TYPE_FLT:  fprintf(f, FLT_PRINT_FMT, fp->u.f);  break;
+    case TYPE_STR:  fprintf(f, "%s", fp->u.s->str);      break;
+    case TYPE_RE:   fprintf(f, "regex: %p", fp->u.r);    break;
+    case TYPE_FH:   fprintf(f, "file: %p", fp->u.fh->p); break;
+    case TYPE_SEQ:
+        fprintf(f, "seq: %"PRId64"..%"PRId64":%"PRId64,
+                fp->u.q->from, fp->u.q->to, fp->u.q->itvl);
+        break;
+    case TYPE_TBL:  fprintf(f, "table: %p", fp->u.t);    break;
+    case TYPE_RFN:
+    case TYPE_CFN:  fprintf(f, "fn: %p", fp->u.fn);      break;
     }
     return 0;
 }
@@ -803,7 +791,6 @@ static struct {
     LIB_REG(getc,   0),
     LIB_REG(open,   1),
     LIB_REG(printf, 1),
-    LIB_REG(put,    0),
     LIB_REG(putc,   0),
     LIB_REG(read,   0),
     LIB_REG(write,  0),
