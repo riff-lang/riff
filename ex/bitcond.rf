@@ -1,9 +1,0 @@
-// Conditional using bitwise ops
-// x ? y : z
-// x = 2, y = 4, z = 5 -> 4
-
-x = 2
-y = 4
-z = 5
-
-((y ^ z) & (~(!x) + 1)) ^ y
