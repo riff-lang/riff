@@ -541,7 +541,7 @@ static void expr_stmt(rf_parser *y) {
     if (n > 1 || (!y->ax && (!y->px || y->ox)))
         c_print(y->c, n);
     else
-        push(OP_POP);
+        c_pop(y->c, n);
 }
 
 // After exiting scope, "pop" local variables no longer in scope by
@@ -555,14 +555,8 @@ static uint8_t pop_locals(rf_parser *y, int depth, int f) {
         if (f)
             free(y->lcl[i].id);
     }
-    if (!count)
-        return count;
-    else if (count == 1)
-        push(OP_POP);
-    else {
-        push(OP_POPI);
-        push(count);
-    }
+    if (count)
+        c_pop(y->c, count);
     return count;
 }
 
@@ -924,7 +918,7 @@ static void local_stmt(rf_parser *y) {
             push(OP_NULL); // Reserve stack slot
         }
         expr(y, 0, 0);
-        push(OP_POP);
+        c_pop(y->c, 1);
 
         unset(lx);
         if (TK_KIND(','))

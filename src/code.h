@@ -159,6 +159,7 @@ void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
 int  c_prep_loop(rf_code *, int);
 void c_print(rf_code *, int);
+void c_pop(rf_code *, int);
 void c_return(rf_code *, int);
 
 #endif

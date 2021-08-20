@@ -445,6 +445,15 @@ void c_print(rf_code *c, int n) {
     }
 }
 
+void c_pop(rf_code *c, int n) {
+    if (n == 1)
+        push(OP_POP);
+    else {
+        push(OP_POPI);
+        push((uint8_t) n);
+    }
+}
+
 // t = 0 => void return
 // t = 1 => return one value
 void c_return(rf_code *c, int t) {
