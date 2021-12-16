@@ -110,7 +110,5 @@ static void *dispatch_labels[] = {
     &&L_SSEQF,
     &&L_SSEQT,
     &&L_SSEQE,
-    &&L_SET,
-    &&L_PRINT1,
-    &&L_PRINT
+    &&L_SET
 };

@@ -36,9 +36,7 @@ typedef struct {
     // Flags used when evaluating whether expression statements should
     // be printed
     int lhs: 1;     // Set when leftmost expr has been evaluated
-    int ax:  1;     // Assignment flag
     int ox:  1;     // Typical (i.e. not ++/--) operation flag
-    int px:  1;     // Prefix or postfix increment/decrement flag
 
     int fx:   1;    // For loop flag (parsing `z` in `for x,y in z`)
     int lx:   1;    // Local flag (newly-declared)

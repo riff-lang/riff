@@ -14,7 +14,7 @@ fn dump(f) {
              }
         }
         write(" ")
-        print gsub(s, /[^ -~]/, ".")
+        print(gsub(s, /[^ -~]/, "."))
     }
 }
 

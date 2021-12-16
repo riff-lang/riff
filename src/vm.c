@@ -382,24 +382,6 @@ Z_BINOP(idx) {
     }
 }
 
-Z_UOP(print) {
-    switch (v->type) {
-    case TYPE_NULL: printf("null");                 break;
-    case TYPE_INT:  printf("%"PRId64, v->u.i);      break;
-    case TYPE_FLT:  printf(FLT_PRINT_FMT, v->u.f);  break;
-    case TYPE_STR:  printf("%s", v->u.s->str);      break;
-    case TYPE_RE:   printf("regex: %p", v->u.r);    break;
-    case TYPE_FH:   printf("file: %p", v->u.fh->p); break;
-    case TYPE_SEQ:
-        printf("seq: %"PRId64"..%"PRId64":%"PRId64,
-                v->u.q->from, v->u.q->to, v->u.q->itvl);
-        break;
-    case TYPE_TBL:  printf("table: %p", v->u.t);    break;
-    case TYPE_RFN:
-    case TYPE_CFN:  printf("fn: %p", v->u.fn);      break;
-    }
-}
-
 static inline void new_iter(rf_val *set) {
     rf_iter *new = malloc(sizeof(rf_iter));
     new->p = iter;
@@ -983,20 +965,12 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             nret = fn->fn(&sp->v, nargs);
         }
         ip += 2;
-        // TODO - hacky
-        // If callee returns 0 and the next instruction is PRINT1,
-        // skip over the instruction. This facilitates user
-        // functions which conditionally return something.
+        // Nulllify stack slot if callee returns nothing
         if (!nret) { 
             set_null(&sp[-1].v);
-            if (*ip == OP_PRINT1) {
-                ++ip;
-                --sp;
-            }
         }
         z_break;
     }
-
 
     z_case(RET) return 0;
 
@@ -1224,7 +1198,7 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
               sp[-1].v);
         ++ip;
         z_break;
-    // x..y,z
+    // x..y:z
     z_case(SSEQ)
         z_seq(intval(&sp[-3].v),
               intval(&sp[-2].v),
@@ -1233,7 +1207,7 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         sp -= 2;
         ++ip;
         z_break;
-    // x..,z
+    // x..:z
     z_case(SSEQF)
         z_seq(intval(&sp[-2].v),
               INT64_MAX,
@@ -1242,7 +1216,7 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         --sp;
         ++ip;
         z_break;
-    // ..y,z
+    // ..y:z
     z_case(SSEQT)
         z_seq(0,
               intval(&sp[-2].v),
@@ -1251,7 +1225,7 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         --sp;
         ++ip;
         z_break;
-    // ..,z
+    // ..:z
     z_case(SSEQE)
         z_seq(0,
               INT64_MAX,
@@ -1266,26 +1240,6 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         sp[-2].v = *sp[-2].a = sp[-1].v;
         --sp;
         ++ip;
-        z_break;
-
-    // Print a single element from the stack
-    z_case(PRINT1)
-        z_print(&sp[-1].v);
-        printf("\n");
-        --sp;
-        ++ip;
-        z_break;
-
-    // Print (IP+1) elements from the stack
-    z_case(PRINT)
-        for (int i = ip[1]; i > 0; --i) {
-            z_print(&sp[-i].v);
-            if (i > 1)
-                printf(" ");
-        }
-        printf("\n");
-        sp -= ip[1];
-        ip += 2;
         z_break;
 #ifndef COMPUTED_GOTO
     } }

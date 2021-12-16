@@ -183,6 +183,34 @@ LIB_FN(open) {
     return 1;
 }
 
+static inline void fprintf_val(FILE *f, rf_val *v) {
+    switch (v->type) {
+    case TYPE_NULL: fprintf(f, "null");                 break;
+    case TYPE_INT:  fprintf(f, "%"PRId64, v->u.i);      break;
+    case TYPE_FLT:  fprintf(f, FLT_PRINT_FMT, v->u.f);  break;
+    case TYPE_STR:  fprintf(f, "%s", v->u.s->str);      break;
+    case TYPE_RE:   fprintf(f, "regex: %p", v->u.r);    break;
+    case TYPE_FH:   fprintf(f, "file: %p", v->u.fh->p); break;
+    case TYPE_SEQ:
+        fprintf(f, "seq: %"PRId64"..%"PRId64":%"PRId64,
+                v->u.q->from, v->u.q->to, v->u.q->itvl);
+        break;
+    case TYPE_TBL:  fprintf(f, "table: %p", v->u.t);    break;
+    case TYPE_RFN:
+    case TYPE_CFN:  fprintf(f, "fn: %p", v->u.fn);      break;
+    }
+}
+
+// print(...)
+LIB_FN(print) {
+    for (int i = 0; i < argc; ++i) {
+        if (i) fputs(" ", stdout);
+        fprintf_val(stdout, fp+i);
+    }
+    fputs("\n", stdout);
+    return 0;
+}
+
 // printf(s, ...)
 LIB_FN(printf) {
     if (!is_str(fp))
@@ -249,21 +277,7 @@ LIB_FN(write) {
     if (!argc)
         return 0;
     FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].u.fh->p : stdout;
-    switch (fp->type) {
-    case TYPE_NULL: fprintf(f, "null");                  break;
-    case TYPE_INT:  fprintf(f, "%"PRId64, fp->u.i);      break;
-    case TYPE_FLT:  fprintf(f, FLT_PRINT_FMT, fp->u.f);  break;
-    case TYPE_STR:  fprintf(f, "%s", fp->u.s->str);      break;
-    case TYPE_RE:   fprintf(f, "regex: %p", fp->u.r);    break;
-    case TYPE_FH:   fprintf(f, "file: %p", fp->u.fh->p); break;
-    case TYPE_SEQ:
-        fprintf(f, "seq: %"PRId64"..%"PRId64":%"PRId64,
-                fp->u.q->from, fp->u.q->to, fp->u.q->itvl);
-        break;
-    case TYPE_TBL:  fprintf(f, "table: %p", fp->u.t);    break;
-    case TYPE_RFN:
-    case TYPE_CFN:  fprintf(f, "fn: %p", fp->u.fn);      break;
-    }
+    fprintf_val(f, fp);
     return 0;
 }
 
@@ -787,6 +801,7 @@ static struct {
     LIB_REG(get,    0),
     LIB_REG(getc,   0),
     LIB_REG(open,   1),
+    LIB_REG(print,  0),
     LIB_REG(printf, 1),
     LIB_REG(putc,   0),
     LIB_REG(read,   0),

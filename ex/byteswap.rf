@@ -16,5 +16,5 @@ fn byteswap(x, n, m) {
     return x ^ (x & (maskn ^ maskm)) ^ nth_byte ^ mth_byte
 }
 
-print "Swap bytes 1 and 3 in 0x12345678:", hex(byteswap(0x12345678, 1, 3))
-print "Swap bytes 0 and 2 in 0xdeadbeef:", hex(byteswap(0xdeadbeef, 0, 2))
+print("Swap bytes 1 and 3 in 0x12345678:", hex(byteswap(0x12345678, 1, 3)))
+print("Swap bytes 0 and 2 in 0xdeadbeef:", hex(byteswap(0xdeadbeef, 0, 2)))

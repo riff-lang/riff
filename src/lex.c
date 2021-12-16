@@ -432,11 +432,6 @@ static int read_id(rf_lexer *x, rf_token *tk) {
             x->p += 3;
             return TK_NULL;
         } else break;
-    case 'p':
-        if (check_kw(x, "rint", 4)) {
-            x->p += 4;
-            return TK_PRINT;
-        } else break;
     case 'r':
         if (check_kw(x, "eturn", 5)) {
             x->p += 5;

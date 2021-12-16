@@ -85,8 +85,6 @@ static struct {
     [OP_POW]     = { "pow",      0 },
     [OP_PREDEC]  = { "predec",   0 },
     [OP_PREINC]  = { "preinc",   0 },
-    [OP_PRINT1]  = { "print",    0 },
-    [OP_PRINT]   = { "print",    1 },
     [OP_PUSHK0]  = { "pushk  0", 0 },
     [OP_PUSHK1]  = { "pushk  1", 0 },
     [OP_PUSHK2]  = { "pushk  2", 0 },

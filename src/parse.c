@@ -18,9 +18,7 @@
 #define unset(f)    y->f    = 0
 #define restore(f)  y->f    = f
 #define unset_all() y->lhs  = 0; \
-                    y->ax   = 0; \
                     y->ox   = 0; \
-                    y->px   = 0; \
                     y->retx = 0
 
 #define save_and_unset(f) int f = y->f; y->f = 0
@@ -203,11 +201,9 @@ static void literal(rf_parser *y, uint32_t flags) {
 
 static int paren_expr(rf_parser *y) {
     save_and_unset(lhs);
-    save_and_unset(ax);
     save_and_unset(ox);
     int e = expr(y, 0, 0);
     restore(lhs);
-    restore(ax);
     restore(ox);
     return e;
 }
@@ -359,12 +355,10 @@ static int nud(rf_parser *y, uint32_t flags) {
         save_and_unset(ox);
         adv();
         expr(y, EXPR_FIELD, 17);
-        if (flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
-            set(ax);
+        if (flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind))
             push(OP_FLDA);
-        } else {
+        else
             push(OP_FLDV);
-        }
         set(lhs);
         restore(ox);
         break;
@@ -400,10 +394,7 @@ static int nud(rf_parser *y, uint32_t flags) {
             err(y, "unexpected symbol following prefix ++/--");
         expr(y, flags | EXPR_REF, 14);
         c_prefix(y->c, tk);
-        if (!y->lhs) {
-            set(px);
-            set(lhs);
-        }
+        set(lhs);
         break;
     case TK_NULL:
     case TK_INT:
@@ -440,10 +431,7 @@ static int led(rf_parser *y, uint32_t flags, int p, int tk) {
     case TK_DEC:
         if (is_const(p) || flags & EXPR_REF)
             return p;
-        if (!y->lhs) {
-            set(px);
-            set(lhs);
-        }
+        set(lhs);
         c_postfix(y->c, tk);
         adv_mode(LEX_LED);
         return y->x->tk.kind;
@@ -470,14 +458,10 @@ static int led(rf_parser *y, uint32_t flags, int p, int tk) {
             if (y->lhs && !(flags & EXPR_FIELD) && y->ox && is_asgmt(tk)) {
                 err(y, "syntax error");
             }
-            if (!y->ax && !y->ox) {
+            if (!y->ox)
                 set(lhs);
-            }
-            if (is_asgmt(tk)) {
-                set(ax);
-            } else {
+            if (!is_asgmt(tk))
                 set(ox);
-            }
             adv();
             p = expr(y, flags & ~EXPR_REF, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
             c_infix(y->c, tk);
@@ -522,26 +506,7 @@ static int expr(rf_parser *y, uint32_t flags, int rbp) {
 // Standalone expressions
 static void expr_stmt(rf_parser *y) {
     int n = expr_list(y, 0);
-
-    // Implicit printing conditions
-    // 1. Leftmost expr is not being assigned to
-    // 2. Leftmost expr is not being incremented/decremented UNLESS
-    //    accompanied by an otherwise typical operation, e.g.
-    //    arithmetic
-    //
-    // Examples:
-    //   a = 1       (Do not print)
-    //   a << 2      (Print)
-    //   a++         (Do not print)
-    //   a = b--     (Do not print)
-    //   ++a == 1    (Print)
-    //   x++ ? y : z (Print)
-    //   ++a[b]      (Do not print)
-    //   a[++b]      (Print)
-    if (n > 1 || (!y->ax && (!y->px || y->ox)))
-        c_print(y->c, n);
-    else
-        c_pop(y->c, n);
+    c_pop(y->c, n);
 }
 
 // After exiting scope, "pop" local variables no longer in scope by
@@ -958,21 +923,6 @@ static void loop_stmt(rf_parser *y) {
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
-static void print_stmt(rf_parser *y) {
-    int paren = 0;
-    if (TK_KIND('(')) { // Parenthesized expr list?
-        adv();
-        paren = ')';
-    }
-    const char *p = y->x->p;    // Save pointer
-    int n = expr_list(y, paren);
-    if (p == y->x->p)           // No expression parsed
-        err(y, "expected expression in `print` statement");
-    c_print(y->c, n);
-    if (paren)
-        consume(y, ')', "expected ')'");
-}
-
 static void ret_stmt(rf_parser *y) {
     // Destroy any unterminated iterators before returning control.
     // Destroying iterators before parsing any return expression
@@ -1049,7 +999,6 @@ static void stmt(rf_parser *y) {
     case TK_IF:     adv(); if_stmt(y);    break;
     case TK_LOCAL:  adv(); local_stmt(y); break;
     case TK_LOOP:   adv(); loop_stmt(y);  break;
-    case TK_PRINT:  adv(); print_stmt(y); break;
     case TK_RETURN: adv(); ret_stmt(y);   break;
     case TK_WHILE:  adv(); while_stmt(y); break;
     default:               expr_stmt(y);  break;

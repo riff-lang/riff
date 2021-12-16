@@ -436,15 +436,6 @@ void c_postfix(rf_code *c, int op) {
     }
 }
 
-void c_print(rf_code *c, int n) {
-    if (n == 1)
-        push(OP_PRINT1);
-    else {
-        push(OP_PRINT);
-        push((uint8_t) n);
-    }
-}
-
 void c_pop(rf_code *c, int n) {
     if (n == 1)
         push(OP_POP);

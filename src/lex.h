@@ -59,7 +59,6 @@ enum tokens {
     TK_IN,
     TK_LOCAL,
     TK_LOOP,
-    TK_PRINT,
     TK_RETURN,
     TK_WHILE,
 

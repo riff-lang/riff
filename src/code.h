@@ -114,8 +114,6 @@ enum opcodes {
     OP_SSEQT,   // Sequence: 0..SP[-2] w/ interval SP[-1]
     OP_SSEQE,   // Sequence: .. (empty/infinite) w/ interval SP[-1]
     OP_SET,     // Assignment
-    OP_PRINT1,  // Print value at SP[-1]
-    OP_PRINT    // Print (IP+1) values from stack
 };
 
 enum jumps {
@@ -158,7 +156,6 @@ void c_sequence(rf_code *, int, int, int);
 void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
 int  c_prep_loop(rf_code *, int);
-void c_print(rf_code *, int);
 void c_pop(rf_code *, int);
 void c_return(rf_code *, int);
 
