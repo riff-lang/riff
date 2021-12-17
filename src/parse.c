@@ -240,8 +240,11 @@ static void logical(rf_parser *y, uint32_t flags, int tk) {
 }
 
 static int expr_list(rf_parser *y, int c) {
+    save_and_unset(lhs);
+    save_and_unset(ox);
     int n = 0;
     while (!TK_KIND(c)) {
+        unset_all();
         expr(y, 0, 0);
         ++n;
         if (TK_KIND(','))
@@ -249,6 +252,8 @@ static int expr_list(rf_parser *y, int c) {
         else
             break;
     }
+    restore(lhs);
+    restore(ox);
     return n;
 }
 
@@ -495,7 +500,6 @@ static int expr(rf_parser *y, uint32_t flags, int rbp) {
         // calls
         if (p == ')' && is_incdec(tk))
             return p;
-
 
         p  = led(y, flags, p, tk);
         tk = y->x->tk.kind;
