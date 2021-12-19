@@ -27,22 +27,22 @@ executable at `/usr/local/bin/riff`.
 
 ## Basic Usage
 
-- Run a Riff program on the command-line:
-
-    ```bash
-    $ riff '<program>'
-    ```
-
 - Run a Riff program stored in a file:
 
     ```bash
-    $ riff -f file.rf
+    $ riff file.rf
+    ```
+
+- Run a Riff program on the command-line:
+
+    ```bash
+    $ riff -e '<program>'
     ```
 
 - Print a listing of mnemonics which associate to `riff` VM
   instructions for a given program:
   
     ```bash
-    $ riff -l '<program>'
-    $ riff -lf file.rf
+    $ riff -l file.rf
+    $ riff -le '<program>'
     ```

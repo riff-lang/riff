@@ -7,7 +7,7 @@
 char *u_file2str(const char *path) {
     FILE *file = fopen(path, "rb");
     if (!file) {
-        fprintf(stderr, "file not found: %s\n", path);
+        fprintf(stderr, "riff: file not found: %s\n", path);
         exit(1);
     }
     fseek(file, 0L, SEEK_END);

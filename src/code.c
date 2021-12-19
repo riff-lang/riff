@@ -101,7 +101,7 @@ void c_loop(rf_code *c, int l) {
     }
 }
 
-void c_sequence(rf_code *c, int from, int to, int step) {
+void c_range(rf_code *c, int from, int to, int step) {
     if (step) {
         if (from) {
             if (to)

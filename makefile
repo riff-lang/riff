@@ -36,6 +36,7 @@ WFLAGS       += -Weverything
 SRC           = src/riff.c
 SRC          += src/code.c
 SRC          += src/disas.c
+SRC          += src/env.c
 SRC          += src/fmt.c
 SRC          += src/fn.c
 SRC          += src/hash.c

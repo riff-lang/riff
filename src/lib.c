@@ -88,21 +88,15 @@ LIB_FN(eval) {
     if (!is_str(fp))
         return 0;
     rf_env e;
-    rf_fn  main;
+    rf_fn main;
     rf_code c;
+    e_init(&e);
     c_init(&c);
-    main.code  = &c;
+    main.code = &c;
     main.arity = 0;
-    e.nf       = 0;
-    e.fcap     = 0;
-    e.fn       = NULL;
-    e.main     = main;
-    e.argc     = 0;
-    e.ff       = 0;
-    e.argv     = NULL;
-    e.pname    = NULL;
-    e.src      = fp->u.s->str;
-    main.name  = NULL;
+    e.main = main;
+    e.src = fp->u.s->str;
+    main.name = NULL;
     y_compile(&e);
     z_exec_reenter(&e, (rf_stack *) fp);
     return 0;

@@ -454,7 +454,7 @@ static inline void destroy_iter(void) {
     free(old);
 }
 
-static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) {
+static inline void init_argv(rf_tbl *t, rf_int arg0, int rf_argc, char **rf_argv) {
     t_init(t);
     for (rf_int i = 0; i < rf_argc; ++i) {
         // TODO force parameter should not be set
@@ -462,7 +462,7 @@ static inline void init_argv(rf_tbl *t, rf_int os, int rf_argc, char **rf_argv) 
             TYPE_STR,
             .u.s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 0)
         };
-        t_insert_int(t, i-os-1, &v, 1, 1);
+        t_insert_int(t, i-arg0, &v, 1, 1);
     }
 }
 
@@ -474,7 +474,7 @@ int z_exec(rf_env *e) {
     iter = NULL;
     t_init(&fldv);
     re_register_fldv(&fldv);
-    init_argv(&argv, e->ff, e->argc, e->argv);
+    init_argv(&argv, e->arg0, e->argc, e->argv);
     h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1);
 
     h_insert(&globals, s_newstr("stdin",  5, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdin,  FH_STD}}, 1);

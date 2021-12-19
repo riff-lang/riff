@@ -285,9 +285,9 @@ static void call(rf_parser *y) {
 }
 
 // TODO Support arbitrary indexing a la C99 designators
-static void table(rf_parser *y) {
-    int n = expr_list(y, '}');
-    consume_mode(y, LEX_LED, '}', "expected '}'");
+static void table(rf_parser *y, int tk) {
+    int n = expr_list(y, tk);
+    consume_mode(y, LEX_LED, tk, "expected closing brace/bracket");
     c_table(y->c, n);
 }
 
@@ -311,7 +311,7 @@ static void anon_fn(rf_parser *y) {
 
 // type = 1 if called from led()
 // type = 0 if called from nud()
-static int sequence(rf_parser *y, uint32_t flags, int type) {
+static int range(rf_parser *y, uint32_t flags, int type) {
     int e, from, to, step;
     e    = 0;
     from = type;
@@ -324,11 +324,11 @@ static int sequence(rf_parser *y, uint32_t flags, int type) {
         adv();
         e = expr(y, flags, 0);
     } else if (TK_KIND(')') || TK_KIND('}') || TK_KIND(']')) {
-        c_sequence(y->c, from, to, step);
+        c_range(y->c, from, to, step);
         return e;
     }
 
-    // Consume next expr as upper bound in sequence
+    // Consume next expr as upper bound in range
     else {
         to = 1;
         expr(y, flags, 0);
@@ -339,7 +339,7 @@ static int sequence(rf_parser *y, uint32_t flags, int type) {
         }
     }
 
-    c_sequence(y->c, from, to, step);
+    c_range(y->c, from, to, step);
     return e;
 }
 
@@ -382,14 +382,17 @@ static int nud(rf_parser *y, uint32_t flags) {
         }
         return ')';
     }
+    case '[':
     case '{':
         adv();
-        table(y);
+        // '[' + 2 = ']'
+        // '{' + 2 = '}'
+        table(y, tk + 2);
         break;
     case TK_DOTS:
         set(ox);
         adv();
-        e = sequence(y, flags & ~EXPR_REF, 0);
+        e = range(y, flags & ~EXPR_REF, 0);
         break;
     case TK_INC:
     case TK_DEC:
@@ -431,7 +434,7 @@ static int led(rf_parser *y, uint32_t flags, int p, int tk) {
     case TK_DOTS:
         set(ox);
         adv();
-        return sequence(y, flags & ~EXPR_REF, 1);
+        return range(y, flags & ~EXPR_REF, 1);
     case TK_INC:
     case TK_DEC:
         if (is_const(p) || flags & EXPR_REF)
@@ -936,7 +939,7 @@ static void ret_stmt(rf_parser *y) {
     }
     if (y->ld == y->fd)
         set(retx);
-    if (TK_KIND(';') || TK_KIND('}')) {
+    if (TK_KIND(TK_EOI) || TK_KIND(';') || TK_KIND('}')) {
         c_return(y->c, 0);
         return;
     }
@@ -1037,10 +1040,14 @@ static void y_init(rf_parser *y) {
 int y_compile(rf_env *e) {
     rf_parser y;
     y.e = e;
-    rf_lexer  x;
+    rf_lexer x;
     y.x = &x;
     x_init(&x, e->src);
     y.c = e->main.code;
+    // Overwrite OP_RET byte if appending to an existing bytecode
+    // array
+    if (y.c->n && y.c->code[y.c->n-1] == OP_RET)
+        y.c->n -= 1;
     y_init(&y);
     stmt_list(&y);
     pop_locals(&y, y.ld, 1);

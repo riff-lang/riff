@@ -152,7 +152,7 @@ void c_infix(rf_code *, int);
 void c_postfix(rf_code *, int);
 void c_jump(rf_code *, int, int);
 void c_loop(rf_code *, int);
-void c_sequence(rf_code *, int, int, int);
+void c_range(rf_code *, int, int, int);
 void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
 int  c_prep_loop(rf_code *, int);
