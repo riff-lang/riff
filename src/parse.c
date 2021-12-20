@@ -533,7 +533,7 @@ static uint8_t pop_locals(rf_parser *y, int depth, int f) {
 }
 
 static void break_stmt(rf_parser *y) {
-    if (!y->ld)
+    if (!y->loop)
         err(y, "break statement outside of loop");
     // Reserve a forward jump
     p_list *p = y->brk;
@@ -543,7 +543,7 @@ static void break_stmt(rf_parser *y) {
 }
 
 static void cont_stmt(rf_parser *y) {
-    if (!y->ld)
+    if (!y->loop)
         err(y, "continue statement outside of loop");
     // Reserve a forward jump
     p_list *p = y->cont;
