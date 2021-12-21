@@ -577,7 +577,7 @@ static void do_stmt(rf_parser *y) {
     p_list *r_cont = y->cont;
     p_list b, c;
     uint8_t old_loop = y->loop;
-    y->loop = y->ld++;
+    y->loop = ++y->ld;
     enter_loop(y, &b, &c);
     int l1 = y->c->n;
     if (TK_KIND('{')) {
@@ -588,7 +588,7 @@ static void do_stmt(rf_parser *y) {
         stmt(y);
     }
     consume(y, TK_WHILE, "expected 'while' condition after 'do' block");
-    y->ld--;
+    --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
     // Patch continue stmts
@@ -745,7 +745,7 @@ static void for_stmt(rf_parser *y) {
 
     // Increment lexical depth once before adding locals [k,] v so
     // they're only visible to the loop
-    y->ld++;
+    ++y->ld;
     if (!TK_KIND(TK_ID))
         err(y, "expected identifier");
     add_local(y, y->x->tk.lexeme.s);
@@ -772,7 +772,7 @@ static void for_stmt(rf_parser *y) {
 
     // Increment the lexical depth again so break/continue statements
     // don't pop k,v locals
-    y->loop = y->ld++;
+    y->loop = ++y->ld;
     enter_loop(y, &b, &c);
     if (TK_KIND('{')) {
         adv();
@@ -820,7 +820,7 @@ static void for_stmt(rf_parser *y) {
 static void if_stmt(rf_parser *y) {
     expr(y, 0, 0);
     int l1, l2;
-    y->ld++;
+    ++y->ld;
     l1 = c_prep_jump(y->c, JZ);
     if (TK_KIND('{')) {
         adv();
@@ -829,7 +829,7 @@ static void if_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
-    y->ld--;
+    --y->ld;
     y->nlcl -= pop_locals(y, y->ld, 1);
     if (TK_KIND(TK_ELIF)) {
 y_elif:
@@ -845,7 +845,7 @@ y_elif:
         // incremented.
         if (TK_KIND(TK_IF))
             goto y_elif;
-        y->ld++;
+        ++y->ld;
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         if (TK_KIND('{')) {
@@ -856,7 +856,7 @@ y_elif:
             stmt(y);
         }
         c_patch(y->c, l2);
-        y->ld--;
+        --y->ld;
         y->nlcl -= pop_locals(y, y->ld, 1);
     } else {
         c_patch(y->c, l1);
@@ -906,7 +906,7 @@ static void loop_stmt(rf_parser *y) {
     p_list *r_cont = y->cont;
     p_list b, c;
     uint8_t old_loop = y->loop;
-    y->loop = y->ld++;
+    y->loop = ++y->ld;
     enter_loop(y, &b, &c);
     int l1 = y->c->n;
     if (TK_KIND('{')) {
@@ -916,7 +916,7 @@ static void loop_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
-    y->ld--;
+    --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
     // Patch continue stmts
@@ -962,7 +962,7 @@ static void while_stmt(rf_parser *y) {
     expr(y, 0, 0);
     l2 = c_prep_jump(y->c, JZ);
     uint8_t old_loop = y->loop;
-    y->loop = y->ld++;
+    y->loop = ++y->ld;
     enter_loop(y, &b, &c);
     if (TK_KIND('{')) {
         adv();
@@ -971,7 +971,7 @@ static void while_stmt(rf_parser *y) {
     } else {
         stmt(y);
     }
-    y->ld--;
+    --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
     // Patch continue stmts
