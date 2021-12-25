@@ -447,30 +447,16 @@ void c_pop(rf_code *c, int n) {
 
 // t = 0 => void return
 // t = 1 => return one value
-// t = 2 => clean up fn compilation; check for implicit return
-// TODO should be possible to emit multiple OP_TCALLs in some
-// scenarios
 void c_return(rf_code *c, int t) {
-    switch (t) {
-    case 0:
+    if (!t)
         push(OP_RET);
-        break;
-    case 1:
-        // Patch tailcall
-        if (c->n > 1 && c->code[c->n-2] == OP_CALL)
+    else {
+
+        // Patch OP_CALLs immediately preceding OP_RET1 to be tailcall
+        // optimized
+        if (c->n > 1 && c->code[c->n-2] == OP_CALL) {
             c->code[c->n-2] = OP_TCALL;
-        push(OP_RET1);
-        break;
-    case 2:
-        if (c->n > 0) {
-            if (c->code[c->n-1] == OP_POP)
-                c->code[c->n-1] = OP_RET1;
-            // Patch tailcall
-            if (c->n > 2 && c->code[c->n-3] == OP_CALL)
-                c->code[c->n-3] = OP_TCALL;
-        } else {
-            push(OP_RET);
         }
-        break;
+        push(OP_RET1);
     }
 }

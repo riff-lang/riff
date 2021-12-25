@@ -634,14 +634,13 @@ static int compile_fn(rf_parser *y) {
     }
     consume(y, '{', "expected '{'");
     stmt_list(y);
-    consume(y, '}', "expected '}'");
 
     // Caller cleans the stack; no need to pop locals from scope
 
-    // If the last stmt was not a return statement, overwrite OP_POP
-    // if it was emitted and check for tailcall optimization
+    // If the last stmt was not a return statement, push OP_RET
     if (!y->retx)
-        c_return(y->c, 2);
+        push(OP_RET);
+    consume(y, '}', "expected '}'");
     y->fd = old_fd;
     --y->ld;
     return arity;
