@@ -96,23 +96,23 @@ enum opcodes {
     OP_CALL,    // Function call
     OP_RET,     // Return from call (void)
     OP_RET1,    // Return from call 1 value
-    OP_TBL0,    // Create empty table
-    OP_TBL,     // Create table of the top (IP+1) stack elements
-    OP_TBLK,    // Create table of the top K[IP+1] stack elements
+    OP_TAB0,    // Create empty table
+    OP_TAB,     // Create table of the top (IP+1) stack elements
+    OP_TABK,    // Create table of the top K[IP+1] stack elements
     OP_IDXA,    // Index of a set, leaving address on stack (nD array)
     OP_IDXA1,   // Index of a set, leaving address on stack
     OP_IDXV,    // Index of a set, leaving value on stack (nD array)
     OP_IDXV1,   // Index of a set, leaving value on stack
     OP_FLDA,    // Index of the fldv, leaving address on stack
     OP_FLDV,    // Index of the fldv, leaving value on stack
-    OP_SEQ,     // Sequence: SP[-2]..SP[-1]
-    OP_SEQF,    // Sequence: SP[-1]..INT_MAX
-    OP_SEQT,    // Sequence: 0..SP[-1]
-    OP_SEQE,    // Sequence: .. (empty/infinite)
-    OP_SSEQ,    // Sequence: SP[-3]..SP[-2] w/ interval SP[-1]
-    OP_SSEQF,   // Sequence: SP[-2]..INT_MAX w/ interval SP[-1]
-    OP_SSEQT,   // Sequence: 0..SP[-2] w/ interval SP[-1]
-    OP_SSEQE,   // Sequence: .. (empty/infinite) w/ interval SP[-1]
+    OP_RNG,     // Sequence: SP[-2]..SP[-1]
+    OP_RNGF,    // Sequence: SP[-1]..INT_MAX
+    OP_RNGT,    // Sequence: 0..SP[-1]
+    OP_RNGE,    // Sequence: .. (empty/infinite)
+    OP_SRNG,    // Sequence: SP[-3]..SP[-2] w/ interval SP[-1]
+    OP_SRNGF,   // Sequence: SP[-2]..INT_MAX w/ interval SP[-1]
+    OP_SRNGT,   // Sequence: 0..SP[-2] w/ interval SP[-1]
+    OP_SRNGE,   // Sequence: .. (empty/infinite) w/ interval SP[-1]
     OP_SET,     // Assignment
 };
 

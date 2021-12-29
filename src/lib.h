@@ -20,6 +20,6 @@ struct c_fn {
     rf_lib_fn fn;
 };
 
-void l_register(rf_htbl *);
+void l_register(rf_htab *);
 
 #endif

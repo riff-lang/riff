@@ -9,7 +9,7 @@
 #define set(f)   h->f = 1
 #define unset(f) h->f = 0
 
-void h_init(rf_htbl *h) {
+void h_init(rf_htab *h) {
     h->n     = 0;
     h->an    = 0;
     h->cap   = 0;
@@ -17,7 +17,7 @@ void h_init(rf_htbl *h) {
     h->nodes = NULL;
 }
 
-uint32_t h_length(rf_htbl *h) {
+uint32_t h_length(rf_htab *h) {
     if (!h->lx)
         return h->n;
     uint32_t l = 0;
@@ -39,8 +39,8 @@ static ht_node *new_node(rf_str *k, rf_val *v) {
     case TYPE_INT:  nv = v_newint(v->u.i); break;
     case TYPE_FLT:  nv = v_newflt(v->u.f); break;
     case TYPE_STR:  nv = v_newstr(v->u.s); break;
-    case TYPE_TBL:
-        nv      = v_newtbl();
+    case TYPE_TAB:
+        nv      = v_newtab();
         nv->u.t = v->u.t;
         break;
     case TYPE_RFN: case TYPE_CFN:
@@ -55,7 +55,7 @@ static ht_node *new_node(rf_str *k, rf_val *v) {
 }
 
 // Given a string's hash, return index of the element if it exists in the
-// table, or an index of a suitble empty slot
+// table, or an index of a suitable empty slot
 static uint32_t node_slot(ht_node **e, uint32_t cap, uint32_t hash) {
     cap -= 1;
     uint32_t i = hash & cap;
@@ -67,7 +67,7 @@ static uint32_t node_slot(ht_node **e, uint32_t cap, uint32_t hash) {
     return i;
 }
 
-static int exists(rf_htbl *h, rf_str *k) {
+static int exists(rf_htab *h, rf_str *k) {
     if (!h->cap) return 0;
     if (!k->hash)
         k->hash = u_strhash(k->str);
@@ -75,7 +75,7 @@ static int exists(rf_htbl *h, rf_str *k) {
     return h->nodes[i] && h->nodes[i]->key->hash == k->hash;
 }
 
-int h_exists_int(rf_htbl *h, rf_int k) {
+int h_exists_int(rf_htab *h, rf_int k) {
     if (!h->cap) return 0;
     char str[21];
     size_t len = u_int2str(k, str);
@@ -84,7 +84,7 @@ int h_exists_int(rf_htbl *h, rf_int k) {
 }
 
 
-rf_val *h_lookup(rf_htbl *h, rf_str *k, int set) {
+rf_val *h_lookup(rf_htab *h, rf_str *k, int set) {
     if (set) set(lx);
     // If the table is empty, call h_insert, which allocates memory
     if (!h->nodes)
@@ -97,7 +97,7 @@ rf_val *h_lookup(rf_htbl *h, rf_str *k, int set) {
     return h->nodes[i]->val;
 }
 
-rf_val *h_insert(rf_htbl *h, rf_str *k, rf_val *v, int set) {
+rf_val *h_insert(rf_htab *h, rf_str *k, rf_val *v, int set) {
     if (set) set(lx);
     if (!k->hash)
         k->hash = u_strhash(k->str);
@@ -145,7 +145,7 @@ rf_val *h_insert(rf_htbl *h, rf_str *k, rf_val *v, int set) {
 }
 
 // Remove the key/value pair by nullifying its slot
-rf_val *h_delete(rf_htbl *h, rf_str *k) {
+rf_val *h_delete(rf_htab *h, rf_str *k) {
     if (!h->nodes || !exists(h, k))
         return NULL;
     if (!k->hash)

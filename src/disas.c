@@ -91,24 +91,24 @@ static struct {
     [OP_PUSHK]   = { "pushk",    1 },
     [OP_RET1]    = { "ret    1", 0 },
     [OP_RET]     = { "ret",      0 },
-    [OP_SEQE]    = { "seqe",     0 },
-    [OP_SEQF]    = { "seqf",     0 },
-    [OP_SEQT]    = { "seqt",     0 },
-    [OP_SEQ]     = { "seq",      0 },
+    [OP_RNGE]    = { "rnge",     0 },
+    [OP_RNGF]    = { "rngf",     0 },
+    [OP_RNGT]    = { "rngt",     0 },
+    [OP_RNG]     = { "rng",      0 },
     [OP_SET]     = { "set",      0 },
     [OP_SHLX]    = { "shlx",     0 },
     [OP_SHL]     = { "shl",      0 },
     [OP_SHRX]    = { "shrx",     0 },
     [OP_SHR]     = { "shr",      0 },
-    [OP_SSEQE]   = { "sseqe",    0 },
-    [OP_SSEQF]   = { "sseqf",    0 },
-    [OP_SSEQT]   = { "sseqt",    0 },
-    [OP_SSEQ]    = { "sseq",     0 },
+    [OP_SRNGE]   = { "srnge",    0 },
+    [OP_SRNGF]   = { "srngf",    0 },
+    [OP_SRNGT]   = { "srngt",    0 },
+    [OP_SRNG]    = { "srng",     0 },
     [OP_SUBX]    = { "subx",     0 },
     [OP_SUB]     = { "sub",      0 },
-    [OP_TBL0]    = { "tbl    0", 0 },
-    [OP_TBLK]    = { "tbl",      1 },
-    [OP_TBL]     = { "tbl",      1 },
+    [OP_TAB0]    = { "tab    0", 0 },
+    [OP_TABK]    = { "tab",      1 },
+    [OP_TAB]     = { "tab",      1 },
     [OP_TCALL]   = { "tcall",    1 },
     [OP_XJNZ16]  = { "xjnz",     2 },
     [OP_XJNZ8]   = { "xjnz",     1 },
@@ -158,7 +158,7 @@ static void d_code_obj(rf_code *c, int ipw) {
             b1 = c->code[ip+1];
             switch (b0) {
             case OP_PUSHK:
-            case OP_TBLK:
+            case OP_TABK:
                 switch (c->k[b1].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND(f));

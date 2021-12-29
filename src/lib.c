@@ -185,11 +185,11 @@ static inline void fprintf_val(FILE *f, rf_val *v) {
     case TYPE_STR:  fprintf(f, "%s", v->u.s->str);      break;
     case TYPE_RE:   fprintf(f, "regex: %p", v->u.r);    break;
     case TYPE_FH:   fprintf(f, "file: %p", v->u.fh->p); break;
-    case TYPE_SEQ:
-        fprintf(f, "seq: %"PRId64"..%"PRId64":%"PRId64,
+    case TYPE_RNG:
+        fprintf(f, "range: %"PRId64"..%"PRId64":%"PRId64,
                 v->u.q->from, v->u.q->to, v->u.q->itvl);
         break;
-    case TYPE_TBL:  fprintf(f, "table: %p", v->u.t);    break;
+    case TYPE_TAB:  fprintf(f, "table: %p", v->u.t);    break;
     case TYPE_RFN:
     case TYPE_CFN:  fprintf(f, "fn: %p", v->u.fn);      break;
     }
@@ -301,11 +301,11 @@ static rf_uint prng_next(void) {
 }
 
 // rand([x])
-//   rand()     | random float ∈ [0..1)
-//   rand(0)    | random int ∈ [INT64_MIN..INT64_MAX]
-//   rand(n)    | random int ∈ [0..n]
-//   rand(m,n)  | random int ∈ [m..n]
-//   rand(seq)  | random int ∈ (range/sequence)
+//   rand()       | random float ∈ [0..1)
+//   rand(0)      | random int ∈ [INT64_MIN..INT64_MAX]
+//   rand(n)      | random int ∈ [0..n]
+//   rand(m,n)    | random int ∈ [m..n]
+//   rand(range)  | random int ∈ range
 LIB_FN(rand) {
     rf_uint rand = prng_next();
     if (!argc) {
@@ -313,9 +313,8 @@ LIB_FN(rand) {
         set_flt(fp-1, f);
     }
 
-    // If first argument is a range/sequence, ignore any succeeding
-    // args
-    else if (is_seq(fp)) {
+    // If first argument is a range, ignore any succeeding args
+    else if (is_rng(fp)) {
         rf_int from = fp->u.q->from;
         rf_int to   = fp->u.q->to;
         rf_int itvl = fp->u.q->itvl;
@@ -672,7 +671,7 @@ LIB_FN(split) {
         len = fp->u.s->l;
     }
     rf_str *s;
-    rf_tbl *t = malloc(sizeof(rf_tbl));
+    rf_tab *t = malloc(sizeof(rf_tab));
     t_init(t);
     rf_re *delim;
     int errcode = 0;
@@ -730,7 +729,7 @@ do_split: {
             t_insert_int(t, i++, &(rf_val) {TYPE_STR, .u.s = s}, 1, 1);
         }
     }
-    set_tbl(fp-1, t);
+    set_tab(fp-1, t);
     return 1;
     }
 
@@ -740,7 +739,7 @@ split_chars: {
         s = s_newstr(str + i, 1, 0);
         t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s}, 1, 1);
     }
-    set_tbl(fp-1, t);
+    set_tab(fp-1, t);
     return 1;
     }
 }
@@ -758,8 +757,8 @@ LIB_FN(type) {
     case TYPE_STR:  str = "string";   len = 6; break;
     case TYPE_RE:   str = "regex";    len = 5; break;
     case TYPE_FH:   str = "file";     len = 4; break;
-    case TYPE_SEQ:  str = "sequence"; len = 8; break;
-    case TYPE_TBL:  str = "table";    len = 5; break;
+    case TYPE_RNG:  str = "range";    len = 5; break;
+    case TYPE_TAB:  str = "table";    len = 5; break;
     case TYPE_RFN:
     case TYPE_CFN:  str = "function"; len = 8; break;
     default: break;
@@ -818,7 +817,7 @@ static struct {
     { NULL, { 0, NULL } }
 };
 
-void l_register(rf_htbl *g) {
+void l_register(rf_htab *g) {
     // Initialize the PRNG with the current time
     prng_seed(time(0));
     for (int i = 0; lib_fn[i].name; ++i) {

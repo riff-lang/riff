@@ -105,26 +105,26 @@ void c_range(rf_code *c, int from, int to, int step) {
     if (step) {
         if (from) {
             if (to)
-                push(OP_SSEQ);
+                push(OP_SRNG);
             else
-                push(OP_SSEQF);
+                push(OP_SRNGF);
         } else {
             if (to)
-                push(OP_SSEQT);
+                push(OP_SRNGT);
             else
-                push(OP_SSEQE);
+                push(OP_SRNGE);
         }
     } else {
         if (from) {
             if (to)
-                push(OP_SEQ);
+                push(OP_RNG);
             else
-                push(OP_SEQF);
+                push(OP_RNGF);
         } else {
             if (to)
-                push(OP_SEQT);
+                push(OP_RNGT);
             else
-                push(OP_SEQE);
+                push(OP_RNGE);
         }
     }
 }
@@ -333,12 +333,12 @@ void c_local(rf_code *c, int i, int mode) {
 
 void c_table(rf_code *c, int n) {
     if (!n)
-        push(OP_TBL0);
+        push(OP_TAB0);
     else if (n <= 0xff) {
-        push(OP_TBL);
+        push(OP_TAB);
         push((uint8_t) n);
     } else {
-        push(OP_TBLK);
+        push(OP_TABK);
 
         // Search for exisitng `n` in the constants pool
         for (int i = 0; i < c->nk; ++i) {

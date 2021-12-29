@@ -18,8 +18,8 @@ enum types {
     TYPE_STR,
     TYPE_RE,
     TYPE_FH,
-    TYPE_SEQ,
-    TYPE_TBL,
+    TYPE_RNG,
+    TYPE_TAB,
     TYPE_RFN,
     TYPE_CFN
 };
@@ -30,8 +30,8 @@ enum types {
 #define is_str(x)  ((x)->type == TYPE_STR)
 #define is_re(x)   ((x)->type == TYPE_RE)
 #define is_fh(x)   ((x)->type == TYPE_FH)
-#define is_seq(x)  ((x)->type == TYPE_SEQ)
-#define is_tbl(x)  ((x)->type == TYPE_TBL)
+#define is_rng(x)  ((x)->type == TYPE_RNG)
+#define is_tab(x)  ((x)->type == TYPE_TAB)
 #define is_rfn(x)  ((x)->type == TYPE_RFN)
 #define is_cfn(x)  ((x)->type == TYPE_CFN)
 #define is_num(x)  ((x)->type == TYPE_INT || (x)->type == TYPE_FLT)
@@ -86,9 +86,9 @@ typedef struct {
     rf_int from;
     rf_int to;
     rf_int itvl;
-} rf_seq;
+} rf_rng;
 
-typedef struct rf_tbl rf_tbl;
+typedef struct rf_tab rf_tab;
 typedef struct rf_fn  rf_fn;
 typedef struct c_fn   c_fn;
 
@@ -104,8 +104,8 @@ typedef struct {
         rf_str *s;
         rf_re  *r;
         rf_fh  *fh;
-        rf_seq *q;
-        rf_tbl *t;
+        rf_rng *q;
+        rf_tab *t;
         rf_fn  *fn;
         c_fn   *cfn;
     } u;
@@ -116,7 +116,7 @@ typedef struct {
 #define set_int(p, x) *(p) = (rf_val) {TYPE_INT, .u.i = (x)}
 #define set_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .u.f = (x)}
 #define set_str(p, x) *(p) = (rf_val) {TYPE_STR, .u.s = (x)}
-#define set_tbl(p, x) *(p) = (rf_val) {TYPE_TBL, .u.t = (x)}
+#define set_tab(p, x) *(p) = (rf_val) {TYPE_TAB, .u.t = (x)}
 
 #define numval(x) (is_int(x) ? (x)->u.i : \
                    is_flt(x) ? (x)->u.f : \
@@ -135,7 +135,7 @@ rf_str *s_newstr_concat(char *, char *, int);
 rf_str *s_substr(char *, rf_int, rf_int, rf_int);
 rf_str *s_int2str(rf_int);
 rf_str *s_flt2str(rf_flt);
-void    re_register_fldv(rf_tbl *);
+void    re_register_fldv(rf_tab *);
 rf_re  *re_compile(char *, size_t, uint32_t, int *);
 void    re_free(rf_re *);
 int     re_store_numbered_captures(pcre2_match_data *);
@@ -144,6 +144,6 @@ rf_val *v_newnull(void);
 rf_val *v_newint(rf_int);
 rf_val *v_newflt(rf_flt);
 rf_val *v_newstr(rf_str *);
-rf_val *v_newtbl(void);
+rf_val *v_newtab(void);
 
 #endif

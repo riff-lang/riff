@@ -17,9 +17,9 @@ static void err(const char *msg) {
     exit(1);
 }
 
-static rf_htbl   globals;
-static rf_tbl    argv;
-static rf_tbl    fldv;
+static rf_htab   globals;
+static rf_tab    argv;
+static rf_tab    fldv;
 static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
 
@@ -80,8 +80,8 @@ static inline int test(rf_val *v) {
         }
         return !!v->u.s->l;
     }
-    case TYPE_TBL: return !!t_length(v->u.t);
-    case TYPE_RE:  case TYPE_SEQ:
+    case TYPE_TAB: return !!t_length(v->u.t);
+    case TYPE_RE:  case TYPE_RNG:
     case TYPE_RFN: case TYPE_CFN:
         return 1;
     default: return 0;
@@ -224,10 +224,10 @@ Z_UOP(len) {
         l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;
     case TYPE_STR: l = v->u.s->l;        break;
-    case TYPE_TBL: l = t_length(v->u.t); break;
+    case TYPE_TAB: l = t_length(v->u.t); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
     case TYPE_RE:   // TODO - extract something from PCRE pattern?
-    case TYPE_SEQ:  // TODO
+    case TYPE_RNG:  // TODO
     case TYPE_CFN:
         l = 1;
         break;
@@ -320,7 +320,7 @@ Z_BINOP(idx) {
     switch (l->type) {
     case TYPE_INT: {
         u_int2str(l->u.i, temp);
-        if (is_seq(r)) {
+        if (is_rng(r)) {
             set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {
             rf_int r1  = intval(r);
@@ -336,7 +336,7 @@ Z_BINOP(idx) {
     }
     case TYPE_FLT: {
         u_flt2str(l->u.f, temp);
-        if (is_seq(r)) {
+        if (is_rng(r)) {
             set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
         } else {
             rf_int r1  = intval(r);
@@ -351,7 +351,7 @@ Z_BINOP(idx) {
         break;
     }
     case TYPE_STR: {
-        if (is_seq(r)) {
+        if (is_rng(r)) {
             l->u.s = s_substr(l->u.s->str, r->u.q->from, r->u.q->to, r->u.q->itvl);
         } else {
             rf_int r1  = intval(r);
@@ -365,7 +365,7 @@ Z_BINOP(idx) {
         }
         break;
     }
-    case TYPE_TBL:
+    case TYPE_TAB:
         *l = *t_lookup(l->u.t, r, 0);
         break;
     case TYPE_RFN: {
@@ -392,7 +392,7 @@ static inline void new_iter(rf_val *set) {
         // Fall-through
     case TYPE_INT:
         iter->keys = NULL;
-        iter->t = LOOP_SEQ;
+        iter->t = LOOP_RNG;
         iter->st = 0;
         if (set->u.i >= 0) {
             iter->n = set->u.i + 1; // Inclusive
@@ -410,9 +410,9 @@ static inline void new_iter(rf_val *set) {
         break;
     case TYPE_RE:
         err("cannot iterate over regular expression");
-    case TYPE_SEQ:
+    case TYPE_RNG:
         iter->keys = NULL;
-        iter->t = LOOP_SEQ;
+        iter->t = LOOP_RNG;
         iter->set.itvl = set->u.q->itvl;
         if (iter->set.itvl > 0)
             iter->on = (set->u.q->to - set->u.q->from) + 1;
@@ -424,11 +424,11 @@ static inline void new_iter(rf_val *set) {
             iter->n = (rf_uint) ceil(fabs(iter->on / (double) iter->set.itvl));
         iter->st = set->u.q->from;
         break;
-    case TYPE_TBL:
-        iter->t = LOOP_TBL;
+    case TYPE_TAB:
+        iter->t = LOOP_TAB;
         iter->on = iter->n = t_length(set->u.t);
         iter->keys = t_collect_keys(set->u.t);
-        iter->set.tbl = set->u.t;
+        iter->set.tab = set->u.t;
         break;
     case TYPE_RFN:
         iter->t = LOOP_FN;
@@ -445,7 +445,7 @@ static inline void new_iter(rf_val *set) {
 static inline void destroy_iter(void) {
     rf_iter *old = iter;
     iter = iter->p;
-    if (old->t == LOOP_TBL) {
+    if (old->t == LOOP_TAB) {
         if (!(old->n + 1)) // Loop completed?
             free(old->keys - old->on);
         else
@@ -454,7 +454,7 @@ static inline void destroy_iter(void) {
     free(old);
 }
 
-static inline void init_argv(rf_tbl *t, rf_int arg0, int rf_argc, char **rf_argv) {
+static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv) {
     t_init(t);
     for (rf_int i = 0; i < rf_argc; ++i) {
         // TODO force parameter should not be set
@@ -475,7 +475,7 @@ int z_exec(rf_env *e) {
     t_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, e->arg0, e->argc, e->argv);
-    h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TBL, .u.t = &argv}, 1);
+    h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TAB, .u.t = &argv}, 1);
 
     h_insert(&globals, s_newstr("stdin",  5, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdin,  FH_STD}}, 1);
     h_insert(&globals, s_newstr("stdout", 6, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdout, FH_STD}}, 1);
@@ -572,7 +572,7 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             z_break;
         }
         switch (iter->t) {
-        case LOOP_SEQ:
+        case LOOP_RNG:
             if (is_null(iter->v))
                 *iter->v = (rf_val) {TYPE_INT, .u.i = iter->st};
             else
@@ -593,11 +593,11 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 *iter->v = (rf_val) {TYPE_STR, .u.s = s_newstr(iter->set.str++, 1, 0)};
             }
             break;
-        case LOOP_TBL:
+        case LOOP_TAB:
             if (iter->k != NULL) {
                 *iter->k = *iter->keys;
             }
-            *iter->v = *t_lookup(iter->set.tbl, iter->keys, 0);
+            *iter->v = *t_lookup(iter->set.tab, iter->keys, 0);
             iter->keys++;
             break;
         case LOOP_FN:
@@ -984,18 +984,18 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // Create a sequential table of x elements from the top
 // of the stack. Leave the table rf_val on the stack.
 // Tables index at 0 by default.
-#define new_tbl(x) \
-    tp = v_newtbl(); \
+#define new_tab(x) \
+    tp = v_newtab(); \
     for (int i = (x) - 1; i >= 0; --i) { \
         --sp; \
         t_insert_int(tp->u.t, i, &sp->v, 1, 1); \
     } \
     sp++->v = *tp;
 
-    z_case(TBL0) new_tbl(0);    ++ip;    z_break;
-    z_case(TBL)  new_tbl(ip[1]) ip += 2; z_break;
-    z_case(TBLK)
-        new_tbl(k[ip[1]].u.i);
+    z_case(TAB0) new_tab(0);    ++ip;    z_break;
+    z_case(TAB)  new_tab(ip[1]) ip += 2; z_break;
+    z_case(TABK)
+        new_tab(k[ip[1]].u.i);
         ip += 2;
         z_break;
 
@@ -1010,9 +1010,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
             // Create array if sp[-2].a is an uninitialized variable
             case TYPE_NULL:
-                *sp[i+1].a = *v_newtbl();
+                *sp[i+1].a = *v_newtab();
                 // Fall-through
-            case TYPE_TBL:
+            case TYPE_TAB:
                 sp[i+1].v = *t_lookup(sp[i].a->u.t, &sp[i+1].v, 0);
                 break;
 
@@ -1045,9 +1045,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
             // Create array if sp[i].a is an uninitialized variable
             case TYPE_NULL:
-                *tp = *v_newtbl();
+                *tp = *v_newtab();
                 // Fall-through
-            case TYPE_TBL:
+            case TYPE_TAB:
                 sp[i+1].a = t_lookup(tp->u.t, &sp[i+1].v, 1);
                 break;
 
@@ -1076,9 +1076,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
         // Create array if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *tp = *v_newtbl();
+            *tp = *v_newtab();
             // Fall-through
-        case TYPE_TBL:
+        case TYPE_TAB:
             sp[-2].a = t_lookup(tp->u.t, &sp[-1].v, 1);
             break;
 
@@ -1112,9 +1112,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
         // Create array if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *sp[-2].a = *v_newtbl();
+            *sp[-2].a = *v_newtab();
             // Fall-through
-        case TYPE_TBL:
+        case TYPE_TAB:
             sp[-2].v = *t_lookup(sp[-2].a->u.t, &sp[-1].v, 0);
             --sp;
             ++ip;
@@ -1142,31 +1142,31 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
 
-// Create a new "sequence" value.
-// There are 8 different valid forms of a sequence; each has their own
+// Create a new "range" value.
+// There are 8 different valid forms of a range; each has their own
 // instruction.
-//   seq:   x..y        SP[-2]..SP[-1]
-//   seqf:  x..         SP[-1]..INT_MAX
-//   seqt:  ..y         0..SP[-1]
-//   seqe:  ..          0..INT_MAX
-//   sseq:  x..y:z      SP[-3]..SP[-2],SP[-1]
-//   sseqf: x..:z       SP[-2]..INT_MAX,SP[-1]
-//   sseqt: ..y:z       0..SP[-2],SP[-1]
-//   sseqe: ..:z        0..INT_MAX,SP[-1]
-// If `z` is not provided, the interval is set to -1 if x > y (downward
-// sequences). Otherwise, the interval is set to 1 (upward
-// sequences).
-#define z_seq(f,t,i,s) { \
-    rf_seq *seq = malloc(sizeof(rf_seq)); \
-    rf_int from = seq->from = (f); \
-    rf_int to   = seq->to = (t); \
+//   rng:   x..y        SP[-2]..SP[-1]
+//   rngf:  x..         SP[-1]..INT_MAX
+//   rngt:  ..y         0..SP[-1]
+//   rnge:  ..          0..INT_MAX
+//   srng:  x..y:z      SP[-3]..SP[-2]:SP[-1]
+//   srngf: x..:z       SP[-2]..INT_MAX:SP[-1]
+//   srngt: ..y:z       0..SP[-2]:SP[-1]
+//   srnge: ..:z        0..INT_MAX:SP[-1]
+// If `z` is not provided, the interval is set to -1 if x > y
+// (downward ranges). Otherwise, the interval is set to 1 (upward
+// ranges).
+#define z_rng(f,t,i,s) { \
+    rf_rng *rng = malloc(sizeof(rf_rng)); \
+    rf_int from = rng->from = (f); \
+    rf_int to   = rng->to = (t); \
     rf_int itvl = (i); \
-    seq->itvl   = itvl ? itvl : from > to ? -1 : 1; \
-    s = (rf_val) {TYPE_SEQ, .u.q = seq}; \
+    rng->itvl   = itvl ? itvl : from > to ? -1 : 1; \
+    s = (rf_val) {TYPE_RNG, .u.q = rng}; \
 }
     // x..y
-    z_case(SEQ)
-        z_seq(intval(&sp[-2].v),
+    z_case(RNG)
+        z_rng(intval(&sp[-2].v),
               intval(&sp[-1].v),
               0,
               sp[-2].v);
@@ -1174,33 +1174,33 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
     // x..
-    z_case(SEQF)
-        z_seq(intval(&sp[-1].v),
+    z_case(RNGF)
+        z_rng(intval(&sp[-1].v),
               INT64_MAX,
               0,
               sp[-1].v);
         ++ip;
         z_break;
     // ..y
-    z_case(SEQT)
-        z_seq(0,
+    z_case(RNGT)
+        z_rng(0,
               intval(&sp[-1].v),
               0,
               sp[-1].v);
         ++ip;
         z_break;
     // ..
-    z_case(SEQE)
+    z_case(RNGE)
         ++sp;
-        z_seq(0,
+        z_rng(0,
               INT64_MAX,
               0,
               sp[-1].v);
         ++ip;
         z_break;
     // x..y:z
-    z_case(SSEQ)
-        z_seq(intval(&sp[-3].v),
+    z_case(SRNG)
+        z_rng(intval(&sp[-3].v),
               intval(&sp[-2].v),
               intval(&sp[-1].v),
               sp[-3].v);
@@ -1208,8 +1208,8 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
     // x..:z
-    z_case(SSEQF)
-        z_seq(intval(&sp[-2].v),
+    z_case(SRNGF)
+        z_rng(intval(&sp[-2].v),
               INT64_MAX,
               intval(&sp[-1].v),
               sp[-2].v);
@@ -1217,8 +1217,8 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
     // ..y:z
-    z_case(SSEQT)
-        z_seq(0,
+    z_case(SRNGT)
+        z_rng(0,
               intval(&sp[-2].v),
               intval(&sp[-1].v),
               sp[-2].v);
@@ -1226,8 +1226,8 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
     // ..:z
-    z_case(SSEQE)
-        z_seq(0,
+    z_case(SRNGE)
+        z_rng(0,
               INT64_MAX,
               intval(&sp[-1].v),
               sp[-1].v);

@@ -5,11 +5,11 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-static rf_tbl *fldv;
+static rf_tab *fldv;
 static pcre2_compile_context *context = NULL;
 
 // Register the VM's global fields table
-void re_register_fldv(rf_tbl *t) {
+void re_register_fldv(rf_tab *t) {
     fldv = t;
     return;
 }

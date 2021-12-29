@@ -10,7 +10,7 @@
 
 #define MIN_LOAD_FACTOR 0.5
 
-void t_init(rf_tbl *t) {
+void t_init(rf_tab *t) {
     unset(nullx);
     unset(lx);
     t->n     = 0;
@@ -18,14 +18,14 @@ void t_init(rf_tbl *t) {
     t->cap   = 0;
     t->nullv = v_newnull();
     t->v     = NULL;
-    t->h     = malloc(sizeof(rf_htbl));
+    t->h     = malloc(sizeof(rf_htab));
     h_init(t->h);
 }
 
 // lx flag is set whenever the VM performs a lookup with the intent on
 // setting the value (OP_xxA). When lx is set, recalculate length of
 // the array. This accomodates "deletion" via `null` assignment.
-rf_int t_length(rf_tbl *t) {
+rf_int t_length(rf_tab *t) {
     if (!t->lx)
         return t->n + h_length(t->h);
     rf_int l = 0;
@@ -40,11 +40,11 @@ rf_int t_length(rf_tbl *t) {
     return l + h_length(t->h);
 }
 
-static int exists(rf_tbl *t, rf_int k) {
+static int exists(rf_tab *t, rf_int k) {
     return k >= 0 && k < t->cap && t->v[k] != NULL;
 }
 
-rf_val *t_collect_keys(rf_tbl *t) {
+rf_val *t_collect_keys(rf_tab *t) {
     rf_int len = t_length(t);
     rf_val *keys = malloc(len * sizeof(rf_val));
     int n = 0;
@@ -53,7 +53,7 @@ rf_val *t_collect_keys(rf_tbl *t) {
             keys[n++] = (rf_val) {TYPE_INT, .u.i = i};
         }
     }
-    rf_htbl *h = t->h;
+    rf_htab *h = t->h;
     for (int i = 0; i < h->cap && n <= len; ++i) {
         if (h->nodes[i] && !is_null(h->nodes[i]->val)) {
             keys[n++] = (rf_val) {TYPE_STR, .u.s = h->nodes[i]->key};
@@ -78,7 +78,7 @@ static double potential_lf(int n, int cap, rf_int k) {
 
 // If int k is within the capacity of the "array" part, perform the
 // lookup. Otherwise, defer to h_lookup().
-static rf_val *t_lookup_int(rf_tbl *t, rf_int k, int set) {
+static rf_val *t_lookup_int(rf_tab *t, rf_int k, int set) {
     if (set) set(lx);
     if (exists(t, k)) {
         return t->v[k];
@@ -118,7 +118,7 @@ static rf_int str2intidx(rf_str *s) {
 }
 
 // TODO flt lookup is slow with string conversion
-rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
+rf_val *t_lookup(rf_tab *t, rf_val *k, int set) {
     if (set) set(lx);
     switch (k->type) {
     case TYPE_NULL:
@@ -151,7 +151,7 @@ rf_val *t_lookup(rf_tbl *t, rf_val *k, int set) {
 
     }
     // TODO monitor
-    case TYPE_TBL: {
+    case TYPE_TAB: {
         char temp[21];
         size_t temp_l = u_int2str((rf_int) k->u.t, temp);
         return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
@@ -180,9 +180,9 @@ static int new_size(int n, int cap, rf_int k) {
 // This allows memory to be allocated once with the exact size needed
 // instead of potentially resizing multiple times throughout
 // initialization. Otherwise, t_insert_int() can defer to the hash
-// table part of the rf_tbl if the rf_int `k` would cause the array
+// table part of the rf_tab if the rf_int `k` would cause the array
 // part to be too sparsely populated.
-rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
+rf_val *t_insert_int(rf_tab *t, rf_int k, rf_val *v, int set, int force) {
     if (set) set(lx);
     if (k >= 0 && (force || (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
         if (t->cap <= k || h_exists_int(t->h, k)) {
@@ -228,7 +228,7 @@ rf_val *t_insert_int(rf_tbl *t, rf_int k, rf_val *v, int set, int force) {
     }
 }
 
-rf_val *t_insert(rf_tbl *t, rf_val *k, rf_val *v, int set) {
+rf_val *t_insert(rf_tab *t, rf_val *k, rf_val *v, int set) {
     if (set) set(lx);
     switch (k->type) {
     case TYPE_NULL:
@@ -247,7 +247,7 @@ rf_val *t_insert(rf_tbl *t, rf_val *k, rf_val *v, int set) {
     case TYPE_STR: return h_insert(t->h, k->u.s, v, set);
 
     // TODO monitor
-    case TYPE_TBL: {
+    case TYPE_TAB: {
         char temp[21];
         size_t temp_l = u_int2str((rf_int) k->u.t, temp);
         return h_insert(t->h, TEMP_STR(temp, temp_l), v, set);

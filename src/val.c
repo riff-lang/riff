@@ -28,10 +28,10 @@ rf_val *v_newstr(rf_str *s) {
     return v;
 }
 
-rf_val *v_newtbl(void) {
+rf_val *v_newtab(void) {
     rf_val *v = malloc(sizeof(rf_val));
-    rf_tbl *t = malloc(sizeof(rf_tbl));
+    rf_tab *t = malloc(sizeof(rf_tab));
     t_init(t);
-    *v = (rf_val) {TYPE_TBL, .u.t = t};
+    *v = (rf_val) {TYPE_TAB, .u.t = t};
     return v;
 }
