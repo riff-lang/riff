@@ -304,6 +304,13 @@ static rf_int match(rf_val *l, rf_val *r) {
         }
         temp_re = re_compile(temp_rhs, PCRE2_ZERO_TERMINATED, 0, &errcode);
 do_match:
+        // Check for invalid regex in RHS
+        // TODO treat as literal string in this case? (PCRE2_LITERAL)
+        if (errcode != 100) {
+            PCRE2_UCHAR errstr[0x200];
+            pcre2_get_error_message(errcode, errstr, 0x200);
+            err((const char *) errstr);
+        }
         res = re_match(lhs, len, temp_re, capture);
         re_free(temp_re);
         return res;
