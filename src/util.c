@@ -4,39 +4,6 @@
 #include <errno.h>
 #include <stdlib.h>
 
-char *u_file2str(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "riff: file not found: %s\n", path);
-        exit(1);
-    }
-    fseek(file, 0L, SEEK_END);
-    size_t s = ftell(file);
-    rewind(file);
-
-    // Skip shebang (#!...)
-    int c = fgetc(file);
-    if (c == '#') {
-        c = fgetc(file);
-        if (c == '!') {
-            s -= 2;
-            do {
-                c = fgetc(file);
-                --s;
-            } while (c != EOF && c != '\n');
-        } else {
-            rewind(file);
-        }
-    } else {
-        rewind(file);
-    }
-    char *buf  = malloc(s + 1);
-    size_t end = fread(buf, sizeof(char), s, file);
-    fclose(file);
-    buf[end] = '\0';
-    return buf;
-}
-
 // djb2
 // source: http://www.cse.yorku.ca/~oz/hash.html
 uint32_t u_strhash(const char *str) {

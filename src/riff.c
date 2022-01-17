@@ -1,6 +1,7 @@
 #include "code.h"
 #include "disas.h"
 #include "env.h"
+#include "mem.h"
 #include "parse.h"
 #include "types.h"
 #include "util.h"
@@ -45,10 +46,63 @@ static void usage(void) {
          "  -h       print this usage text and exit\n"
          "  -l       list bytecode with assembler-like mnemonics\n"
          "  -v       print version information and exit\n"
-         "  --       stop processing options");
+         "  --       stop processing options\n"
+         "  -        stop processing options and execute stdin");
 }
 
-// TODO handle piped input (stdin)
+static void skip_shebang(FILE *file, size_t *s) {
+    int c0 = fgetc(file);
+    if (c0 == '#') {
+        int c = fgetc(file);
+        if (c == '!') {
+            s -= 2;
+            do {
+                c = fgetc(file);
+                --s;
+            } while (c != EOF && c != '\n');
+        } else {
+            ungetc(c, file);
+            ungetc(c0, file);
+        }
+    } else {
+        ungetc(c0, file);
+    }
+}
+
+static char *stdin2str(void) {
+    size_t s = ftell(stdin);
+    skip_shebang(stdin, &s);
+    int cap = 0;
+    char *buf = NULL;
+    int n = 0;
+    char c;
+    while ((c = fgetc(stdin)) != EOF) {
+        m_growarray(buf, n, cap, buf);
+        buf[n++] = c;
+    }
+    if (!buf)
+        return NULL;
+    buf[n] = '\0';
+    return buf;
+}
+
+static char *file2str(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        fprintf(stderr, "riff: file not found: %s\n", path);
+        exit(1);
+    }
+    fseek(file, 0L, SEEK_END);
+    size_t s = ftell(file);
+    rewind(file);
+    skip_shebang(file, &s);
+    char *buf = malloc(s + 1);
+    size_t end = fread(buf, sizeof(char), s, file);
+    fclose(file);
+    buf[end] = '\0';
+    return buf;
+}
+
 int main(int argc, char **argv) {
     rf_env e;
     e_init(&e);
@@ -58,19 +112,16 @@ int main(int argc, char **argv) {
     main.code = &c;
     main.arity = 0;
     e.main = main;
-
-    if (argc == 1) {
-        fprintf(stderr, "riff: No program given\n");
-        exit(1);
-    }
-
+    e.argc = argc;
+    e.argv = argv;
     bool disas = false;
+    bool opt_e = false;
     opterr = 0;
-
     int o;
     while ((o = getopt(argc, argv, "e:hlv")) != -1) {
         switch (o) {
         case 'e':
+            opt_e = true;
             e.src = optarg;
             y_compile(&e);
             break;
@@ -84,7 +135,10 @@ int main(int argc, char **argv) {
             version();
             exit(0);
         case '?':
-            printf("riff: unrecognized option: '-%c'\n", optopt);
+            if (optopt == 'e')
+                printf("riff: missing argument for option '-e'\n");
+            else
+                printf("riff: unrecognized option: '-%c'\n", optopt);
             usage();
             exit(1);
         default:
@@ -92,13 +146,25 @@ int main(int argc, char **argv) {
         }
     }
 
-    e.argc = argc;
-    e.argv = argv;
-
-    if (optind < argc) {
+    // Check for piped input
+    if (optind == argc && !opt_e) {
+        if ((fseek(stdin, 0, SEEK_END), ftell(stdin)) == 0) {
+            fprintf(stderr, "riff: No program given\n");
+            return 1;
+        }
+        e.src = stdin2str();
+        e.pname = "<stdin>";
+        y_compile(&e);
+    } else if (optind < argc) {
+        // Option '-': Stop processing options and execute stdin
+        if (argv[optind][0] == '-' && argv[optind][1] != '-') {
+            e.src = stdin2str();
+            e.pname = "<stdin>";
+        } else {
+            e.src = file2str(argv[optind]);
+            e.pname = argv[optind];
+        }
         e.arg0 = optind;
-        e.pname = argv[optind];
-        e.src = u_file2str(argv[optind]);
         y_compile(&e);
     } else {
         e.pname = "<command-line>";
