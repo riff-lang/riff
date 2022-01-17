@@ -202,7 +202,8 @@ LIB_FN(print) {
         fprintf_val(stdout, fp+i);
     }
     fputs("\n", stdout);
-    return 0;
+    set_int(fp-1, argc);
+    return 1;
 }
 
 // printf(s, ...)
@@ -246,7 +247,8 @@ LIB_FN(putc) {
     int n = build_char_str(fp, argc, buf);
     buf[n] = '\0';
     fputs(buf, stdout);
-    return 0;
+    set_int(fp-1, n);
+    return 1;
 }
 
 // read(f[,n])
@@ -288,15 +290,13 @@ static rf_uint prngs[4];
 
 static rf_uint prng_next(void) {
     const rf_uint res = rol(prngs[1] * 5, 7) * 9;
-    const rf_uint t   = prngs[1] << 17;
-
+    const rf_uint t = prngs[1] << 17;
     prngs[2] ^= prngs[0];
     prngs[3] ^= prngs[1];
     prngs[1] ^= prngs[2];
     prngs[0] ^= prngs[3];
     prngs[2] ^= t;
     prngs[3]  = rol(prngs[3], 45);
-
     return res;
 }
 
@@ -406,14 +406,15 @@ static void prng_seed(rf_uint seed) {
 // rand() will produce the same sequence when srand is initialized
 // with a given seed every time.
 LIB_FN(srand) {
+    rf_int seed = 0;
     if (!argc)
-        prng_seed(time(0));
-    else if (is_null(fp))
-        prng_seed(0);
-    else
+        seed = time(0);
+    else if (!is_null(fp))
         // Seed the PRNG with whatever 64 bits are in the rf_val union
-        prng_seed(fp->u.i);
-    return 0;
+        seed = fp->u.i;
+    prng_seed(seed);
+    set_int(fp-1, seed);
+    return 1;
 }
 
 // String functions
