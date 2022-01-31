@@ -1,3 +1,5 @@
+#!/usr/bin/env riff
+
 // Reversible hexdump utility
 
 fn dump(f) {
@@ -5,44 +7,25 @@ fn dump(f) {
         s = read(f,16)
         if !#s break
         printf("%07x0: ", ln++)
-        for i in #s-1 {
+        for i in #s-1
             printf(i == 7 ? "%02x  " : "%02x ", byte(s,i))
-        }
-        if #s < 16 {
-            for i in #s..15 {
+        if #s < 16
+            for i in #s..15
                 write(i == 7 ? "    " : "   ")
-             }
-        }
-        write(" ")
-        print(gsub(s, /[^ -~]/, "."))
+        printf(" %s\n", gsub(s, /[^ -~]/, "."))
     }
 }
 
 fn rev(f) {
     while !eof(f) {
         s = read(f)
-        if s ~ /.*: (.{48})/ {
+        if s ~ /.*: (.{48})/
             for i in split($1)
                 putc(num(i,16))
-        }
     }
 }
 
-if arg[2] {
-    f = open(arg[2])
-    opt = arg[1] == "-r"
-} elif arg[1] {
-    if arg[1] == "-r" {
-        opt = 1
-        f = stdin
-    } else {
-        f = open(arg[1])
-    }
-} else {
-    f = stdin
-}
-if opt
-    rev(f)
-else
-    dump(f)
+opt = arg[1] == "-r"
+f = arg[2] ? open(arg[2]) : !opt && arg[1] ? open(arg[1]) : stdin
+opt ? rev(f) : dump(f)
 close(f)

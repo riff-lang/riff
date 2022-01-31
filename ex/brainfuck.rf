@@ -1,3 +1,5 @@
+#!/usr/bin/env riff
+
 // Brainfuck interpreter
 
 op['>'] = "i++"
@@ -9,7 +11,7 @@ op[','] = "m[i]=getc()"
 op['['] = "while m[i]{"
 op[']'] = "}"
 
-file = open(arg[1])
+file = arg[1] ? open(arg[1]) : stdin
 while !eof(file)
     prog #= op[getc(file)]
 close(file)
