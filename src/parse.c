@@ -52,7 +52,7 @@ static int is_asgmt(int tk) {
 }
 
 static int is_const(int tk) {
-    return tk == TK_NULL || tk == TK_FLT || tk == TK_INT || tk == TK_STR;
+    return tk >= TK_NULL && tk <= TK_RE;
 }
 
 static int is_incdec(int tk) {
