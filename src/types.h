@@ -88,13 +88,14 @@ typedef struct {
     rf_int itvl;
 } rf_rng;
 
-typedef struct rf_tab rf_tab;
-typedef struct rf_fn  rf_fn;
-typedef struct c_fn   c_fn;
+typedef struct rf_tab  rf_tab;
+typedef struct rf_htab rf_htab;
+typedef struct rf_fn   rf_fn;
+typedef struct c_fn    c_fn;
 
 typedef struct {
     // Type tag is aligned to the word-sized boundary to accommodate
-    // an implicit type tag in the VM stack element. This is necessary
+    // an implicit type tag in the VM stack object. This is necessary
     // for distinguishing values from addresses on the VM stack for
     // instructions which operate on both. E.g. array subscripting.
     uintptr_t type;
@@ -128,13 +129,18 @@ typedef struct {
                    is_int(x) ? (rf_flt) (x)->u.i : \
                    is_str(x) ? str2flt((x)->u.s) : 0)
 
-rf_int  str2int(rf_str *);
-rf_flt  str2flt(rf_str *);
-rf_str *s_newstr(const char *, size_t, int);
-rf_str *s_newstr_concat(char *, char *, int);
-rf_str *s_substr(char *, rf_int, rf_int, rf_int);
-rf_str *s_int2str(rf_int);
-rf_str *s_flt2str(rf_flt);
+rf_int   str2int(rf_str *);
+rf_flt   str2flt(rf_str *);
+rf_str  *s_newstr(const char *, size_t, int);
+rf_str  *s_newstr_concat(char *, char *, int);
+rf_str  *s_substr(char *, rf_int, rf_int, rf_int);
+rf_str  *s_int2str(rf_int);
+rf_str  *s_flt2str(rf_flt);
+int      s_numunlikely(rf_str *);
+int      s_haszero(rf_str *);
+uint32_t s_hash(rf_str *);
+int      s_eq(rf_str *, rf_str *);
+int      s_eq_fast(rf_str *, rf_str *);
 void    re_register_fldv(rf_tab *);
 rf_re  *re_compile(char *, size_t, uint32_t, int *);
 void    re_free(rf_re *);
@@ -144,6 +150,7 @@ rf_val *v_newnull(void);
 rf_val *v_newint(rf_int);
 rf_val *v_newflt(rf_flt);
 rf_val *v_newstr(rf_str *);
-rf_val *v_newtab(void);
+rf_val *v_newtab(uint32_t);
+rf_val *v_copy(rf_val *);
 
 #endif

@@ -6,7 +6,6 @@
 #include "fn.h"
 #include "mem.h"
 #include "parse.h"
-#include "table.h"
 #include "vm.h"
 
 #include <ctype.h>
@@ -541,17 +540,10 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // substitution pattern, PCRE2 match data must be passed to a
     // PCRE2 match operation with the same pattern and subject string
     // before performing the actual subtitution
-    int m_res = pcre2_match(
-            p,
-            (PCRE2_SPTR) s,
-            len,
-            0,
-            0,
-            md,
-            NULL);
+    pcre2_match(p, (PCRE2_SPTR) s, len, 0, 0, md, NULL);
 
     // Perform the substitution
-    int res = pcre2_substitute(
+    pcre2_substitute(
             p,                      // Compiled regex
             (PCRE2_SPTR) s,         // Original string pointer
             len,                    // Original string length
@@ -702,7 +694,7 @@ do_split: {
     char *p = buf;
     size_t n = STR_BUF_SZ;
     char *sentinel = "\0";
-    int rc = pcre2_substitute(
+    pcre2_substitute(
             delim,
             (PCRE2_SPTR) str,
             len,
@@ -727,7 +719,7 @@ do_split: {
             s = s_newstr(p, l, 0);
             p += l + 1;
             n -= l + 1;
-            t_insert_int(t, i++, &(rf_val) {TYPE_STR, .u.s = s}, 1, 1);
+            t_insert_int(t, i++, &(rf_val) {TYPE_STR, .u.s = s});
         }
     }
     set_tab(fp-1, t);
@@ -738,7 +730,7 @@ do_split: {
 split_chars: {
     for (rf_int i = 0; i < len; ++i) {
         s = s_newstr(str + i, 1, 0);
-        t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s}, 1, 1);
+        t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s});
     }
     set_tab(fp-1, t);
     return 1;
@@ -769,62 +761,72 @@ LIB_FN(type) {
 }
 
 // Registry info for a given library function
-#define LIB_REG(name, arity) { #name , { (arity), l_##name } }
+#define LIB_FN_REG(name, arity) { #name , { (arity), l_##name } }
 
 static struct {
     const char *name;
     c_fn        fn;
 } lib_fn[] = {
     // Arithmetic
-    LIB_REG(abs,    1),
-    LIB_REG(atan,   1),
-    LIB_REG(ceil,   1),
-    LIB_REG(cos,    1),
-    LIB_REG(exp,    1),
-    LIB_REG(int,    1),
-    LIB_REG(log,    1),
-    LIB_REG(sin,    1),
-    LIB_REG(sqrt,   1),
-    LIB_REG(tan,    1),
+    LIB_FN_REG(abs,    1),
+    LIB_FN_REG(atan,   1),
+    LIB_FN_REG(ceil,   1),
+    LIB_FN_REG(cos,    1),
+    LIB_FN_REG(exp,    1),
+    LIB_FN_REG(int,    1),
+    LIB_FN_REG(log,    1),
+    LIB_FN_REG(sin,    1),
+    LIB_FN_REG(sqrt,   1),
+    LIB_FN_REG(tan,    1),
     // I/O
-    LIB_REG(close,  1),
-    LIB_REG(eof,    0),
-    LIB_REG(eval,   1),
-    LIB_REG(exit,   0),
-    LIB_REG(flush,  0),
-    LIB_REG(get,    0),
-    LIB_REG(getc,   0),
-    LIB_REG(open,   1),
-    LIB_REG(print,  0),
-    LIB_REG(printf, 1),
-    LIB_REG(putc,   0),
-    LIB_REG(read,   0),
-    LIB_REG(write,  0),
+    LIB_FN_REG(close,  1),
+    LIB_FN_REG(eof,    0),
+    LIB_FN_REG(eval,   1),
+    LIB_FN_REG(exit,   0),
+    LIB_FN_REG(flush,  0),
+    LIB_FN_REG(get,    0),
+    LIB_FN_REG(getc,   0),
+    LIB_FN_REG(open,   1),
+    LIB_FN_REG(print,  0),
+    LIB_FN_REG(printf, 1),
+    LIB_FN_REG(putc,   0),
+    LIB_FN_REG(read,   0),
+    LIB_FN_REG(write,  0),
     // PRNG
-    LIB_REG(rand,   0),
-    LIB_REG(srand,  0),
+    LIB_FN_REG(rand,   0),
+    LIB_FN_REG(srand,  0),
     // Strings
-    LIB_REG(byte,   1),
-    LIB_REG(char,   0),
-    LIB_REG(fmt,    1),
-    LIB_REG(gsub,   2),
-    LIB_REG(hex,    1),
-    LIB_REG(lower,  1),
-    LIB_REG(num,    1),
-    LIB_REG(split,  1),
-    LIB_REG(sub,    2),
-    LIB_REG(type,   1),
-    LIB_REG(upper,  1),
+    LIB_FN_REG(byte,   1),
+    LIB_FN_REG(char,   0),
+    LIB_FN_REG(fmt,    1),
+    LIB_FN_REG(gsub,   2),
+    LIB_FN_REG(hex,    1),
+    LIB_FN_REG(lower,  1),
+    LIB_FN_REG(num,    1),
+    LIB_FN_REG(split,  1),
+    LIB_FN_REG(sub,    2),
+    LIB_FN_REG(type,   1),
+    LIB_FN_REG(upper,  1),
     { NULL, { 0, NULL } }
 };
 
-void l_register(rf_htab *g) {
+static void register_funcs(rf_htab *g) {
     // Initialize the PRNG with the current time
     prng_seed(time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
-        rf_str *s  = s_newstr(lib_fn[i].name, strlen(lib_fn[i].name), 1);
         rf_val *fn = malloc(sizeof(rf_val));
-        *fn        = (rf_val) {TYPE_CFN, .u.cfn = &lib_fn[i].fn};
-        h_insert(g, s, fn, 1);
+        *fn = (rf_val) {TYPE_CFN, .u.cfn = &lib_fn[i].fn};
+        ht_insert_cstr(g, lib_fn[i].name, fn);
     }
+}
+
+static void register_streams(rf_htab *g) {
+    ht_insert_cstr(g, "stdin", &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdin, FH_STD}});
+    ht_insert_cstr(g, "stdout", &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdout, FH_STD}});
+    ht_insert_cstr(g, "stderr", &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stderr, FH_STD}});
+}
+
+void l_register_builtins(rf_htab *g) {
+    register_funcs(g);
+    register_streams(g);
 }

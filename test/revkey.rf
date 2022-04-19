@@ -5,7 +5,7 @@
 // Expected output: 002233778899FFBC1234567890449955
 
 // The known key: k_11
-k11 ="E593B292D82CE2C48539C08C2EFB24EF"
+k11 = "E593B292D82CE2C48539C08C2EFB24EF"
 
 // Function g used in key scheduling layer
 fn g(x,i) {

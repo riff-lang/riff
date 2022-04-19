@@ -3,31 +3,72 @@
 #include "mem.h"
 
 #include <ctype.h>
+#include <math.h>
 #include <stdio.h>
+#include <string.h>
 
-#define set(f)   t->f = 1
-#define unset(f) t->f = 0
+#define T_MIN_LOAD_FACTOR  0.5
 
-#define MIN_LOAD_FACTOR 0.5
+#define HT_MIN_CAP         8
+#define HT_MIN_LOAD_FACTOR 0.4
+#define HT_MAX_LOAD_FACTOR 1.0
+
+static inline ht_node *next(ht_node *);
+static uint32_t ht_logical_size(rf_htab *);
 
 void t_init(rf_tab *t) {
-    unset(nullx);
-    unset(lx);
-    t->n     = 0;
-    t->an    = 0;
+    t->nullx = 0;
+    t->hint  = 0;
+    t->lsize = 0;
+    t->psize = 0;
     t->cap   = 0;
     t->nullv = v_newnull();
     t->v     = NULL;
     t->h     = malloc(sizeof(rf_htab));
-    h_init(t->h);
+    ht_init(t->h);
 }
 
-// lx flag is set whenever the VM performs a lookup with the intent on
-// setting the value (OP_xxA). When lx is set, recalculate length of
-// the array. This accomodates "deletion" via `null` assignment.
-rf_int t_length(rf_tab *t) {
-    if (!t->lx)
-        return t->n + h_length(t->h);
+static rf_val *reduce_key(rf_val *s, rf_val *d) {
+    switch (s->type) {
+    case TYPE_FLT:
+        if (s->u.f == ceil(s->u.f)) {
+            set_int(d, (rf_int) s->u.f);
+            return d;
+        }
+        break;
+    case TYPE_STR: {
+        if (s_numunlikely(s->u.s))
+            return s;
+        char *end;
+        rf_int i = u_str2i64(s->u.s->str, &end, 0);
+        if (!*end) {
+            set_int(d, i);
+            if (!i)
+                return s_haszero(s->u.s) ? d : s;
+            return d;
+        }
+        rf_flt f = u_str2d(s->u.s->str, &end, 0);
+        if (!*end) {
+            set_flt(d, f);
+            if (f == 0.0) {
+                if (s_haszero(s->u.s)) {
+                    set_int(d, 0);
+                    return d;
+                } else {
+                    return s;
+                }
+            }
+            return d;
+        }
+        break;
+    }
+    }
+    return s;
+}
+
+rf_int t_logical_size(rf_tab *t) {
+    if (!t->hint)
+        return t->lsize + ht_logical_size(t->h);
     rf_int l = 0;
     for (int i = 0; i < t->cap; ++i) {
         if (t->v[i] && !is_null(t->v[i]))
@@ -35,225 +76,274 @@ rf_int t_length(rf_tab *t) {
     }
     // Include special "null" index
     l += (t->nullx && !is_null(t->nullv));
-    t->n = l;
-    unset(lx);
-    return l + h_length(t->h);
+    t->lsize = l;
+    t->hint = 0;
+    return l + ht_logical_size(t->h);
 }
 
-static int exists(rf_tab *t, rf_int k) {
-    return k >= 0 && k < t->cap && t->v[k] != NULL;
+// Don't call if k < 0
+static int t_exists(rf_tab *t, rf_int k) {
+    return k < t->cap && t->v[k] != NULL;
 }
 
+static inline void ht_collect_keys(rf_htab *h, rf_val *keys, int *n) {
+    for (uint32_t i = 0; i < h->cap; ++i) {
+        ht_node *node = h->nodes[i];
+        while (node) {
+            if (!is_null(node->v))
+                keys[*n++] = (rf_val) {node->k->type, node->k->u};
+            node = next(node);
+        }
+    }
+}
+
+// NOTE: The language currently defines the order of iteration as:
+// - Integer keys 0..N
+// - Misc hash table keys (no particular order)
+// - null key
 rf_val *t_collect_keys(rf_tab *t) {
-    rf_int len = t_length(t);
+    uint32_t len = t_logical_size(t);
     rf_val *keys = malloc(len * sizeof(rf_val));
     int n = 0;
-    for (rf_int i = 0; i < t->cap && n <= len; ++i) {
-        if (exists(t, i) && !is_null(t->v[i])) {
+    for (uint32_t i = 0; i < t->cap && n <= len; ++i) {
+        if (t_exists(t,i) && !is_null(t->v[i])) {
             keys[n++] = (rf_val) {TYPE_INT, .u.i = i};
         }
     }
-    rf_htab *h = t->h;
-    for (int i = 0; i < h->cap && n <= len; ++i) {
-        if (h->nodes[i] && !is_null(h->nodes[i]->val)) {
-            keys[n++] = (rf_val) {TYPE_STR, .u.s = h->nodes[i]->key};
-        }
-    }
+    // TODO pass `len`, allowing function to exit early if possible
+    ht_collect_keys(t->h, keys, &n);
     if (t->nullx)
         keys[n++] = (rf_val) {TYPE_NULL, .u.i = 0};
     return keys;
 }
 
-static double potential_lf(int n, int cap, rf_int k) {
+static double t_potential_lf(uint32_t n, uint32_t cap, rf_int k) {
     double n1 = n + 1.0;
     double n2 = cap > k ? cap : k + 1.0;
     return n1 / n2;
 }
 
-// Source: The Implementation of Lua 5.0, section 4
-// The computed size of the array part is the largest n such that at
-// least half the slots between 1 and n are in use (to avoid wasting
-// space with sparse arrays) and there is at least one used slot
-// between n/2 + 1 and n (to avoid a size n when n/2 would do)
-
-// If int k is within the capacity of the "array" part, perform the
-// lookup. Otherwise, defer to h_lookup().
-static rf_val *t_lookup_int(rf_tab *t, rf_int k, int set) {
-    if (set) set(lx);
-    if (exists(t, k)) {
-        return t->v[k];
-    }
-    if (!t->cap) {
-        return t_insert_int(t, k, &(rf_val){TYPE_NULL}, set, 0);
-    }
-    if (k >= 0 && (k < t->cap ||
-        (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
-        return t_insert_int(t, k, &(rf_val){TYPE_NULL}, set, 0);
-    } else {
-        char temp[21];
-        size_t temp_l = u_int2str(k, temp);
-        return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
-    }
+static inline int would_fit(rf_tab *t, rf_int k) {
+    return k >= 0 &&
+        (k < t->cap || t_potential_lf(t->psize, t->cap, k) >= T_MIN_LOAD_FACTOR);
 }
 
-// If the entire string is a valid integer, return the number
-static rf_int str2intidx(rf_str *s) {
-    char *end;
-    rf_flt f = u_str2d(s->str, &end, 0);
-    rf_int i = (rf_int) f;
-    if (f == i && *end == '\0') {
-        // Be dubious of strings coerced to 0.0; make sure the string
-        // actually has `0` in it somewhere. Otherwise, it may read
-        // a string like "+" to be 0.0, which would be unintended.
-        if (f == 0.0) {
-            for (int j = 0; j < s->l; ++j) {
-                if (s->str[j] == '0')
-                    return 0;
-            }
-            return -1;
-        }
-        return i;
-    }
-    return -1;
-}
-
-// TODO flt lookup is slow with string conversion
-rf_val *t_lookup(rf_tab *t, rf_val *k, int set) {
-    if (set) set(lx);
+rf_val *t_lookup(rf_tab *t, rf_val *k, int hint) {
+    if (hint) t->hint = 1;
+    rf_val tmp;
+    k = reduce_key(k, &tmp);
     switch (k->type) {
     case TYPE_NULL:
-        if (set && !t->nullx) {
-            set(nullx);
-            t->n++;
-        }
+        if (hint) t->nullx = 1;
         return t->nullv;
     case TYPE_INT:
-        if (k->u.i < 0) {
-            char temp[21];
-            size_t temp_l = u_int2str(k->u.i, temp);
-            return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
+        if (k->u.i >= 0) {
+            rf_int ki = k->u.i;
+            if (t_exists(t, ki))
+                return t->v[ki];
+            if (would_fit(t, ki))
+                return t_insert_int(t, ki, NULL);
         }
-        else
-            return t_lookup_int(t, k->u.i, set);
-    case TYPE_FLT:
-        if ((k->u.f == (rf_int) k->u.f) &&
-            ((rf_int) k->u.f >= 0))
-            return t_lookup_int(t, (rf_int) k->u.f, set);
-        else {
-            char temp[32];
-            size_t temp_l = u_flt2str(k->u.f, temp);
-            return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
-        }
-    case TYPE_STR: {
-        rf_int si = str2intidx(k->u.s);
-        return si >= 0 ? t_lookup_int(t, si, set)
-                       : h_lookup(t->h, k->u.s, set);
-
-    }
-    // TODO monitor
-    case TYPE_TAB: {
-        char temp[21];
-        size_t temp_l = u_int2str((rf_int) k->u.t, temp);
-        return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
-    }
-   // TODO Temp logic for unsupported types
-    default:
-        if (set && !t->nullx) {
-            set(nullx);
-            t->n++;
-        }
-        return t->nullv;
-    }
-    return NULL;
-}
-
-static int new_size(int n, int cap, rf_int k) {
-    int sz = cap < k ? k + 1 : cap + 1;
-    while (potential_lf(n, sz, k) >= MIN_LOAD_FACTOR) {
-        ++sz;
-    }
-    return sz + 1;
-}
-
-// VM currently initializes sequential tables backwards, inserting the
-// last element first by calling t_insert_int() with `force` set to 1.
-// This allows memory to be allocated once with the exact size needed
-// instead of potentially resizing multiple times throughout
-// initialization. Otherwise, t_insert_int() can defer to the hash
-// table part of the rf_tab if the rf_int `k` would cause the array
-// part to be too sparsely populated.
-rf_val *t_insert_int(rf_tab *t, rf_int k, rf_val *v, int set, int force) {
-    if (set) set(lx);
-    if (k >= 0 && (force || (potential_lf(t->an, t->cap, k) >= MIN_LOAD_FACTOR))) {
-        if (t->cap <= k || h_exists_int(t->h, k)) {
-            set(lx);
-            int oc = t->cap;
-            int nc = force ? k + 1 : new_size(t->an, t->cap, k);
-            // TODO the hackiest hack that ever hacked - maybe keep
-            // track of integer keys in the hash part instead
-            nc += !force * h_length(t->h);
-            t->v = realloc(t->v, sizeof(rf_val *) * nc);
-
-            // Collect valid integer keys from the hash part and move
-            // them to the newly allocated array part
-            for (rf_int i = oc; i < nc; ++i) {
-                if (exists(t,i)) continue;
-                char temp[21];
-                size_t temp_l = u_int2str(i, temp);
-                t->v[i] = h_delete(t->h, TEMP_STR(temp, temp_l));
-                if (t->v[i]) t->an++;
-            }
-            t->cap = nc;
-        }
-        if (!exists(t, k)) {
-            rf_val *nv = malloc(sizeof(rf_val));
-            *nv     = *v;
-            t->v[k] = nv;
-            t->an++;
-            if (set && !is_null(v))
-                t->n++;
-        } else {
-            *t->v[k] = *v;
-        }
-        return t->v[k];
-    }
-    else {
-        char temp[21];
-        size_t temp_l = u_int2str(k, temp);
-        // TODO
-        if (force)
-            return h_insert(t->h, TEMP_STR(temp, temp_l), v, set);
-        else
-            return h_lookup(t->h, TEMP_STR(temp, temp_l), set);
+        // Fall-through
+    default: return ht_lookup(t->h, k);
     }
 }
 
-rf_val *t_insert(rf_tab *t, rf_val *k, rf_val *v, int set) {
-    if (set) set(lx);
+static uint32_t new_size(uint32_t n, uint32_t cap, rf_int k) {
+    uint32_t sz = cap < k ? k + 1 : cap + 1;
+    return (uint32_t) (sz / T_MIN_LOAD_FACTOR) + 1;
+}
+
+// Don't call with k < 0
+rf_val *t_insert_int(rf_tab *t, rf_int k, rf_val *v) {
+    if (k >= t->cap) {
+        uint32_t old_cap = t->cap;
+        uint32_t new_cap = new_size(t->psize, old_cap, k);
+        t->v = realloc(t->v, new_cap * sizeof(rf_val *));
+        for (uint32_t i = old_cap; i < new_cap; ++i) {
+            if (t_exists(t,i)) continue;
+            t->v[i] = ht_delete(t->h, &(rf_val){TYPE_INT, .u.i = i});
+            if (t->v[i])
+                t->psize++;
+        }
+        t->cap = new_cap;
+    }
+    if (!t_exists(t,k)) {
+        t->v[k] = v == NULL ? v_newnull() : v_copy(v);
+        t->psize++;
+    } else if (v != NULL) {
+        *t->v[k] = *v;
+    }
+    t->hint = 1;
+    return t->v[k];
+}
+
+// Hash tables
+
+void ht_init(rf_htab *h) {
+    h->nodes = NULL;
+    h->lsize = 0;
+    h->psize = 0;
+    h->cap   = 0;
+    h->hint  = 0;
+}
+
+static inline ht_node *next(ht_node *n) {
+    return n->next;
+}
+
+static uint32_t ht_logical_size(rf_htab *h) {
+    if (!h->hint)
+        return h->lsize;
+    uint32_t l = 0;
+    for (uint32_t i = 0; i < h->cap; ++i) {
+        ht_node *n = h->nodes[i];
+        while (n) {
+            if (!is_null(n->v))
+                ++l;
+            n = next(n);
+        }
+    }
+    h->hint = 0;
+    return (h->lsize = l);
+}
+
+static inline double ht_potential_lf(rf_htab *h) {
+    double n1 = (double) h->psize + 1.0;
+    double n2 = (double) h->cap;
+    return n1 / n2;
+}
+
+// Ripped from LuaJIT
+#define rol(x,n) (((x)<<(n)) | ((x)>>(-(int)(n)&(8*sizeof(x)-1))))
+static inline uint32_t hashrot(uint32_t lo, uint32_t hi) {
+    lo ^= hi; hi  = rol(hi, 14);
+    lo -= hi; hi  = rol(hi, 5);
+    hi ^= lo; hi -= rol(lo, 13);
+    return hi;
+}
+
+static inline uint32_t anchor(rf_val *k, uint32_t mask) {
     switch (k->type) {
-    case TYPE_NULL:
-        *t->nullv = *v;
-        if (!is_null(v)) t->n++;
-        return t->nullv;
-    case TYPE_INT: return t_insert_int(t, k->u.i, v, set, 0);
-    case TYPE_FLT:
-        if (k->u.f == (rf_int) k->u.f)
-            return t_insert_int(t, (rf_int) k->u.f, v, set, 0);
-        else {
-            char temp[32];
-            size_t temp_l = u_flt2str(k->u.f, temp);
-            return h_insert(t->h, TEMP_STR(temp, temp_l), v, set);
-        }
-    case TYPE_STR: return h_insert(t->h, k->u.s, v, set);
-
-    // TODO monitor
-    case TYPE_TAB: {
-        char temp[21];
-        size_t temp_l = u_int2str((rf_int) k->u.t, temp);
-        return h_insert(t->h, TEMP_STR(temp, temp_l), v, set);
+    case TYPE_INT: return ((uint32_t) k->u.i) & mask;
+    case TYPE_STR: return s_hash(k->u.s) & mask;
+    default:
+        return hashrot(
+            (uint32_t) (k->u.i & UINT32_MAX),
+            (uint32_t) ((k->u.i >> 32) & UINT32_MAX)
+        ) & mask;
     }
-    case TYPE_RFN: // TODO
-    default: break;
+}
+
+static inline void insert_node(ht_node **nodes, ht_node *new, uint32_t i) {
+    ht_node *n = nodes[i];
+    if (!n) {
+        nodes[i] = new;
+        return;
+    }
+    while (n->next)
+        n = next(n);
+    n->next = new;
+}
+
+static inline void ht_resize(rf_htab *h, size_t new_cap) {
+    ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap);
+    for (uint32_t i = 0; i < new_cap; ++i)
+        new_nodes[i] = NULL;
+    for (uint32_t i = 0; i < h->cap; ++i) {
+        ht_node *n = h->nodes[i];
+        while (n) {
+            insert_node(new_nodes, n, anchor(n->k, new_cap-1));
+            ht_node *p = n;
+            n = next(n);
+            p->next = NULL;
+        }
+    }
+    free(h->nodes);
+    h->nodes = new_nodes;
+    h->cap = new_cap;
+}
+
+static inline int v_equal(rf_val *v1, rf_val *v2) {
+    if (v1->type != v2->type)
+        return 0;
+    switch (v1->type) {
+    case TYPE_FLT: return v1->u.f == v2->u.f;
+    case TYPE_STR: return s_eq_fast(v1->u.s, v2->u.s);
+    default: return v1->u.i == v2->u.i;
+    }
+}
+
+rf_val *ht_lookup(rf_htab *h, rf_val *k) {
+    h->hint = 1;
+    if (h->nodes == NULL)
+        return ht_insert(h, k, NULL);
+    ht_node *n = h->nodes[anchor(k, h->cap-1)];
+    while (n) {
+        if (v_equal(n->k, k))
+            return n->v;
+        n = next(n);
+    }
+    return ht_insert(h, k, NULL);
+}
+
+rf_val *ht_lookup_str(rf_htab *h, rf_str *k) {
+    return ht_lookup(h, &(rf_val){TYPE_STR, .u.s = k});
+}
+
+static inline ht_node *new_node(rf_val *k, rf_val *v) {
+    ht_node *new = malloc(sizeof(ht_node));
+    new->k = v_copy(k);
+    new->v = v == NULL ? v_newnull() : v_copy(v);
+    new->next = NULL;
+    return new;
+}
+
+rf_val *ht_insert(rf_htab *h, rf_val *k, rf_val *v) {
+    // If HT is uninitialized, allocate memory
+    if (h->nodes == NULL) {
+        h->nodes = malloc(sizeof(ht_node *) * HT_MIN_CAP);
+        h->cap = HT_MIN_CAP;
+        for (int i = 0; i < HT_MIN_CAP; ++i) {
+            h->nodes[i] = NULL;
+        }
+    } else {
+        double lf = ht_potential_lf(h);
+        if (lf > HT_MAX_LOAD_FACTOR)
+            ht_resize(h, h->cap << 1);
+        else if (h->cap > HT_MIN_CAP && lf < HT_MIN_LOAD_FACTOR)
+            ht_resize(h, h->cap >> 1);
+    }
+    ht_node *new = new_node(k,v);
+    insert_node(h->nodes, new, anchor(k, h->cap-1));
+    h->psize++;
+    return new->v;
+}
+
+rf_val *ht_insert_str(rf_htab *h, rf_str *k, rf_val *v) {
+    return ht_insert(h, &(rf_val){TYPE_STR, .u.s = k}, v);
+}
+
+rf_val *ht_insert_cstr(rf_htab *h, const char *k, rf_val *v) {
+    return ht_insert_str(h, s_newstr(k, strlen(k), 1), v);
+}
+
+rf_val *ht_delete(rf_htab *h, rf_val *k) {
+    if (h->nodes == NULL)
+        return NULL;
+    ht_node **a = &h->nodes[anchor(k, h->cap-1)];
+    ht_node *n = *a;
+    while (n) {
+        if (v_equal(n->k, k)) {
+            *a = n->next;
+            rf_val *v = n->v;
+            free(n->k);
+            free(n);
+            h->psize--;
+            return v;
+        }
+        a = &n->next;
+        n = next(n);
     }
     return NULL;
 }

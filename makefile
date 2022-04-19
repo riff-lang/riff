@@ -3,6 +3,7 @@ LOC           = /usr/local/bin
 
 CFLAGS        = -O3
 CFLAGS       += $(shell pcre2-config --cflags)
+CFLAGS       += -Wunused
 
 LDFLAGS       = -lm
 LDFLAGS      += $(shell pcre2-config --libs8)
@@ -39,15 +40,14 @@ SRC          += src/disas.c
 SRC          += src/env.c
 SRC          += src/fmt.c
 SRC          += src/fn.c
-SRC          += src/hash.c
 SRC          += src/lex.c
 SRC          += src/lib.c
 SRC          += src/parse.c
-SRC          += src/re.c
-SRC          += src/str.c
+SRC          += src/regex.c
+SRC          += src/string.c
 SRC          += src/table.c
 SRC          += src/util.c
-SRC          += src/val.c
+SRC          += src/value.c
 SRC          += src/vm.c
 
 TESTS         = test/expressions.bats
@@ -57,6 +57,9 @@ TESTS        += test/etc.bats
 
 # Compile-time info for riff -v
 CFLAGS       += -DGIT_DESC=\"$(shell git describe)\"
+
+# Homebrew-installed Clang
+BREW_CLANG    = /usr/local/opt/llvm/bin/clang
 
 .PHONY: all clean install mem prof test warn
 
@@ -101,14 +104,14 @@ bin/lsan: $(SRC)
 # on macOS - use Homebrew-installed clang instead
 ifneq ($(wildcard /usr/local/opt/llvm/bin/clang),)
 	mkdir -p bin
-	/usr/local/opt/llvm/bin/clang $(CFLAGS) $(LFLAGS) $(SRC) -o bin/lsan $(LDFLAGS)
+	$(BREW_CLANG) $(CFLAGS) $(LFLAGS) $(SRC) -o bin/lsan $(LDFLAGS)
 else
 	@echo ERROR: LeakSanitizer requires Brew-installed clang
 endif
 
 bin/prof: $(SRC)
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(PFLAGS) $(SRC) -o bin/prof $(LDFLAGS)
+	$(BREW_CLANG) $(CFLAGS) $(PFLAGS) $(SRC) -o bin/prof $(LDFLAGS)
 
 bin/warn: $(SRC)
 	mkdir -p bin

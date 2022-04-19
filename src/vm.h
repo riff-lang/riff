@@ -3,7 +3,7 @@
 
 #include "code.h"
 #include "env.h"
-#include "hash.h"
+#include "table.h"
 #include "types.h"
 
 // VM stack element

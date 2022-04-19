@@ -3,7 +3,6 @@
 #include "conf.h"
 #include "lib.h"
 #include "mem.h"
-#include "table.h"
 
 #include <inttypes.h>
 #include <math.h>
@@ -69,18 +68,14 @@ static inline int test(rf_val *v) {
         rf_flt f = u_str2d(v->u.s->str, &end, 0);
         if (!*end) {
             // Check for literal '0' character in string
-            if (f == 0.0) {
-                for (int i = 0; i < v->u.s->l; ++i) {
-                    if (v->u.s->str[i] == '0')
-                        return 0;
-                }
-            } else {
+            if (f == 0.0 && s_haszero(v->u.s))
+                return 0;
+            else
                 return !!f;
-            }
         }
         return !!v->u.s->l;
     }
-    case TYPE_TAB: return !!t_length(v->u.t);
+    case TYPE_TAB: return !!t_logical_size(v->u.t);
     case TYPE_RE:  case TYPE_RNG:
     case TYPE_RFN: case TYPE_CFN:
         return 1;
@@ -224,7 +219,7 @@ Z_UOP(len) {
         l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;
     case TYPE_STR: l = v->u.s->l;        break;
-    case TYPE_TAB: l = t_length(v->u.t); break;
+    case TYPE_TAB: l = t_logical_size(v->u.t); break;
     case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
     case TYPE_RE:   // TODO - extract something from PCRE pattern?
     case TYPE_RNG:  // TODO
@@ -433,7 +428,7 @@ static inline void new_iter(rf_val *set) {
         break;
     case TYPE_TAB:
         iter->t = LOOP_TAB;
-        iter->on = iter->n = t_length(set->u.t);
+        iter->on = iter->n = t_logical_size(set->u.t);
         iter->keys = t_collect_keys(set->u.t);
         iter->set.tab = set->u.t;
         break;
@@ -464,30 +459,30 @@ static inline void destroy_iter(void) {
 static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv) {
     t_init(t);
     for (rf_int i = 0; i < rf_argc; ++i) {
-        // TODO force parameter should not be set
         rf_val v = (rf_val) {
             TYPE_STR,
             .u.s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 0)
         };
-        t_insert_int(t, i-arg0, &v, 1, 1);
+        rf_int idx = i - arg0;
+        if (idx < 0)
+            ht_insert(t->h, &(rf_val){TYPE_INT, .u.i = idx}, &v);
+        else
+            t_insert_int(t, idx, &v);
     }
 }
 
-static int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
+int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
 
 // VM entry point/initialization
 int z_exec(rf_env *e) {
-    h_init(&globals);
+    ht_init(&globals);
     iter = NULL;
     t_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, e->arg0, e->argc, e->argv);
-    h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TAB, .u.t = &argv}, 1);
-
-    h_insert(&globals, s_newstr("stdin",  5, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdin,  FH_STD}}, 1);
-    h_insert(&globals, s_newstr("stdout", 6, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdout, FH_STD}}, 1);
-    h_insert(&globals, s_newstr("stderr", 6, 1), &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stderr, FH_STD}}, 1);
-    l_register(&globals);
+    // h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TAB, .u.t = &argv}, 1);
+    ht_insert_cstr(&globals, "arg", &(rf_val){TYPE_TAB, .u.t = &argv});
+    l_register_builtins(&globals);
 
     // Add user-defined functions to the global hash table
     for (int i = 0; i < e->nf; ++i) {
@@ -497,7 +492,7 @@ int z_exec(rf_env *e) {
             continue;
         rf_val *fn = malloc(sizeof(rf_val));
         *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
-        h_insert(&globals, e->fn[i]->name, fn, 1);
+        ht_insert_str(&globals, e->fn[i]->name, fn);
     }
 
     return exec(e->main.code->code, e->main.code->k, stack, stack);
@@ -513,7 +508,7 @@ int z_exec_reenter(rf_env *e, rf_stack *fp) {
             continue;
         rf_val *fn = malloc(sizeof(rf_val));
         *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
-        h_insert(&globals, e->fn[i]->name, fn, 1);
+        ht_insert_str(&globals, e->fn[i]->name, fn);
     }
     return exec(e->main.code->code, e->main.code->k, fp, fp);
 }
@@ -525,7 +520,7 @@ int z_exec_reenter(rf_env *e, rf_stack *fp) {
 #endif
 
 // VM interpreter loop
-static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
+int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     if (sp - stack >= VM_STACK_SIZE)
         err("stack overflow");
     rf_stack *retp = sp; // Save original SP
@@ -799,10 +794,11 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // Push global address
 // Assign the address of global variable x's rf_val in the globals
 // table.
-// h_lookup() will create an entry if needed, accommodating
+// ht_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-#define gbla(x) sp++->a = h_lookup(&globals, k[(x)].u.s, 1);
+// #define gbla(x) sp++->a = h_lookup(&globals, k[(x)].u.s, 1);
+#define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].u.s);
 
     z_case(GBLA)  gbla(ip[1]); ip += 2; z_break;
     z_case(GBLA0) gbla(0);     ++ip;    z_break;
@@ -811,11 +807,12 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
 // Push global value
 // Copy the value of global variable x to the top of the stack.
-// h_lookup() will create an entry if needed, accommodating
+// ht_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
-#define gblv(x) sp++->v = *h_lookup(&globals, k[(x)].u.s, 0);
+// #define gblv(x) sp++->v = *h_lookup(&globals, k[(x)].u.s, 0);
+#define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].u.s);
 
     z_case(GBLV)  gblv(ip[1]); ip += 2; z_break;
     z_case(GBLV0) gblv(0);     ++ip;    z_break;
@@ -826,10 +823,10 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // Push the address of FP[x] to the top of the stack.
 #define lcla(x) sp++->a = &fp[(x)].v;
 
-    z_case(LCLA)  lcla(ip[1]) ip += 2; z_break;
-    z_case(LCLA0) lcla(0);    ++ip;    z_break;
-    z_case(LCLA1) lcla(1);    ++ip;    z_break;
-    z_case(LCLA2) lcla(2);    ++ip;    z_break;
+    z_case(LCLA)  lcla(ip[1]); ip += 2; z_break;
+    z_case(LCLA0) lcla(0);     ++ip;    z_break;
+    z_case(LCLA1) lcla(1);     ++ip;    z_break;
+    z_case(LCLA2) lcla(2);     ++ip;    z_break;
 
 // Push local value
 // Copy the value of FP[x] to the top of the stack.
@@ -992,10 +989,10 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // of the stack. Leave the table rf_val on the stack.
 // Tables index at 0 by default.
 #define new_tab(x) \
-    tp = v_newtab(); \
+    tp = v_newtab(x); \
     for (int i = (x) - 1; i >= 0; --i) { \
         --sp; \
-        t_insert_int(tp->u.t, i, &sp->v, 1, 1); \
+        t_insert_int(tp->u.t, i, &sp->v); \
     } \
     sp++->v = *tp;
 
@@ -1015,9 +1012,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             }
             switch (sp[i].a->type) {
 
-            // Create array if sp[-2].a is an uninitialized variable
+            // Create table if sp[-2].a is an uninitialized variable
             case TYPE_NULL:
-                *sp[i+1].a = *v_newtab();
+                *sp[i+1].a = *v_newtab(0);
                 // Fall-through
             case TYPE_TAB:
                 sp[i+1].v = *t_lookup(sp[i].a->u.t, &sp[i+1].v, 0);
@@ -1050,9 +1047,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
             switch (tp->type) {
 
-            // Create array if sp[i].a is an uninitialized variable
+            // Create table if sp[i].a is an uninitialized variable
             case TYPE_NULL:
-                *tp = *v_newtab();
+                *tp = *v_newtab(0);
                 // Fall-through
             case TYPE_TAB:
                 sp[i+1].a = t_lookup(tp->u.t, &sp[i+1].v, 1);
@@ -1083,7 +1080,7 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
         // Create array if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *tp = *v_newtab();
+            *tp = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
             sp[-2].a = t_lookup(tp->u.t, &sp[-1].v, 1);
@@ -1117,9 +1114,9 @@ static int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
         switch (sp[-2].a->type) {
 
-        // Create array if sp[-2].a is an uninitialized variable
+        // Create table if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *sp[-2].a = *v_newtab();
+            *sp[-2].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
             sp[-2].v = *t_lookup(sp[-2].a->u.t, &sp[-1].v, 0);

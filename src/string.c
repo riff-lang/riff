@@ -1,10 +1,11 @@
-#include <inttypes.h>
-#include <math.h>
-#include <stdio.h>
 #include "types.h"
 
 #include "util.h"
 
+#include <ctype.h>
+#include <inttypes.h>
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -55,7 +56,7 @@ rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
 
     len = (size_t) ceil(fabs(len / (double) itvl));
     char *str = malloc(len * sizeof(char) + 1);
-    for (size_t i = 0; i <= len; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         str[i] = s[from];
         from += itvl;
     }
@@ -77,4 +78,24 @@ rf_str *s_flt2str(rf_flt f) {
     char str[32];
     size_t len = sprintf(str, "%g", f);
     return s_newstr(str, len, 0);
+}
+
+inline int s_numunlikely(rf_str *s) {
+    return !s->l || !strchr("+-.0123456789", s->str[0]);
+}
+
+inline int s_haszero(rf_str *s) {
+    return !!strchr(s->str, '0');
+}
+
+inline uint32_t s_hash(rf_str *s) {
+    return s->hash ? s->hash : (s->hash = u_strhash(s->str));
+}
+
+inline int s_eq(rf_str *s1, rf_str *s2) {
+    return s1->l == s2->l && !memcmp(s1->str, s2->str, s1->l);
+}
+
+inline int s_eq_fast(rf_str *s1, rf_str *s2) {
+    return s_hash(s1) == s_hash(s2);
 }

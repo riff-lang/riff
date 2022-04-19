@@ -1,7 +1,7 @@
 #ifndef LIB_H
 #define LIB_H
 
-#include "hash.h"
+#include "table.h"
 #include "types.h"
 
 // Each library function takes a frame pointer and an argument count,
@@ -20,6 +20,6 @@ struct c_fn {
     rf_lib_fn fn;
 };
 
-void l_register(rf_htab *);
+void l_register_builtins(rf_htab *);
 
 #endif

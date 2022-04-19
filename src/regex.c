@@ -1,5 +1,6 @@
 #include "types.h"
 
+#include "conf.h"
 #include "table.h"
 
 #include <inttypes.h>
@@ -38,12 +39,12 @@ void re_free(rf_re *re) {
 
 int re_store_numbered_captures(pcre2_match_data *md) {
     uint32_t i = 0;
+    PCRE2_UCHAR buf[STR_BUF_SZ];
     while (1) {
-        PCRE2_UCHAR *buf;
-        PCRE2_SIZE   l;
-        if (!pcre2_substring_get_bynumber(md, i, &buf, &l)) {
+        PCRE2_SIZE l = STR_BUF_SZ;
+        if (!pcre2_substring_copy_bynumber(md, i, buf, &l)) {
             rf_val v = (rf_val) {TYPE_STR, .u.s = s_newstr((const char *) buf, l, 0)};
-            t_insert_int(fldv, (rf_int) i, &v, 1, 0);
+            t_insert_int(fldv, (rf_int) i, &v);
         } else {
             break;
         }
