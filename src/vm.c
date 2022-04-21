@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void err(const char *msg) {
+static inline void err(const char *msg) {
     fprintf(stderr, "riff: [vm] %s\n", msg);
     exit(1);
 }
@@ -248,7 +248,7 @@ Z_BINOP(cat) {
     set_str(l, s_newstr_concat(lhs, rhs, 0));
 }
 
-static rf_int match(rf_val *l, rf_val *r) {
+static inline rf_int match(rf_val *l, rf_val *r) {
 
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
