@@ -459,7 +459,7 @@ static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv
     }
 }
 
-int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
+static inline int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
 
 // VM entry point/initialization
 int z_exec(rf_env *e) {
@@ -508,7 +508,7 @@ int z_exec_reenter(rf_env *e, rf_stack *fp) {
 #endif
 
 // VM interpreter loop
-int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
+static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     if (sp - stack >= VM_STACK_SIZE)
         err("stack overflow");
     rf_stack *retp = sp; // Save original SP
