@@ -19,15 +19,14 @@ AFLAGS        = -g
 AFLAGS       += -fsanitize=address
 AFLAGS       += -fsanitize-address-use-after-scope
 
+IFLAGS        = -fprofile-instr-generate
+IFLAGS       += -fcoverage-mapping
+
 # LeakSanitizer (standalone)
 # LSan can be run on top of ASan with the bin/asan executable:
 #   $ ASAN_OPTIONS=detect_leaks=1 bin/asan ...
 LFLAGS        = -g
 LFLAGS       += -fsanitize=leak
-
-PFLAGS        = -g
-PFLAGS       += -fprofile-instr-generate
-PFLAGS       += -fcoverage-mapping
 
 WFLAGS        = -Wall
 WFLAGS       += -Wextra
@@ -61,7 +60,7 @@ CFLAGS       += -DGIT_DESC=\"$(shell git describe)\"
 # Homebrew-installed Clang
 BREW_CLANG    = /usr/local/opt/llvm/bin/clang
 
-.PHONY: all clean install mem prof test warn
+.PHONY: clean
 
 all: bin/riff
 
@@ -73,8 +72,8 @@ install: bin/riff
 	install bin/riff $(LOC)/riff
 
 asan: bin/asan
+instr: bin/instr
 lsan: bin/lsan
-prof: bin/prof
 
 test: bin/riff
 	bats -p $(TESTS)
@@ -93,26 +92,26 @@ pcre2-wasm:
 
 bin/riff: $(SRC)
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(SRC) -o bin/riff $(LDFLAGS)
+	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
 bin/asan: $(SRC)
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(AFLAGS) $(SRC) -o bin/asan $(LDFLAGS)
+	$(CC) $(CFLAGS) $(AFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
 bin/lsan: $(SRC)
 # LeakSanitizer doesn't seem to be supported by the default compiler
 # on macOS - use Homebrew-installed clang instead
-ifneq ($(wildcard /usr/local/opt/llvm/bin/clang),)
+ifneq ($(wildcard $(BREW_CLANG)),)
 	mkdir -p bin
-	$(BREW_CLANG) $(CFLAGS) $(LFLAGS) $(SRC) -o bin/lsan $(LDFLAGS)
+	$(BREW_CLANG) $(CFLAGS) $(LFLAGS) $(SRC) -o $@ $(LDFLAGS)
 else
 	@echo ERROR: LeakSanitizer requires Brew-installed clang
 endif
 
-bin/prof: $(SRC)
+bin/instr: $(SRC)
 	mkdir -p bin
-	$(BREW_CLANG) $(CFLAGS) $(PFLAGS) $(SRC) -o bin/prof $(LDFLAGS)
+	$(BREW_CLANG) $(CFLAGS) $(IFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
 bin/warn: $(SRC)
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(WFLAGS) $(SRC) -o bin/warn $(LDFLAGS)
+	$(CC) $(CFLAGS) $(WFLAGS) $(SRC) -o $@ $(LDFLAGS)
