@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum types {
     TYPE_NULL,
@@ -100,8 +101,8 @@ typedef struct {
     // instructions which operate on both. E.g. array subscripting.
     uintptr_t type;
     union {
-        rf_flt  f;
         rf_int  i;
+        rf_flt  f;
         rf_str *s;
         rf_re  *r;
         rf_fh  *fh;
@@ -129,27 +130,41 @@ typedef struct {
                    is_int(x) ? (rf_flt) (x)->u.i : \
                    is_str(x) ? str2flt((x)->u.s) : 0)
 
-rf_int   str2int(rf_str *);
-rf_flt   str2flt(rf_str *);
-rf_str  *s_newstr(const char *, size_t, int);
-rf_str  *s_newstr_concat(char *, char *, int);
-rf_str  *s_substr(char *, rf_int, rf_int, rf_int);
-rf_str  *s_int2str(rf_int);
-rf_str  *s_flt2str(rf_flt);
-int      s_numunlikely(rf_str *);
-int      s_haszero(rf_str *);
-uint32_t s_hash(rf_str *);
-int      s_eq(rf_str *, rf_str *);
-int      s_eq_fast(rf_str *, rf_str *);
+static inline rf_int str2int(rf_str *s) {
+    char *end;
+    return u_str2i64(s->str, &end, 0);
+}
+
+static inline rf_flt str2flt(rf_str *s) {
+    char *end;
+    return u_str2d(s->str, &end, 0);
+}
+
+static inline uint32_t s_hash(rf_str *s) {
+    return s->hash ? s->hash : (s->hash = u_strhash(s->str));
+}
+
+static inline int s_eq_fast(rf_str *s1, rf_str *s2) {
+    return s_hash(s1) == s_hash(s2);
+}
+
+static inline int s_numunlikely(rf_str *s) {
+    return !s->l || !strchr("+-.0123456789", s->str[0]);
+}
+
+static inline int s_haszero(rf_str *s) {
+    return !!strchr(s->str, '0');
+}
+
+rf_str *s_newstr(const char *, size_t, int);
+rf_str *s_newstr_concat(char *, char *, int);
+rf_str *s_substr(char *, rf_int, rf_int, rf_int);
 void    re_register_fldv(rf_tab *);
 rf_re  *re_compile(char *, size_t, uint32_t, int *);
 void    re_free(rf_re *);
 int     re_store_numbered_captures(pcre2_match_data *);
 rf_int  re_match(char *, size_t, rf_re *, int);
 rf_val *v_newnull(void);
-rf_val *v_newint(rf_int);
-rf_val *v_newflt(rf_flt);
-rf_val *v_newstr(rf_str *);
 rf_val *v_newtab(uint32_t);
 rf_val *v_copy(rf_val *);
 

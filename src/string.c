@@ -67,35 +67,3 @@ rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
     ns->hash = 0;
     return ns;
 }
-
-rf_str *s_int2str(rf_int i) {
-    char str[32];
-    size_t len = sprintf(str, "%"PRId64, i);
-    return s_newstr(str, len, 0);
-}
-
-rf_str *s_flt2str(rf_flt f) {
-    char str[32];
-    size_t len = sprintf(str, "%g", f);
-    return s_newstr(str, len, 0);
-}
-
-inline int s_numunlikely(rf_str *s) {
-    return !s->l || !strchr("+-.0123456789", s->str[0]);
-}
-
-inline int s_haszero(rf_str *s) {
-    return !!strchr(s->str, '0');
-}
-
-inline uint32_t s_hash(rf_str *s) {
-    return s->hash ? s->hash : (s->hash = u_strhash(s->str));
-}
-
-inline int s_eq(rf_str *s1, rf_str *s2) {
-    return s1->l == s2->l && !memcmp(s1->str, s2->str, s1->l);
-}
-
-inline int s_eq_fast(rf_str *s1, rf_str *s2) {
-    return s_hash(s1) == s_hash(s2);
-}

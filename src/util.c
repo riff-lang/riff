@@ -4,16 +4,6 @@
 #include <errno.h>
 #include <stdlib.h>
 
-// djb2
-// source: http://www.cse.yorku.ca/~oz/hash.html
-uint32_t u_strhash(const char *str) {
-    uint32_t h = 5381;
-    unsigned int c;
-    while ((c = *str++))
-        h = ((h << 5) + h) + c;
-    return h;
-}
-
 int u_decval(int c) {
     return c - '0';
 }

@@ -22,18 +22,6 @@ static rf_tab    fldv;
 static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
 
-// Coerce string to int unconditionally
-inline rf_int str2int(rf_str *s) {
-    char *end;
-    return u_str2i64(s->str, &end, 0);
-}
-
-// Coerce string to float unconditionally
-inline rf_flt str2flt(rf_str *s) {
-    char *end;
-    return u_str2d(s->str, &end, 0);
-}
-
 // Integer arithmetic (Bitwise ops)
 #define int_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
