@@ -10,116 +10,12 @@ static struct {
     const char *mnemonic;
     int         arity;
 } opcode_info[] = {
-    [OP_ADDX]    = { "addx",     0 },
-    [OP_ADD]     = { "add",      0 },
-    [OP_ANDX]    = { "andx",     0 },
-    [OP_AND]     = { "and",      0 },
-    [OP_CALL]    = { "call",     1 },
-    [OP_CATX]    = { "catx",     0 },
-    [OP_CAT]     = { "cat",      0 },
-    [OP_DIVX]    = { "divx",     0 },
-    [OP_DIV]     = { "div",      0 },
-    [OP_EQ]      = { "eq",       0 },
-    [OP_FLDA]    = { "flda",     0 },
-    [OP_FLDV]    = { "fldv",     0 },
-    [OP_GBLA0]   = { "gbla   0", 0 },
-    [OP_GBLA1]   = { "gbla   1", 0 },
-    [OP_GBLA2]   = { "gbla   2", 0 },
-    [OP_GBLA]    = { "gbla",     1 },
-    [OP_GBLV0]   = { "gblv   0", 0 },
-    [OP_GBLV1]   = { "gblv   1", 0 },
-    [OP_GBLV2]   = { "gblv   2", 0 },
-    [OP_GBLV]    = { "gblv",     1 },
-    [OP_GE]      = { "ge",       0 },
-    [OP_GT]      = { "gt",       0 },
-    [OP_IDXA1]   = { "idxa",     0 },
-    [OP_IDXA]    = { "idxa",     1 },
-    [OP_IDXV1]   = { "idxv",     0 },
-    [OP_IDXV]    = { "idxv",     1 },
-    [OP_IMM0]    = { "imm    0", 0 },
-    [OP_IMM16]   = { "imm",      2 },
-    [OP_IMM1]    = { "imm    1", 0 },
-    [OP_IMM2]    = { "imm    2", 0 },
-    [OP_IMM8]    = { "imm",      1 },
-    [OP_ITERKV]  = { "iterkv",   2 },
-    [OP_ITERV]   = { "iterv",    2 },
-    [OP_JMP16]   = { "jmp",      2 },
-    [OP_JMP8]    = { "jmp",      1 },
-    [OP_JNZ16]   = { "jnz",      2 },
-    [OP_JNZ8]    = { "jnz",      1 },
-    [OP_JZ16]    = { "jz",       2 },
-    [OP_JZ8]     = { "jz",       1 },
-    [OP_LCLA0]   = { "lcla   0", 0 },
-    [OP_LCLA1]   = { "lcla   1", 0 },
-    [OP_LCLA2]   = { "lcla   2", 0 },
-    [OP_LCLA]    = { "lcla",     1 },
-    [OP_LCLV0]   = { "lclv   0", 0 },
-    [OP_LCLV1]   = { "lclv   1", 0 },
-    [OP_LCLV2]   = { "lclv   2", 0 },
-    [OP_LCLV]    = { "lclv",     1 },
-    [OP_LEN]     = { "len",      0 },
-    [OP_LE]      = { "le",       0 },
-    [OP_LNOT]    = { "lnot",     0 },
-    [OP_LOOP16]  = { "loop",     2 },
-    [OP_LOOP8]   = { "loop",     1 },
-    [OP_LT]      = { "lt",       0 },
-    [OP_MATCH]   = { "match",    0 },
-    [OP_MODX]    = { "modx",     0 },
-    [OP_MOD]     = { "mod",      0 },
-    [OP_MULX]    = { "mulx",     0 },
-    [OP_MUL]     = { "mul",      0 },
-    [OP_NEG]     = { "neg",      0 },
-    [OP_NE]      = { "ne",       0 },
-    [OP_NMATCH]  = { "nmatch",   0 },
-    [OP_NOT]     = { "not",      0 },
-    [OP_NULL]    = { "null",     0 },
-    [OP_NUM]     = { "num",      0 },
-    [OP_ORX]     = { "orx",      0 },
-    [OP_OR]      = { "or",       0 },
-    [OP_POPI]    = { "pop",      1 },
-    [OP_POPL]    = { "popl",     0 },
-    [OP_POP]     = { "pop",      0 },
-    [OP_POSTDEC] = { "pstdec",   0 },
-    [OP_POSTINC] = { "pstinc",   0 },
-    [OP_POWX]    = { "powx",     0 },
-    [OP_POW]     = { "pow",      0 },
-    [OP_PREDEC]  = { "predec",   0 },
-    [OP_PREINC]  = { "preinc",   0 },
-    [OP_PUSHK0]  = { "pushk  0", 0 },
-    [OP_PUSHK1]  = { "pushk  1", 0 },
-    [OP_PUSHK2]  = { "pushk  2", 0 },
-    [OP_PUSHK]   = { "pushk",    1 },
-    [OP_RET1]    = { "ret    1", 0 },
-    [OP_RET]     = { "ret",      0 },
-    [OP_RNGE]    = { "rnge",     0 },
-    [OP_RNGF]    = { "rngf",     0 },
-    [OP_RNGT]    = { "rngt",     0 },
-    [OP_RNG]     = { "rng",      0 },
-    [OP_SET]     = { "set",      0 },
-    [OP_SHLX]    = { "shlx",     0 },
-    [OP_SHL]     = { "shl",      0 },
-    [OP_SHRX]    = { "shrx",     0 },
-    [OP_SHR]     = { "shr",      0 },
-    [OP_SRNGE]   = { "srnge",    0 },
-    [OP_SRNGF]   = { "srngf",    0 },
-    [OP_SRNGT]   = { "srngt",    0 },
-    [OP_SRNG]    = { "srng",     0 },
-    [OP_SUBX]    = { "subx",     0 },
-    [OP_SUB]     = { "sub",      0 },
-    [OP_TAB0]    = { "tab    0", 0 },
-    [OP_TABK]    = { "tab",      1 },
-    [OP_TAB]     = { "tab",      1 },
-    [OP_TCALL]   = { "tcall",    1 },
-    [OP_XJNZ16]  = { "xjnz",     2 },
-    [OP_XJNZ8]   = { "xjnz",     1 },
-    [OP_XJZ16]   = { "xjz",      2 },
-    [OP_XJZ8]    = { "xjz",      1 },
-    [OP_XORX]    = { "xorx",     0 },
-    [OP_XOR]     = { "xor",      0 }
+#define OPCODE(x,y,z) { z, y }
+#include "opcodes.h"
 };
 
 #define OP_ARITY    (opcode_info[b0].arity)
-#define OP_MNEMONIC (opcode_info[b0].mnemonic)
+#define MNEMONIC (opcode_info[b0].mnemonic)
 
 #define INST0       "%*d: %02x       %s\n"
 #define INST0DEREF  "%*d: %02x       %-6s      // %s\n"
@@ -147,17 +43,17 @@ static int is_jump16(int op) {
 
 // TODO This function is way too big for its own good
 static void d_code_obj(rf_code *c, int ipw) {
-    int sz  = c->n;
-    int ip  = 0;
+    int sz = c->n;
+    int ip = 0;
 
     char s[STR_BUF_SZ];
-    int b0, b1;
+    uint8_t b0, b1, b2;
     while (ip < sz) {
         b0 = c->code[ip];
         if (OP_ARITY) {
             b1 = c->code[ip+1];
             switch (b0) {
-            case OP_PUSHK:
+            case OP_CONST:
             case OP_TABK:
                 switch (c->k[b1].type) {
                 case TYPE_FLT:
@@ -178,44 +74,44 @@ static void d_code_obj(rf_code *c, int ipw) {
                 default:
                     break;
                 }
-                printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
+                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
             case OP_GBLA: case OP_GBLV:
                 sprintf(s, "%s", OPND(s->str));
-                printf(INST1DEREF, ipw, ip, b0, b1, OP_MNEMONIC, b1, s);
+                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
             default:
                 if (is_jump8(b0)) {
-                    printf(INST1ADDR, ipw, ip, b0, b1, OP_MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
+                    printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
                 } else if (is_jump16(b0)) {
-                    int b2 = c->code[ip+2];
+                    b2 = c->code[ip+2];
                     int16_t a = (b1 << 8) + b2;
-                    printf(INST2ADDR, ipw, ip, b0, b1, b2, OP_MNEMONIC,
+                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC,
                             a, ip + a);
                     ip += 1;
                 } else if (b0 == OP_LOOP8) {
-                    printf(INST1ADDR, ipw, ip, b0, b1, OP_MNEMONIC, -b1, ip - (uint8_t) b1);
+                    printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, -b1, ip - (uint8_t) b1);
                 } else if (b0 == OP_LOOP16) {
-                    int b2 = c->code[ip+2];
+                    b2 = c->code[ip+2];
                     int a = (b1 << 8) + b2;
-                    printf(INST2ADDR, ipw, ip, b0, b1, b2, OP_MNEMONIC,
+                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC,
                             -a, ip - a);
                     ip += 1;
                 } else if (b0 == OP_IMM16) {
-                    int b2 = c->code[ip+2];
+                    b2 = c->code[ip+2];
                     int a = (b1 << 8) + b2;
-                    printf(INST2, ipw, ip, b0, b1, b2, OP_MNEMONIC, a);
+                    printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, a);
                     ip += 1;
 
                 } else {
-                    printf(INST1, ipw, ip, b0, b1, OP_MNEMONIC, b1);
+                    printf(INST1, ipw, ip, b0, b1, MNEMONIC, b1);
                 }
                 break;
             }
             ip += 2;
-        } else if (b0 >= OP_PUSHK0 && b0 <= OP_GBLV2) {
+        } else if (b0 >= OP_CONST0 && b0 <= OP_GBLV2) {
             switch (b0) {
-            case OP_PUSHK0:
+            case OP_CONST0:
                 switch (c->k[0].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND0(f));
@@ -235,9 +131,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 default:
                     break;
                 }
-                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
                 break;
-            case OP_PUSHK1:
+            case OP_CONST1:
                 switch (c->k[1].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND1(f));
@@ -257,9 +153,9 @@ static void d_code_obj(rf_code *c, int ipw) {
                 default:
                     break;
                 }
-                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
                 break;
-            case OP_PUSHK2:
+            case OP_CONST2:
                 switch (c->k[2].type) {
                 case TYPE_FLT:
                     sprintf(s, "%g", OPND2(f));
@@ -279,26 +175,26 @@ static void d_code_obj(rf_code *c, int ipw) {
                 default:
                     break;
                 }
-                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
                 break;
             case OP_GBLA0: case OP_GBLV0:
                 sprintf(s, "%s", OPND0(s->str));
-                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
                 break;
             case OP_GBLA1: case OP_GBLV1:
                 sprintf(s, "%s", OPND1(s->str));
-                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
                 break;
             case OP_GBLA2: case OP_GBLV2:
                 sprintf(s, "%s", OPND2(s->str));
-                printf(INST0DEREF, ipw, ip, b0, OP_MNEMONIC, s);
+                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
                 break;
             default:
                 break;
             }
             ip += 1;
         } else {
-            printf(INST0, ipw, ip, b0, OP_MNEMONIC);
+            printf(INST0, ipw, ip, b0, MNEMONIC);
             ip += 1;
         }
     }

@@ -8,120 +8,16 @@
 #include <stdlib.h>
 
 enum opcodes {
-    OP_JMP8,    // Jump (1-byte offset)
-    OP_JMP16,   // Jump (2-byte offset)
-    OP_JNZ8,    // Jump if non-zero (1-byte offset)
-    OP_JNZ16,   // Jump if non-zero (2-byte offset)
-    OP_JZ8,     // Jump if zero (1-byte offset)
-    OP_JZ16,    // Jump if zero (2-byte offset)
-    OP_XJNZ8,   // "Exclusive" jump if non-zero (1-byte offset)
-    OP_XJNZ16,  // "Exclusive" jump if non-zero (2-byte offset)
-    OP_XJZ8,    // "Exclusive" jump if zero (1-byte offset)
-    OP_XJZ16,   // "Exclusive" jump if zero (2-byte offset)
-    OP_LOOP8,   // Evaluate iterator and jump (1-byte offset)
-    OP_LOOP16,  // Evaluate iterator and jump (2-byte offset)
-    OP_POPL,    // Pop (destroy) current iterator
-    OP_ITERV,   // Initialize an iterator with only a value
-    OP_ITERKV,  // Initialize an iterator with key/value pair
-    OP_ADD,     // Add
-    OP_SUB,     // Substract
-    OP_MUL,     // Multiply
-    OP_DIV,     // Divide
-    OP_MOD,     // Modulus
-    OP_POW,     // Exponentiation
-    OP_AND,     // Bitwise AND
-    OP_OR,      // Bitwise OR
-    OP_XOR,     // Bitwise XOR
-    OP_SHL,     // Bitwise shift left
-    OP_SHR,     // Bitwise shift right
-    OP_NUM,     // Numeric coercion
-    OP_NEG,     // Negate
-    OP_NOT,     // Bitwise NOT
-    OP_EQ,      // Equality
-    OP_NE,      // Not equal
-    OP_GT,      // Greater-than
-    OP_GE,      // Greater-than or equal-to
-    OP_LT,      // Less-than
-    OP_LE,      // Less-than or equal-to
-    OP_LNOT,    // Logical NOT
-    OP_CAT,     // Concatenate
-    OP_MATCH,   // Match
-    OP_NMATCH,  // Not match
-    OP_PREINC,  // Pre-increment
-    OP_PREDEC,  // Pre-decrement
-    OP_POSTINC, // Post-increment
-    OP_POSTDEC, // Post-decrement
-    OP_LEN,     // Length
-    OP_ADDX,    // Add assign
-    OP_SUBX,    // Subtract assign
-    OP_MULX,    // Multiply assign
-    OP_DIVX,    // Divide assign
-    OP_MODX,    // Modulus assign
-    OP_CATX,    // Concatenate assign
-    OP_POWX,    // Exponentiation assign
-    OP_ANDX,    // Bitwise AND assign
-    OP_ORX,     // Bitwise OR assign
-    OP_SHLX,    // Bitwise shift left assign
-    OP_SHRX,    // Bitwise shift right assign
-    OP_XORX,    // Bitwise XOR assign
-    OP_POP,     // Pop (--SP)
-    OP_POPI,    // Pop IP+1 values from stack (SP -= (IP+1))
-    OP_NULL,    // Push null value on stack
-    OP_IMM8,    // Push (IP+1) as literal value on stack
-    OP_IMM16,   // Push ((IP+1)<<8) + (IP+2) as literal on stack
-    OP_IMM0,    // Push literal `0` on stack
-    OP_IMM1,    // Push literal `1` on stack
-    OP_IMM2,    // Push literal `2` on stack
-    OP_PUSHK,   // Push K[IP+1] on stack as value
-    OP_PUSHK0,  // Push K[0] on stack as value
-    OP_PUSHK1,  // Push K[1] on stack as value
-    OP_PUSHK2,  // Push K[2] on stack as value
-    OP_GBLA,    // Push address of global var K[IP+1] on stack
-    OP_GBLA0,   // Push address of global var K[0] on stack
-    OP_GBLA1,   // Push address of global var K[1] on stack
-    OP_GBLA2,   // Push address of global var K[2] on stack
-    OP_GBLV,    // Copy value of global var K[IP+1] onto stack
-    OP_GBLV0,   // Copy value of global var K[0] onto stack
-    OP_GBLV1,   // Copy value of global var K[1] onto stack
-    OP_GBLV2,   // Copy value of global var K[2] onto stack
-    OP_LCLA,    // Push address of stack[FP+IP+1] on stack
-    OP_LCLA0,   // Push address of stack[FP+0] on stack
-    OP_LCLA1,   // Push address of stack[FP+1] on stack
-    OP_LCLA2,   // Push address of stack[FP+2] on stack
-    OP_LCLV,    // Copy value of stack[FP+IP+1] onto stack
-    OP_LCLV0,   // Copy value of stack[FP+0] onto stack
-    OP_LCLV1,   // Copy value of stack[FP+1] onto stack
-    OP_LCLV2,   // Copy value of stack[FP+2] onto stack
-    OP_TCALL,   // Function call (tailcall)
-    OP_CALL,    // Function call
-    OP_RET,     // Return from call (void)
-    OP_RET1,    // Return from call 1 value
-    OP_TAB0,    // Create empty table
-    OP_TAB,     // Create table of the top (IP+1) stack elements
-    OP_TABK,    // Create table of the top K[IP+1] stack elements
-    OP_IDXA,    // Index of a set, leaving address on stack (nD array)
-    OP_IDXA1,   // Index of a set, leaving address on stack
-    OP_IDXV,    // Index of a set, leaving value on stack (nD array)
-    OP_IDXV1,   // Index of a set, leaving value on stack
-    OP_FLDA,    // Index of the fldv, leaving address on stack
-    OP_FLDV,    // Index of the fldv, leaving value on stack
-    OP_RNG,     // Sequence: SP[-2]..SP[-1]
-    OP_RNGF,    // Sequence: SP[-1]..INT_MAX
-    OP_RNGT,    // Sequence: 0..SP[-1]
-    OP_RNGE,    // Sequence: .. (empty/infinite)
-    OP_SRNG,    // Sequence: SP[-3]..SP[-2] w/ interval SP[-1]
-    OP_SRNGF,   // Sequence: SP[-2]..INT_MAX w/ interval SP[-1]
-    OP_SRNGT,   // Sequence: 0..SP[-2] w/ interval SP[-1]
-    OP_SRNGE,   // Sequence: .. (empty/infinite) w/ interval SP[-1]
-    OP_SET,     // Assignment
+#define OPCODE(x,y,z) OP_##x
+#include "opcodes.h"
 };
 
 enum jumps {
-    JMP,        // Unconditional jump
-    JZ,         // Pop stack, jump if zero
-    JNZ,        // Pop stack, jump if non-zero
-    XJZ,        // Pop stack OR jump if zero
-    XJNZ        // Pop stack OR jump if non-zero
+    JMP,    // Unconditional jump
+    JZ,     // Pop stack, jump if zero
+    JNZ,    // Pop stack, jump if non-zero
+    XJZ,    // Pop stack OR jump if zero
+    XJNZ    // Pop stack OR jump if non-zero
 };
 
 typedef struct {

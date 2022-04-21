@@ -112,7 +112,7 @@ void c_range(rf_code *c, int from, int to, int step) {
             if (to)
                 push(OP_SRNGT);
             else
-                push(OP_SRNGE);
+                push(OP_SRNGI);
         }
     } else {
         if (from) {
@@ -124,7 +124,7 @@ void c_range(rf_code *c, int from, int to, int step) {
             if (to)
                 push(OP_RNGT);
             else
-                push(OP_RNGE);
+                push(OP_RNGI);
         }
     }
 }
@@ -142,11 +142,11 @@ void c_patch(rf_code *c, int l) {
 
 static void c_pushk(rf_code *c, int i) {
     switch (i) {
-    case 0: push(OP_PUSHK0); break;
-    case 1: push(OP_PUSHK1); break;
-    case 2: push(OP_PUSHK2); break;
+    case 0: push(OP_CONST0); break;
+    case 1: push(OP_CONST1); break;
+    case 2: push(OP_CONST2); break;
     default:
-        push(OP_PUSHK);
+        push(OP_CONST);
         push((uint8_t) i);
         break;
     }
@@ -163,9 +163,8 @@ void c_fn_constant(rf_code *c, rf_fn *fn) {
 // Add a rf_val literal to a code object's constant table, if
 // necessary
 void c_constant(rf_code *c, rf_token *tk) {
-
     if (tk->kind == TK_NULL) {
-        push(OP_NULL);
+        push(OP_NUL);
         return;
     } else if (tk->kind == TK_RE) {
         m_growarray(c->k, c->nk, c->kcap, rf_val);

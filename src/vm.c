@@ -239,7 +239,7 @@ Z_BINOP(cat) {
         switch (l->type) {
         case TYPE_INT: u_int2str(l->u.i, temp_lhs); break;
         case TYPE_FLT: u_flt2str(l->u.f, temp_lhs); break;
-        default:       temp_lhs[0] = '\0';              break;
+        default:       temp_lhs[0] = '\0';          break;
         }
         lhs = temp_lhs;
     } else {
@@ -250,7 +250,7 @@ Z_BINOP(cat) {
         switch (r->type) {
         case TYPE_INT: u_int2str(r->u.i, temp_rhs); break;
         case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
-        default:       temp_rhs[0] = '\0';              break;
+        default:       temp_rhs[0] = '\0';          break;
         }
         rhs = temp_rhs;
     } else {
@@ -275,7 +275,7 @@ static rf_int match(rf_val *l, rf_val *r) {
         switch (l->type) {
         case TYPE_INT: len = u_int2str(l->u.i, temp_lhs); break;
         case TYPE_FLT: len = u_flt2str(l->u.f, temp_lhs); break;
-        default:       temp_lhs[0] = '\0'; break;
+        default:       temp_lhs[0] = '\0';                break;
         }
         lhs = temp_lhs;
     } else {
@@ -534,7 +534,13 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 #define z_break   break
     while (1) { switch (*ip) {
 #else
-#include "labels.h"
+#define z_case(l)  L_##l:
+#define z_break    dispatch()
+#define dispatch() goto *dispatch_labels[*ip]
+    static void *dispatch_labels[] = {
+#define OPCODE(x,y,z)  &&L_##x
+#include "opcodes.h"
+    };
     dispatch();
 #endif
 
@@ -546,8 +552,8 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     z_case(JMP16) j16; z_break;
 
 // Conditional jumps (pop stack unconditionally)
-#define jc8(x)  (x ? j8  : (ip += 2)); --sp;
-#define jc16(x) (x ? j16 : (ip += 3)); --sp;
+#define jc8(x)  (x ? j8  : (ip += 2)); --sp
+#define jc16(x) (x ? j16 : (ip += 3)); --sp
 
     z_case(JNZ8)  jc8(test(&sp[-1].v));   z_break;
     z_case(JNZ16) jc16(test(&sp[-1].v));  z_break;
@@ -659,7 +665,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // sp[-1].v is assumed to be safe to overwrite
 #define unop(x) \
     z_##x(&sp[-1].v); \
-    ++ip;
+    ++ip
 
     z_case(LEN)  unop(len);  z_break;
     z_case(LNOT) unop(lnot); z_break;
@@ -672,7 +678,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 #define binop(x) \
     z_##x(&sp[-2].v, &sp[-1].v); \
     --sp; \
-    ++ip;
+    ++ip
 
     z_case(ADD)    binop(add);    z_break;
     z_case(SUB)    binop(sub);    z_break;
@@ -711,7 +717,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         break; \
     } \
     sp[-1].v = *sp[-1].a; \
-    ++ip;
+    ++ip
 
     z_case(PREINC) pre(1);  z_break;
     z_case(PREDEC) pre(-1); z_break;
@@ -734,7 +740,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         set_int(tp, x); \
         break; \
     } \
-    unop(num);
+    unop(num)
 
     z_case(POSTINC) post(1);  z_break;
     z_case(POSTDEC) post(-1); z_break;
@@ -747,7 +753,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     tp = sp[-2].a; \
     sp[-2].v = *tp; \
     binop(x); \
-    *tp = sp[-1].v;
+    *tp = sp[-1].v
 
     z_case(ADDX) cbinop(add); z_break;
     z_case(SUBX) cbinop(sub); z_break;
@@ -769,11 +775,11 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     z_case(POPI) sp -= ip[1]; ip += 2; z_break;
 
     // Push null literal on stack
-    z_case(NULL) set_null(&sp++->v); ++ip; z_break;
+    z_case(NUL) set_null(&sp++->v); ++ip; z_break;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
-#define imm(x) set_int(&sp++->v, x);
+#define imm(x) set_int(&sp++->v, x)
 
     z_case(IMM8)  imm(ip[1]);              ip += 2; z_break;
     z_case(IMM16) imm((ip[1]<<8) + ip[2]); ip += 3; z_break;
@@ -784,12 +790,12 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // Push constant
 // Copy constant x from code object's constant table to the top of the
 // stack.
-#define pushk(x) sp++->v = k[(x)];
+#define pushk(x) sp++->v = k[(x)]
 
-    z_case(PUSHK)  pushk(ip[1]); ip += 2; z_break;
-    z_case(PUSHK0) pushk(0);     ++ip;    z_break;
-    z_case(PUSHK1) pushk(1);     ++ip;    z_break;
-    z_case(PUSHK2) pushk(2);     ++ip;    z_break;
+    z_case(CONST)  pushk(ip[1]); ip += 2; z_break;
+    z_case(CONST0) pushk(0);     ++ip;    z_break;
+    z_case(CONST1) pushk(1);     ++ip;    z_break;
+    z_case(CONST2) pushk(2);     ++ip;    z_break;
 
 // Push global address
 // Assign the address of global variable x's rf_val in the globals
@@ -797,8 +803,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // ht_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-// #define gbla(x) sp++->a = h_lookup(&globals, k[(x)].u.s, 1);
-#define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].u.s);
+#define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].u.s)
 
     z_case(GBLA)  gbla(ip[1]); ip += 2; z_break;
     z_case(GBLA0) gbla(0);     ++ip;    z_break;
@@ -811,8 +816,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
-// #define gblv(x) sp++->v = *h_lookup(&globals, k[(x)].u.s, 0);
-#define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].u.s);
+#define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].u.s)
 
     z_case(GBLV)  gblv(ip[1]); ip += 2; z_break;
     z_case(GBLV0) gblv(0);     ++ip;    z_break;
@@ -821,7 +825,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
 // Push local address
 // Push the address of FP[x] to the top of the stack.
-#define lcla(x) sp++->a = &fp[(x)].v;
+#define lcla(x) sp++->a = &fp[(x)].v
 
     z_case(LCLA)  lcla(ip[1]); ip += 2; z_break;
     z_case(LCLA0) lcla(0);     ++ip;    z_break;
@@ -830,12 +834,12 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
 // Push local value
 // Copy the value of FP[x] to the top of the stack.
-#define lclv(x) sp++->v = fp[(x)].v;
+#define lclv(x) sp++->v = fp[(x)].v
 
-    z_case(LCLV)  lclv(ip[1]) ip += 2; z_break;
-    z_case(LCLV0) lclv(0);    ++ip;    z_break;
-    z_case(LCLV1) lclv(1);    ++ip;    z_break;
-    z_case(LCLV2) lclv(2);    ++ip;    z_break;
+    z_case(LCLV)  lclv(ip[1]); ip += 2; z_break;
+    z_case(LCLV0) lclv(0);     ++ip;    z_break;
+    z_case(LCLV1) lclv(1);     ++ip;    z_break;
+    z_case(LCLV2) lclv(2);     ++ip;    z_break;
 
     // Tailcalls
     // Recycle current call frame
@@ -994,10 +998,10 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         --sp; \
         t_insert_int(tp->u.t, i, &sp->v); \
     } \
-    sp++->v = *tp;
+    sp++->v = *tp
 
-    z_case(TAB0) new_tab(0);    ++ip;    z_break;
-    z_case(TAB)  new_tab(ip[1]) ip += 2; z_break;
+    z_case(TAB0) new_tab(0);     ++ip;    z_break;
+    z_case(TAB)  new_tab(ip[1]); ip += 2; z_break;
     z_case(TABK)
         new_tab(k[ip[1]].u.i);
         ip += 2;
@@ -1194,7 +1198,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
     // ..
-    z_case(RNGE)
+    z_case(RNGI)
         ++sp;
         z_rng(0,
               INT64_MAX,
@@ -1230,7 +1234,7 @@ int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         ++ip;
         z_break;
     // ..:z
-    z_case(SRNGE)
+    z_case(SRNGI)
         z_rng(0,
               INT64_MAX,
               intval(&sp[-1].v),
