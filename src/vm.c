@@ -139,9 +139,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
     } else if (is_null(l) ^ is_null(r)) { \
         set_int(l, !(0 op 0)); \
     } else if (is_str(l) && is_str(r)) { \
-        if (!l->u.s->hash) l->u.s->hash = u_strhash(l->u.s->str); \
-        if (!r->u.s->hash) r->u.s->hash = u_strhash(r->u.s->str); \
-        set_int(l, (l->u.s->hash op r->u.s->hash)); \
+        set_int(l, (s_hash(l->u.s) op s_hash(r->u.s))); \
     } else if (is_str(l) && !is_str(r)) { \
         if (!l->u.s->l) { \
             set_int(l, !(0 op 0)); \
@@ -233,7 +231,6 @@ Z_BINOP(cat) {
     } else {
         lhs = l->u.s->str;
     }
-
     if (!is_str(r)) {
         switch (r->type) {
         case TYPE_INT: u_int2str(r->u.i, temp_rhs); break;
@@ -244,21 +241,17 @@ Z_BINOP(cat) {
     } else {
         rhs = r->u.s->str;
     }
-
     set_str(l, s_newstr_concat(lhs, rhs, 0));
 }
 
 static inline rf_int match(rf_val *l, rf_val *r) {
-
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
         return re_match(l->u.s->str, l->u.s->l, r->u.r, 1);
-
     char *lhs;
     size_t len = 0;
     char temp_lhs[32];
     char temp_rhs[32];
-
     if (!is_str(l)) {
         switch (l->type) {
         case TYPE_INT: len = u_int2str(l->u.i, temp_lhs); break;
@@ -270,7 +263,6 @@ static inline rf_int match(rf_val *l, rf_val *r) {
         lhs = l->u.s->str;
         len = l->u.s->l;
     }
-
     if (!is_re(r)) {
         rf_re *temp_re;
         rf_int res;
@@ -461,6 +453,14 @@ static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv
 
 static inline int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
 
+#define add_user_funcs() \
+    for (int i = 0; i < e->nf; ++i) { \
+        if (e->fn[i]->name->hash) { \
+            ht_insert_str(&globals, e->fn[i]->name, &(rf_val){TYPE_RFN, .u.fn = e->fn[i]} \
+            ); \
+        } \
+    }
+
 // VM entry point/initialization
 int z_exec(rf_env *e) {
     ht_init(&globals);
@@ -468,36 +468,17 @@ int z_exec(rf_env *e) {
     t_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, e->arg0, e->argc, e->argv);
-    // h_insert(&globals, s_newstr("arg", 3, 1), &(rf_val){TYPE_TAB, .u.t = &argv}, 1);
     ht_insert_cstr(&globals, "arg", &(rf_val){TYPE_TAB, .u.t = &argv});
     l_register_builtins(&globals);
-
     // Add user-defined functions to the global hash table
-    for (int i = 0; i < e->nf; ++i) {
-        // Don't add anonymous functions to globals (rf_str should not
-        // have a computed hash)
-        if (!e->fn[i]->name->hash)
-            continue;
-        rf_val *fn = malloc(sizeof(rf_val));
-        *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
-        ht_insert_str(&globals, e->fn[i]->name, fn);
-    }
-
+    add_user_funcs();
     return exec(e->main.code->code, e->main.code->k, stack, stack);
 }
 
 // Reentry point for eval()
 int z_exec_reenter(rf_env *e, rf_stack *fp) {
     // Add user-defined functions to the global hash table
-    for (int i = 0; i < e->nf; ++i) {
-        // Don't add anonymous functions to globals (rf_str should not
-        // have a computed hash)
-        if (!e->fn[i]->name->hash)
-            continue;
-        rf_val *fn = malloc(sizeof(rf_val));
-        *fn = (rf_val) {TYPE_RFN, .u.fn = e->fn[i]};
-        ht_insert_str(&globals, e->fn[i]->name, fn);
-    }
+    add_user_funcs();
     return exec(e->main.code->code, e->main.code->k, fp, fp);
 }
 
@@ -526,7 +507,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 #define z_break    dispatch()
 #define dispatch() goto *dispatch_labels[*ip]
     static void *dispatch_labels[] = {
-#define OPCODE(x,y,z)  &&L_##x
+#define OPCODE(x,y,z) &&L_##x
 #include "opcodes.h"
     };
     dispatch();
@@ -547,6 +528,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     z_case(JNZ16) jc16(test(&sp[-1].v));  z_break;
     z_case(JZ8)   jc8(!test(&sp[-1].v));  z_break;
     z_case(JZ16)  jc16(!test(&sp[-1].v)); z_break;
+
 
 // Conditional jumps (pop stack if jump not taken)
 #define xjc8(x)  if (x) j8;  else {--sp; ip += 2;}
