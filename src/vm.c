@@ -23,16 +23,10 @@ static rf_iter  *iter;
 static rf_stack  stack[VM_STACK_SIZE];
 
 // Integer arithmetic (Bitwise ops)
-#define int_arith(l,r,op) \
-    if (is_int(l) && is_int(r)) { \
-        l->u.i = (l->u.i op r->u.i); \
-    } else { \
-        set_int(l, (intval(l) op intval(r))); \
-    }
+#define int_arith(l,r,op) set_int(l, (intval(l) op intval(r)))
 
 // Floating-point arithmetic (div)
-#define flt_arith(l,r,op) \
-    set_flt(l, (numval(l) op numval(r)))
+#define flt_arith(l,r,op) set_flt(l, (numval(l) op numval(r)))
 
 // "Polymorphic" arithmetic (add, sub, mul)
 #define num_arith(l,r,op) \
