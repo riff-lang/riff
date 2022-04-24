@@ -101,11 +101,6 @@ LIB_FN(eval) {
     return 0;
 }
 
-// exit([n])
-LIB_FN(exit) {
-    exit(argc ? intval(fp) : 0);
-}
-
 // flush([f])
 LIB_FN(flush) {
     FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdout;
@@ -760,6 +755,19 @@ LIB_FN(type) {
     return 1;
 }
 
+// System functions
+
+// clock()
+LIB_FN(clock) {
+    set_flt(fp-1, ((rf_flt) clock() / (rf_flt) CLOCKS_PER_SEC));
+    return 1;
+}
+
+// exit([n])
+LIB_FN(exit) {
+    exit(argc ? intval(fp) : 0);
+}
+
 // Registry info for a given library function
 #define LIB_FN_REG(name, arity) { #name , { (arity), l_##name } }
 
@@ -782,7 +790,6 @@ static struct {
     LIB_FN_REG(close,  1),
     LIB_FN_REG(eof,    0),
     LIB_FN_REG(eval,   1),
-    LIB_FN_REG(exit,   0),
     LIB_FN_REG(flush,  0),
     LIB_FN_REG(get,    0),
     LIB_FN_REG(getc,   0),
@@ -807,6 +814,9 @@ static struct {
     LIB_FN_REG(sub,    2),
     LIB_FN_REG(type,   1),
     LIB_FN_REG(upper,  1),
+    // System
+    LIB_FN_REG(clock,  0),
+    LIB_FN_REG(exit,   0),
     { NULL, { 0, NULL } }
 };
 
