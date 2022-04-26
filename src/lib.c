@@ -138,7 +138,7 @@ LIB_FN(getc) {
 
 
 static int valid_fmode(char *mode) {
-    return (*mode && strchr("rwa", *(mode++)) &&
+    return (*mode && memchr("rwa", *(mode++), 3) &&
            (*mode != '+' || ((void)(++mode), 1)) &&
            (strspn(mode, "b") == strlen(mode)));
 }

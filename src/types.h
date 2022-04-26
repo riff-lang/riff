@@ -149,11 +149,11 @@ static inline int s_eq_fast(rf_str *s1, rf_str *s2) {
 }
 
 static inline int s_numunlikely(rf_str *s) {
-    return !s->l || !strchr("+-.0123456789", s->str[0]);
+    return !s->l || !memchr("+-.0123456789", s->str[0], 13);
 }
 
 static inline int s_haszero(rf_str *s) {
-    return !!strchr(s->str, '0');
+    return !!memchr(s->str, '0', s->l);
 }
 
 rf_str *s_newstr(const char *, size_t, int);
