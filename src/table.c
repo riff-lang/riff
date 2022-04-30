@@ -296,7 +296,6 @@ static inline int node_eq_val(rf_val *v1, rf_val *v2) {
 }
 
 #define HT_LOOKUP(type, mask) \
-    h->hint = 1; \
     if (h->nodes == NULL) \
         return ht_insert_##type(h, k, NULL); \
     ht_node *n = h->nodes[(mask)]; \
@@ -308,6 +307,7 @@ static inline int node_eq_val(rf_val *v1, rf_val *v2) {
     return ht_insert_##type(h, k, NULL);
 
 rf_val *ht_lookup_val(rf_htab *h, rf_val *k) {
+    h->hint = 1;
     HT_LOOKUP(val, anchor(k, h->cap-1))
 }
 
@@ -371,7 +371,7 @@ static inline rf_val *ht_delete_val(rf_htab *h, rf_val *k) {
     ht_node **a = &h->nodes[anchor(k, h->cap-1)];
     ht_node *n = *a;
     while (n) {
-        if (node_eq_val(n->k.type, k)) {
+        if (node_eq_val(n->k.val, k)) {
             *a = n->next;
             rf_val *v = n->v;
             free(n->k.val);
