@@ -54,8 +54,8 @@ TESTS        += test/fmt.bats
 TESTS        += test/literals.bats
 TESTS        += test/etc.bats
 
-# Compile-time info for riff -v
-CFLAGS       += -DGIT_DESC=\"$(shell git describe)\"
+# Version string (riff -v)
+CFLAGS       += -DRIFF_VERSION=\"$(shell git describe)\"
 
 # Homebrew-installed Clang
 BREW_CLANG    = /usr/local/opt/llvm/bin/clang

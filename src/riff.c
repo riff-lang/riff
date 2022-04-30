@@ -36,7 +36,7 @@ int wasm_main(int flag, char *str) {
 }
 #else
 static void version(void) {
-    puts("riff " GIT_DESC " Copyright 2020-2022, Darryl Abbate");
+    puts("riff " RIFF_VERSION " Copyright 2020-2022, Darryl Abbate");
 }
 
 static void usage(void) {
