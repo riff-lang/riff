@@ -247,40 +247,29 @@ static inline void insert_node(ht_node **nodes, ht_node *new, uint32_t i) {
     n->next = new;
 }
 
-static inline void ht_resize_val(rf_htab *h, size_t new_cap) {
-    ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap);
-    for (uint32_t i = 0; i < new_cap; ++i)
-        new_nodes[i] = NULL;
-    for (uint32_t i = 0; i < h->cap; ++i) {
-        ht_node *n = h->nodes[i];
-        while (n) {
-            insert_node(new_nodes, n, anchor(n->k.val, new_cap-1));
-            ht_node *p = n;
-            n = next(n);
-            p->next = NULL;
-        }
-    }
-    free(h->nodes);
-    h->nodes = new_nodes;
+#define HT_RESIZE(mask) \
+    ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap); \
+    for (uint32_t i = 0; i < new_cap; ++i) \
+        new_nodes[i] = NULL; \
+    for (uint32_t i = 0; i < h->cap; ++i) { \
+        ht_node *n = h->nodes[i]; \
+        while (n) { \
+            insert_node(new_nodes, n, (mask)); \
+            ht_node *p = n; \
+            n = next(n); \
+            p->next = NULL; \
+        } \
+    } \
+    free(h->nodes); \
+    h->nodes = new_nodes; \
     h->cap = new_cap;
+
+static inline void ht_resize_val(rf_htab *h, size_t new_cap) {
+    HT_RESIZE(anchor(n->k.val, new_cap-1))
 }
 
 static inline void ht_resize_str(rf_htab *h, size_t new_cap) {
-    ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap);
-    for (uint32_t i = 0; i < new_cap; ++i)
-        new_nodes[i] = NULL;
-    for (uint32_t i = 0; i < h->cap; ++i) {
-        ht_node *n = h->nodes[i];
-        while (n) {
-            insert_node(new_nodes, n, n->k.str->hash & (new_cap-1));
-            ht_node *p = n;
-            n = next(n);
-            p->next = NULL;
-        }
-    }
-    free(h->nodes);
-    h->nodes = new_nodes;
-    h->cap = new_cap;
+    HT_RESIZE(n->k.str->hash & (new_cap-1))
 }
 
 #define node_eq_str(s1, s2) (s_eq_fast(s1, s2))
@@ -328,7 +317,7 @@ static inline ht_node *new_node_val(rf_val *k, rf_val *v) {
 static inline ht_node *new_node_str(rf_str *k, rf_val *v) {
     ht_node *new = malloc(sizeof(ht_node));
     *new = (ht_node) {
-        .k.str = k, // TODO ensure stack-allocated (temp) strings aren't an issue
+        .k.str = k,
         v == NULL ? v_newnull() : v_copy(v),
         NULL
     };
