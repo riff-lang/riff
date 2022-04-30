@@ -439,7 +439,7 @@ static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv
         };
         rf_int idx = i - arg0;
         if (idx < 0)
-            ht_insert(t->h, &(rf_val){TYPE_INT, .u.i = idx}, &v);
+            ht_insert_val(t->h, &(rf_val){TYPE_INT, .u.i = idx}, &v);
         else
             t_insert_int(t, idx, &v);
     }

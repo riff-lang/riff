@@ -15,6 +15,7 @@
 
 static inline ht_node *next(ht_node *);
 static uint32_t ht_logical_size(rf_htab *);
+static inline rf_val *ht_delete_val(rf_htab *, rf_val *);
 
 void t_init(rf_tab *t) {
     t->nullx = 0;
@@ -91,7 +92,7 @@ static inline void ht_collect_keys(rf_htab *h, rf_val *keys, int *n) {
         ht_node *node = h->nodes[i];
         while (node) {
             if (!is_null(node->v))
-                keys[*n++] = (rf_val) {node->k->type, node->k->u};
+                keys[*n++] = (rf_val) {node->k.val->type, node->k.val->u};
             node = next(node);
         }
     }
@@ -145,7 +146,7 @@ rf_val *t_lookup(rf_tab *t, rf_val *k, int hint) {
                 return t_insert_int(t, ki, NULL);
         }
         // Fall-through
-    default: return ht_lookup(t->h, k);
+    default: return ht_lookup_val(t->h, k);
     }
 }
 
@@ -162,7 +163,7 @@ rf_val *t_insert_int(rf_tab *t, rf_int k, rf_val *v) {
         t->v = realloc(t->v, new_cap * sizeof(rf_val *));
         for (uint32_t i = old_cap; i < new_cap; ++i) {
             if (t_exists(t,i)) continue;
-            t->v[i] = ht_delete(t->h, &(rf_val){TYPE_INT, .u.i = i});
+            t->v[i] = ht_delete_val(t->h, &(rf_val){TYPE_INT, .u.i = i});
             if (t->v[i])
                 t->psize++;
         }
@@ -246,14 +247,14 @@ static inline void insert_node(ht_node **nodes, ht_node *new, uint32_t i) {
     n->next = new;
 }
 
-static inline void ht_resize(rf_htab *h, size_t new_cap) {
+static inline void ht_resize_val(rf_htab *h, size_t new_cap) {
     ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap);
     for (uint32_t i = 0; i < new_cap; ++i)
         new_nodes[i] = NULL;
     for (uint32_t i = 0; i < h->cap; ++i) {
         ht_node *n = h->nodes[i];
         while (n) {
-            insert_node(new_nodes, n, anchor(n->k, new_cap-1));
+            insert_node(new_nodes, n, anchor(n->k.val, new_cap-1));
             ht_node *p = n;
             n = next(n);
             p->next = NULL;
@@ -264,80 +265,116 @@ static inline void ht_resize(rf_htab *h, size_t new_cap) {
     h->cap = new_cap;
 }
 
-static inline int v_equal(rf_val *v1, rf_val *v2) {
+static inline void ht_resize_str(rf_htab *h, size_t new_cap) {
+    ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap);
+    for (uint32_t i = 0; i < new_cap; ++i)
+        new_nodes[i] = NULL;
+    for (uint32_t i = 0; i < h->cap; ++i) {
+        ht_node *n = h->nodes[i];
+        while (n) {
+            insert_node(new_nodes, n, n->k.str->hash & (new_cap-1));
+            ht_node *p = n;
+            n = next(n);
+            p->next = NULL;
+        }
+    }
+    free(h->nodes);
+    h->nodes = new_nodes;
+    h->cap = new_cap;
+}
+
+#define node_eq_str(s1, s2) (s_eq_fast(s1, s2))
+
+static inline int node_eq_val(rf_val *v1, rf_val *v2) {
     if (v1->type != v2->type)
         return 0;
     switch (v1->type) {
     case TYPE_FLT: return v1->u.f == v2->u.f;
-    case TYPE_STR: return s_eq_fast(v1->u.s, v2->u.s);
+    case TYPE_STR: return node_eq_str(v1->u.s, v2->u.s);
     default: return v1->u.i == v2->u.i;
     }
 }
 
-rf_val *ht_lookup(rf_htab *h, rf_val *k) {
-    h->hint = 1;
-    if (h->nodes == NULL)
-        return ht_insert(h, k, NULL);
-    ht_node *n = h->nodes[anchor(k, h->cap-1)];
-    while (n) {
-        if (v_equal(n->k, k))
-            return n->v;
-        n = next(n);
-    }
-    return ht_insert(h, k, NULL);
+#define HT_LOOKUP(type, mask) \
+    h->hint = 1; \
+    if (h->nodes == NULL) \
+        return ht_insert_##type(h, k, NULL); \
+    ht_node *n = h->nodes[(mask)]; \
+    while (n) { \
+        if (node_eq_##type(n->k.type, k)) \
+            return n->v; \
+        n = next(n); \
+    } \
+    return ht_insert_##type(h, k, NULL);
+
+rf_val *ht_lookup_val(rf_htab *h, rf_val *k) {
+    HT_LOOKUP(val, anchor(k, h->cap-1))
 }
 
 rf_val *ht_lookup_str(rf_htab *h, rf_str *k) {
-    return ht_lookup(h, &(rf_val){TYPE_STR, .u.s = k});
+    HT_LOOKUP(str, s_hash(k) & (h->cap-1))
 }
 
-static inline ht_node *new_node(rf_val *k, rf_val *v) {
+static inline ht_node *new_node_val(rf_val *k, rf_val *v) {
     ht_node *new = malloc(sizeof(ht_node));
-    new->k = v_copy(k);
-    new->v = v == NULL ? v_newnull() : v_copy(v);
-    new->next = NULL;
+    *new = (ht_node) {
+        .k.val = v_copy(k),
+        v == NULL ? v_newnull() : v_copy(v),
+        NULL
+    };
     return new;
 }
 
-rf_val *ht_insert(rf_htab *h, rf_val *k, rf_val *v) {
-    // If HT is uninitialized, allocate memory
-    if (h->nodes == NULL) {
-        h->nodes = malloc(sizeof(ht_node *) * HT_MIN_CAP);
-        h->cap = HT_MIN_CAP;
-        for (int i = 0; i < HT_MIN_CAP; ++i) {
-            h->nodes[i] = NULL;
-        }
-    } else {
-        double lf = ht_potential_lf(h);
-        if (lf > HT_MAX_LOAD_FACTOR)
-            ht_resize(h, h->cap << 1);
-        else if (h->cap > HT_MIN_CAP && lf < HT_MIN_LOAD_FACTOR)
-            ht_resize(h, h->cap >> 1);
-    }
-    ht_node *new = new_node(k,v);
-    insert_node(h->nodes, new, anchor(k, h->cap-1));
-    h->psize++;
+static inline ht_node *new_node_str(rf_str *k, rf_val *v) {
+    ht_node *new = malloc(sizeof(ht_node));
+    *new = (ht_node) {
+        .k.str = k, // TODO ensure stack-allocated (temp) strings aren't an issue
+        v == NULL ? v_newnull() : v_copy(v),
+        NULL
+    };
+    return new;
+}
+
+#define HT_INSERT(type, mask) \
+    if (h->nodes == NULL) { \
+        h->nodes = malloc(sizeof(ht_node *) * HT_MIN_CAP); \
+        h->cap = HT_MIN_CAP; \
+        for (int i = 0; i < HT_MIN_CAP; ++i) \
+            h->nodes[i] = NULL; \
+    } else { \
+        double lf = ht_potential_lf(h); \
+        if (lf > HT_MAX_LOAD_FACTOR) \
+            ht_resize_##type(h, h->cap << 1); \
+        else if (h->cap > HT_MIN_CAP && lf < HT_MIN_LOAD_FACTOR) \
+            ht_resize_##type(h, h->cap >> 1); \
+    } \
+    ht_node *new = new_node_##type(k,v); \
+    insert_node(h->nodes, new, (mask)); \
+    h->psize++; \
     return new->v;
+
+rf_val *ht_insert_val(rf_htab *h, rf_val *k, rf_val *v) {
+    HT_INSERT(val, anchor(k, h->cap-1))
 }
 
 rf_val *ht_insert_str(rf_htab *h, rf_str *k, rf_val *v) {
-    return ht_insert(h, &(rf_val){TYPE_STR, .u.s = k}, v);
+    HT_INSERT(str, s_hash(k) & (h->cap-1))
 }
 
 rf_val *ht_insert_cstr(rf_htab *h, const char *k, rf_val *v) {
     return ht_insert_str(h, s_newstr(k, strlen(k), 1), v);
 }
 
-rf_val *ht_delete(rf_htab *h, rf_val *k) {
+static inline rf_val *ht_delete_val(rf_htab *h, rf_val *k) {
     if (h->nodes == NULL)
         return NULL;
     ht_node **a = &h->nodes[anchor(k, h->cap-1)];
     ht_node *n = *a;
     while (n) {
-        if (v_equal(n->k, k)) {
+        if (node_eq_val(n->k.type, k)) {
             *a = n->next;
             rf_val *v = n->v;
-            free(n->k);
+            free(n->k.val);
             free(n);
             h->psize--;
             return v;

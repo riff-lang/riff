@@ -31,7 +31,10 @@ struct rf_htab {
 };
 
 struct ht_node {
-    rf_val  *k;
+    union {
+        rf_str *str;
+        rf_val *val;
+    } k;
     rf_val  *v;
     ht_node *next;
 };
@@ -44,11 +47,10 @@ rf_val *t_insert_int(rf_tab *, rf_int, rf_val *);
 rf_val *t_insert(rf_tab *, rf_val *, rf_val *, int);
 
 void    ht_init(rf_htab *);
-rf_val *ht_lookup(rf_htab *, rf_val *);
+rf_val *ht_lookup_val(rf_htab *, rf_val *);
 rf_val *ht_lookup_str(rf_htab *, rf_str *);
-rf_val *ht_insert(rf_htab *, rf_val *, rf_val *);
+rf_val *ht_insert_val(rf_htab *, rf_val *, rf_val *);
 rf_val *ht_insert_str(rf_htab *, rf_str *, rf_val *);
 rf_val *ht_insert_cstr(rf_htab *, const char *, rf_val *);
-rf_val *ht_delete(rf_htab *, rf_val *);
 
 #endif
