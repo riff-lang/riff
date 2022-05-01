@@ -235,7 +235,7 @@ Z_BINOP(cat) {
     } else {
         rhs = r->u.s->str;
     }
-    set_str(l, s_newstr_concat(lhs, rhs, 0));
+    set_str(l, s_new_concat(lhs, rhs));
 }
 
 static inline rf_int match(rf_val *l, rf_val *r) {
@@ -306,7 +306,7 @@ Z_BINOP(idx) {
             if (r1 > len - 1 || r1 < 0)
                 set_null(l);
             else
-                set_str(l, s_newstr(temp + r1, 1, 0));
+                set_str(l, s_new(temp + r1, 1));
         }
         break;
     }
@@ -322,7 +322,7 @@ Z_BINOP(idx) {
             if (r1 > len - 1 || r1 < 0)
                 set_null(l);
             else
-                set_str(l, s_newstr(temp + r1, 1, 0));
+                set_str(l, s_new(temp + r1, 1));
         }
         break;
     }
@@ -337,7 +337,7 @@ Z_BINOP(idx) {
             if (r1 > len - 1 || r1 < 0)
                 set_null(l);
             else
-                l->u.s = s_newstr(&l->u.s->str[r1], 1, 0);
+                l->u.s = s_new(&l->u.s->str[r1], 1);
         }
         break;
     }
@@ -435,7 +435,7 @@ static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv
     for (rf_int i = 0; i < rf_argc; ++i) {
         rf_val v = (rf_val) {
             TYPE_STR,
-            .u.s = s_newstr(rf_argv[i], strlen(rf_argv[i]), 0)
+            .u.s = s_new(rf_argv[i], strlen(rf_argv[i]))
         };
         rf_int idx = i - arg0;
         if (idx < 0)
@@ -560,9 +560,9 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             }
             if (!is_null(iter->v)) {
                 m_freestr(iter->v->u.s);
-                iter->v->u.s = s_newstr(iter->set.str++, 1, 0);
+                iter->v->u.s = s_new(iter->set.str++, 1);
             } else {
-                *iter->v = (rf_val) {TYPE_STR, .u.s = s_newstr(iter->set.str++, 1, 0)};
+                *iter->v = (rf_val) {TYPE_STR, .u.s = s_new(iter->set.str++, 1)};
             }
             break;
         case LOOP_TAB:

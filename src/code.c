@@ -236,7 +236,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     }
     case TK_STR: {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        rf_str *s = s_newstr(tk->lexeme.s->str, tk->lexeme.s->l, 1);
+        rf_str *s = s_newh(tk->lexeme.s->str, tk->lexeme.s->l);
         c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
         break;
     }
@@ -287,7 +287,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
             return;
         }
     }
-    rf_str *s = s_newstr(tk->lexeme.s->str, tk->lexeme.s->l, 1);
+    rf_str *s = s_newh(tk->lexeme.s->str, tk->lexeme.s->l);
     m_growarray(c->k, c->nk, c->kcap, rf_val);
     c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
     if (c->nk > (UINT8_MAX + 1))

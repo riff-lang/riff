@@ -269,7 +269,7 @@ str_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-    rf_str *s = s_newstr(x->buf.c, x->buf.n, 1);
+    rf_str *s = s_newh(x->buf.c, x->buf.n);
     adv();
     tk->lexeme.s = s;
     return TK_STR;
@@ -451,7 +451,7 @@ static int read_id(rf_lexer *x, rf_token *tk) {
         ++count;
         adv();
     }
-    rf_str *s = s_newstr(start, count, 1);
+    rf_str *s = s_newh(start, count);
     tk->lexeme.s = s;
     return TK_ID;
 }

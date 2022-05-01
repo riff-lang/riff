@@ -156,8 +156,9 @@ static inline int s_haszero(rf_str *s) {
     return !!memchr(s->str, '0', s->l);
 }
 
-rf_str *s_newstr(const char *, size_t, int);
-rf_str *s_newstr_concat(char *, char *, int);
+rf_str *s_new(const char *, size_t);
+rf_str *s_newh(const char *, size_t);
+rf_str *s_new_concat(char *, char *);
 rf_str *s_substr(char *, rf_int, rf_int, rf_int);
 void    re_register_fldv(rf_tab *);
 rf_re  *re_compile(char *, size_t, uint32_t, int *);

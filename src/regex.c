@@ -43,7 +43,7 @@ int re_store_numbered_captures(pcre2_match_data *md) {
     while (1) {
         PCRE2_SIZE l = STR_BUF_SZ;
         if (!pcre2_substring_copy_bynumber(md, i, buf, &l)) {
-            rf_val v = (rf_val) {TYPE_STR, .u.s = s_newstr((const char *) buf, l, 0)};
+            rf_val v = (rf_val) {TYPE_STR, .u.s = s_new((const char *) buf, l)};
             t_insert_int(fldv, (rf_int) i, &v);
         } else {
             break;

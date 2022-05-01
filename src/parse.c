@@ -295,7 +295,7 @@ static void table(rf_parser *y, int tk) {
 //   f = fn () {...}
 static void anon_fn(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
-    rf_str *name = s_newstr("<anonymous fn>", 14, 0);
+    rf_str *name = s_new("<anonymous fn>", 14);
     f_init(f, name);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
@@ -606,7 +606,7 @@ static void do_stmt(rf_parser *y) {
 
 static void add_local(rf_parser *y, rf_str *id) {
     m_growarray(y->lcl, y->nlcl, y->lcap, local);
-    y->lcl[y->nlcl++] = (local) {s_newstr(id->str, id->l, 1), y->ld};
+    y->lcl[y->nlcl++] = (local) {s_newh(id->str, id->l), y->ld};
 }
 
 // Returns the arity of the parsed function
@@ -660,7 +660,7 @@ static void local_fn(rf_parser *y) {
     int idx = resolve_local(y, id);
 
     // Create string for disassembly
-    rf_str *fn_name = s_newstr_concat("local fn ", y->x->tk.lexeme.s->str, 0);
+    rf_str *fn_name = s_new_concat("local fn ", y->x->tk.lexeme.s->str);
 
     // If the identifier doesn't already exist as a local at the
     // current scope, add a new local
@@ -706,7 +706,7 @@ static void fn_stmt(rf_parser *y) {
     if (!TK_KIND(TK_ID)) {
         err(y, "expected identifier for function definition");
     } else {
-        id = s_newstr(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l, 1);
+        id = s_newh(y->x->tk.lexeme.s->str, y->x->tk.lexeme.s->l);
         adv();
     }
     f_init(f, id);

@@ -9,19 +9,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-rf_str *s_newstr(const char *start, size_t l, int h) {
+// Create string and skip hashing
+rf_str *s_new(const char *start, size_t l) {
     char *str = malloc(l * sizeof(char) + 1);
     memcpy(str, start, l);
     str[l] = '\0';
     rf_str *s = malloc(sizeof(rf_str));
-    s->l = l;
-    s->hash = h ? u_strhash(str) : 0;
-    s->str = str;
+    *s = (rf_str) {0, l, str};
+    return s;
+}
+
+// Create string with hash
+rf_str *s_newh(const char *start, size_t l) {
+    char *str = malloc(l * sizeof(char) + 1);
+    memcpy(str, start, l);
+    str[l] = '\0';
+    rf_str *s = malloc(sizeof(rf_str));
+    *s = (rf_str) {u_strhash(str), l, str};
     return s;
 }
 
 // Assumes null-terminated strings
-rf_str *s_newstr_concat(char *l, char *r, int h) {
+rf_str *s_new_concat(char *l, char *r) {
     size_t l_len = strlen(l);
     size_t r_len = strlen(r);
     size_t new_len = l_len + r_len;
@@ -30,9 +39,7 @@ rf_str *s_newstr_concat(char *l, char *r, int h) {
     memcpy(new + l_len, r, r_len);
     new[new_len] = '\0';
     rf_str *s = malloc(sizeof(rf_str));
-    s->l = new_len;
-    s->hash = h ? u_strhash(new) : 0;
-    s->str = new;
+    *s = (rf_str) {0, new_len, new};
     return s;
 }
 
@@ -62,8 +69,6 @@ rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
     }
     str[len] = '\0';
     rf_str *ns = malloc(sizeof(rf_str));
-    ns->str = str;
-    ns->l = len;
-    ns->hash = 0;
+    *ns = (rf_str) {0, len, str};
     return ns;
 }

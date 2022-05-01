@@ -351,7 +351,7 @@ rf_val *ht_insert_str(rf_htab *h, rf_str *k, rf_val *v) {
 }
 
 rf_val *ht_insert_cstr(rf_htab *h, const char *k, rf_val *v) {
-    return ht_insert_str(h, s_newstr(k, strlen(k), 1), v);
+    return ht_insert_str(h, s_newh(k, strlen(k)), v);
 }
 
 static inline rf_val *ht_delete_val(rf_htab *h, rf_val *k) {

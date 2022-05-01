@@ -115,13 +115,13 @@ LIB_FN(get) {
     if (argc) {
         size_t count = intval(fp);
         size_t nread = fread(buf, sizeof *buf, count, stdin);
-        set_str(fp-1, s_newstr(buf, nread, 0));
+        set_str(fp-1, s_new(buf, nread));
         return 1;
     }
     if (!fgets(buf, sizeof buf, stdin)) {
         return 0;
     }
-    set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
+    set_str(fp-1, s_new(buf, strcspn(buf, "\n")));
     return 1;
 }
 
@@ -252,12 +252,12 @@ LIB_FN(read) {
     if (argc > 1 && is_num(fp+1)) {
         size_t count = (size_t) intval(fp+1);
         size_t nread = fread(buf, sizeof *buf, count, f);
-        set_str(fp-1, s_newstr(buf, nread, 0));
+        set_str(fp-1, s_new(buf, nread));
     } else {
         if (!fgets(buf, sizeof buf, f)) {
             return 0;
         }
-        set_str(fp-1, s_newstr(buf, strcspn(buf, "\n"), 0));
+        set_str(fp-1, s_new(buf, strcspn(buf, "\n")));
     }
     return 1;
 }
@@ -446,7 +446,7 @@ LIB_FN(char) {
         return 0;
     char buf[STR_BUF_SZ];
     int n = build_char_str(fp, argc, buf);
-    set_str(fp-1, s_newstr(buf, n, 0));
+    set_str(fp-1, s_new(buf, n));
     return 1;
 }
 
@@ -457,7 +457,7 @@ LIB_FN(fmt) {
     --argc;
     char buf[STR_BUF_SZ];
     int n = fmt_snprintf(buf, sizeof buf, fp->u.s->str, fp + 1, argc);
-    set_str(fp-1, s_newstr(buf, n, 0));
+    set_str(fp-1, s_new(buf, n));
     return 1;
 }
 
@@ -555,7 +555,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // Store capture substrings in the global fields table
     re_store_numbered_captures(md);
     pcre2_match_data_free(md);
-    set_str(fp-1, s_newstr(buf, n, 0));
+    set_str(fp-1, s_new(buf, n));
     return 1;
 }
 
@@ -574,7 +574,7 @@ LIB_FN(hex) {
     rf_int i = intval(fp);
     char buf[20];
     size_t len = sprintf(buf, "0x%"PRIx64, i);
-    set_str(fp-1, s_newstr(buf, len, 0));
+    set_str(fp-1, s_new(buf, len));
     return 1;
 }
 
@@ -588,7 +588,7 @@ static int allxcase(rf_val *fp, int c) {
                    : tolower(fp->u.s->str[i]);
     }
     str[len] = '\0';
-    set_str(fp-1, s_newstr(str, len, 0));
+    set_str(fp-1, s_new(str, len));
     return 1;
 }
 
@@ -711,7 +711,7 @@ do_split: {
             --n;
         } else {
             size_t l = strlen(p);
-            s = s_newstr(p, l, 0);
+            s = s_new(p, l);
             p += l + 1;
             n -= l + 1;
             t_insert_int(t, i++, &(rf_val) {TYPE_STR, .u.s = s});
@@ -724,7 +724,7 @@ do_split: {
     // Split into single-byte strings
 split_chars: {
     for (rf_int i = 0; i < len; ++i) {
-        s = s_newstr(str + i, 1, 0);
+        s = s_new(str + i, 1);
         t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s});
     }
     set_tab(fp-1, t);
@@ -751,7 +751,7 @@ LIB_FN(type) {
     case TYPE_CFN:  str = "function"; len = 8; break;
     default: break;
     }
-    set_str(fp-1, s_newstr(str, len, 0));
+    set_str(fp-1, s_new(str, len));
     return 1;
 }
 
