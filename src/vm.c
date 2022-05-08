@@ -58,8 +58,10 @@ static inline int test(rf_val *v) {
         return !!v->u.s->l;
     }
     case TYPE_TAB: return !!t_logical_size(v->u.t);
-    case TYPE_RE:  case TYPE_RNG:
-    case TYPE_RFN: case TYPE_CFN:
+    case TYPE_RE:
+    case TYPE_RNG:
+    case TYPE_RFN:
+    case TYPE_CFN:
         return 1;
     default: return 0;
     }
@@ -198,11 +200,11 @@ Z_UOP(len) {
     case TYPE_FLT:
         l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;
-    case TYPE_STR: l = v->u.s->l;        break;
+    case TYPE_STR: l = v->u.s->l; break;
     case TYPE_TAB: l = t_logical_size(v->u.t); break;
-    case TYPE_RFN: l = v->u.fn->code->n; break; // # of bytes
     case TYPE_RE:   // TODO - extract something from PCRE pattern?
     case TYPE_RNG:  // TODO
+    case TYPE_RFN:
     case TYPE_CFN:
         l = 1;
         break;
@@ -344,14 +346,6 @@ Z_BINOP(idx) {
     case TYPE_TAB:
         *l = *t_lookup(l->u.t, r, 0);
         break;
-    case TYPE_RFN: {
-        rf_int r1 = intval(r);
-        if (r1 > l->u.fn->code->n - 1 || r1 < 0)
-            set_null(l);
-        else
-            set_int(l, l->u.fn->code->code[r1]);
-        break;
-    }
     default:
         set_null(l);
         break;
@@ -407,13 +401,8 @@ static inline void new_iter(rf_val *set) {
         iter->set.tab = set->u.t;
         break;
     case TYPE_RFN:
-        iter->t = LOOP_FN;
-        iter->n = set->u.fn->code->n;
-        iter->keys = NULL;
-        iter->set.code = set->u.fn->code->code;
-        break;
     case TYPE_CFN:
-        err("cannot iterate over C function");
+        err("cannot iterate over function");
     default: break;
     }
 }
@@ -989,14 +978,16 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 break;
 
             // Dereference and call z_idx().
-            case TYPE_INT: case TYPE_FLT:
-            case TYPE_STR: case TYPE_RFN:
+            case TYPE_INT:
+            case TYPE_FLT:
+            case TYPE_STR:
                 sp[i].v = *sp[-i].a;
                 z_idx(&sp[i].v, &sp[i+1].v);
                 sp[i+1].v = sp[i].v;
                 break;
+            case TYPE_RFN:
             case TYPE_CFN:
-                err("attempt to subscript a C function");
+                err("attempt to subscript a function");
             default:
                 break;
             }
@@ -1093,12 +1084,15 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             break;
 
         // Dereference and call z_idx().
-        case TYPE_INT: case TYPE_FLT: case TYPE_STR: case TYPE_RFN:
+        case TYPE_INT:
+        case TYPE_FLT:
+        case TYPE_STR:
             sp[-2].v = *sp[-2].a;
             binop(idx);
             break;
+        case TYPE_RFN:
         case TYPE_CFN:
-            err("attempt to subscript a C function");
+            err("attempt to subscript a function");
         default:
             break;
         }

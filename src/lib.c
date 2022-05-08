@@ -389,19 +389,12 @@ LIB_FN(srand) {
 // Takes one string and an optional index argument `i` and returns the
 // numeric ASCII code associated with that character. The default
 // value for `i` is 0.
-// If a user-defined function is passed, the byte at index `i` in the
-// function's bytecode array is returned. This is the same as
-// subscripting the function, i.e. byte(f,0) == f[0] for function f.
 LIB_FN(byte) {
     int idx = argc > 1 ? intval(fp+1) : 0;
     if (is_str(fp)) {
         if (idx > fp->u.s->l)
             idx = fp->u.s->l;
         set_int(fp-1, (uint8_t) fp->u.s->str[idx]);
-    } else if (is_rfn(fp)) {
-        if (idx > fp->u.fn->code->n)
-            idx = fp->u.fn->code->n;
-        set_int(fp-1, fp->u.fn->code->code[idx]);
     } else {
         set_int(fp-1, 0);
     }
