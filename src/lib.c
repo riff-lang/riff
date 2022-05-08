@@ -6,6 +6,7 @@
 #include "fn.h"
 #include "mem.h"
 #include "parse.h"
+#include "prng.h"
 #include "vm.h"
 
 #include <ctype.h>
@@ -16,6 +17,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+// Dedicated user PRNG state
+static prng_state prngs;
 
 static void err(const char *msg) {
     fprintf(stderr, "riff: %s\n", msg);
@@ -271,28 +275,7 @@ LIB_FN(write) {
     return 0;
 }
 
-// Pseudo-random number generation
-
-// xoshiro256**
-// Source: https://prng.di.unimi.it
-
-static inline rf_uint rol(const rf_uint x, int k) {
-    return (x << k) | (x >> (64 - k));
-}
-
-static rf_uint prngs[4];
-
-static rf_uint prng_next(void) {
-    const rf_uint res = rol(prngs[1] * 5, 7) * 9;
-    const rf_uint t = prngs[1] << 17;
-    prngs[2] ^= prngs[0];
-    prngs[3] ^= prngs[1];
-    prngs[1] ^= prngs[2];
-    prngs[0] ^= prngs[3];
-    prngs[2] ^= t;
-    prngs[3]  = rol(prngs[3], 45);
-    return res;
-}
+// PRNG functions
 
 // rand([x])
 //   rand()       | random float ∈ [0..1)
@@ -301,7 +284,7 @@ static rf_uint prng_next(void) {
 //   rand(m,n)    | random int ∈ [m..n]
 //   rand(range)  | random int ∈ range
 LIB_FN(rand) {
-    rf_uint rand = prng_next();
+    rf_uint rand = prng_next(&prngs);
     if (!argc) {
         rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((rf_uint)1 << 52)));
         set_flt(fp-1, f);
@@ -384,17 +367,6 @@ LIB_FN(rand) {
     return 1;
 }
 
-// I believe this is how you would utilize splitmix64 to initialize
-// the PRNG state
-static void prng_seed(rf_uint seed) {
-    prngs[0] = seed + 0x9e3779b97f4a7c15u;
-    prngs[1] = (prngs[0] ^ (prngs[0] >> 30)) * 0xbf58476d1ce4e5b9u;
-    prngs[2] = (prngs[1] ^ (prngs[1] >> 27)) * 0x94d049bb133111ebu;
-    prngs[3] =  prngs[2] ^ (prngs[2] >> 31);
-    for (int i = 0; i < 16; ++i)
-        prng_next();
-}
-
 // srand([x])
 // Initializes the PRNG with seed `x` or time(0) if no argument given.
 // rand() will produce the same sequence when srand is initialized
@@ -406,7 +378,7 @@ LIB_FN(srand) {
     else if (!is_null(fp))
         // Seed the PRNG with whatever 64 bits are in the rf_val union
         seed = fp->u.i;
-    prng_seed(seed);
+    prng_seed(&prngs, seed);
     set_int(fp-1, seed);
     return 1;
 }
@@ -822,7 +794,7 @@ static struct {
 
 static void register_funcs(rf_htab *g) {
     // Initialize the PRNG with the current time
-    prng_seed(time(0));
+    prng_seed(&prngs, time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
         rf_val *fn = malloc(sizeof(rf_val));
         *fn = (rf_val) {TYPE_CFN, .u.cfn = &lib_fn[i].fn};

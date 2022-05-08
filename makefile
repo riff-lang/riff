@@ -42,6 +42,7 @@ SRC          += src/fn.c
 SRC          += src/lex.c
 SRC          += src/lib.c
 SRC          += src/parse.c
+SRC          += src/prng.c
 SRC          += src/regex.c
 SRC          += src/string.c
 SRC          += src/table.c
