@@ -26,6 +26,7 @@ struct rf_htab {
     ht_node  **nodes;
     uint32_t   lsize;
     uint32_t   psize;
+    uint32_t   mask;
     uint32_t   cap;
     int        hint: 1;
 };
