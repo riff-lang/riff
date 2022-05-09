@@ -1,6 +1,7 @@
 #include "types.h"
 
 #include "conf.h"
+#include "string.h"
 #include "table.h"
 
 #include <inttypes.h>

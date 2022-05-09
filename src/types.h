@@ -41,15 +41,13 @@ enum types {
 typedef int64_t  rf_int;
 typedef uint64_t rf_uint;
 typedef double   rf_flt;
+typedef uint32_t rf_hash;
 
 typedef struct {
-    uint32_t  hash;
-    size_t    l;
-    char     *str;
+    rf_hash  hash;
+    size_t   len;
+    char    *str;
 } rf_str;
-
-#define TEMP_HASHED_STR(s,h,l) &(rf_str){(h), (l), (s)}
-#define TEMP_STR(s,l)          &(rf_str){0,   (l), (s)}
 
 typedef pcre2_code rf_re;
 
@@ -140,26 +138,6 @@ static inline rf_flt str2flt(rf_str *s) {
     return u_str2d(s->str, &end, 0);
 }
 
-static inline uint32_t s_hash(rf_str *s) {
-    return s->hash ? s->hash : (s->hash = u_strhash(s->str));
-}
-
-static inline int s_eq_fast(rf_str *s1, rf_str *s2) {
-    return s_hash(s1) == s_hash(s2);
-}
-
-static inline int s_numunlikely(rf_str *s) {
-    return !s->l || !memchr("+-.0123456789", s->str[0], 13);
-}
-
-static inline int s_haszero(rf_str *s) {
-    return !!memchr(s->str, '0', s->l);
-}
-
-rf_str *s_new(const char *, size_t);
-rf_str *s_newh(const char *, size_t);
-rf_str *s_new_concat(char *, char *);
-rf_str *s_substr(char *, rf_int, rf_int, rf_int);
 void    re_register_fldv(rf_tab *);
 rf_re  *re_compile(char *, size_t, uint32_t, int *);
 void    re_free(rf_re *);

@@ -7,6 +7,7 @@
 #include "mem.h"
 #include "parse.h"
 #include "prng.h"
+#include "string.h"
 #include "vm.h"
 
 #include <ctype.h>
@@ -392,8 +393,8 @@ LIB_FN(srand) {
 LIB_FN(byte) {
     int idx = argc > 1 ? intval(fp+1) : 0;
     if (is_str(fp)) {
-        if (idx > fp->u.s->l)
-            idx = fp->u.s->l;
+        if (idx > s_len(fp->u.s))
+            idx = s_len(fp->u.s);
         set_int(fp-1, (uint8_t) fp->u.s->str[idx]);
     } else {
         set_int(fp-1, 0);
@@ -446,7 +447,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
         s = temp_s;
     } else {
         s = fp->u.s->str;
-        len = fp->u.s->l;
+        len = s_len(fp->u.s);
     }
 
     // Pattern `p`
@@ -460,7 +461,7 @@ static int xsub(rf_val *fp, int argc, int flags) {
                 u_flt2str(fp[1].u.f, temp_p);
             p = re_compile(temp_p, PCRE2_ZERO_TERMINATED, 0, &errcode);
         } else if (is_str(fp+1)) {
-            p = re_compile(fp[1].u.s->str, fp[1].u.s->l, 0, &errcode);
+            p = re_compile(fp[1].u.s->str, s_len(fp[1].u.s), 0, &errcode);
         } else {
             return 0;
         }
@@ -546,7 +547,7 @@ LIB_FN(hex) {
 static int allxcase(rf_val *fp, int c) {
     if (!is_str(fp))
         return 0;
-    size_t len = fp->u.s->l;
+    size_t len = s_len(fp->u.s);
     char str[len + 1];
     for (int i = 0; i < len; ++i) {
         str[i] = c ? toupper(fp->u.s->str[i])
@@ -621,7 +622,7 @@ LIB_FN(split) {
         str = temp_s;
     } else {
         str = fp->u.s->str;
-        len = fp->u.s->l;
+        len = s_len(fp->u.s);
     }
     rf_str *s;
     rf_tab *t = malloc(sizeof(rf_tab));
@@ -636,9 +637,9 @@ LIB_FN(split) {
         case TYPE_INT: u_int2str(fp[1].u.i, temp); break;
         case TYPE_FLT: u_flt2str(fp[1].u.f, temp); break;
         case TYPE_STR:
-            if (!fp[1].u.s->l)
+            if (!s_len(fp[1].u.s))
                 goto split_chars;
-            delim = re_compile(fp[1].u.s->str, fp[1].u.s->l, 0, &errcode);
+            delim = re_compile(fp[1].u.s->str, s_len(fp[1].u.s), 0, &errcode);
             goto do_split;
         default:
             goto split_chars;

@@ -3,6 +3,7 @@
 #include "conf.h"
 #include "lib.h"
 #include "mem.h"
+#include "string.h"
 
 #include <inttypes.h>
 #include <math.h>
@@ -55,7 +56,7 @@ static inline int test(rf_val *v) {
             else
                 return !!f;
         }
-        return !!v->u.s->l;
+        return !!s_len(v->u.s);
     }
     case TYPE_TAB: return !!t_logical_size(v->u.t);
     case TYPE_RE:
@@ -137,7 +138,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
     } else if (is_str(l) && is_str(r)) { \
         set_int(l, (s_hash(l->u.s) op s_hash(r->u.s))); \
     } else if (is_str(l) && !is_str(r)) { \
-        if (!l->u.s->l) { \
+        if (!s_len(l->u.s)) { \
             set_int(l, !(0 op 0)); \
             return; \
         } \
@@ -149,7 +150,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
             set_int(l, (f op numval(r))); \
         } \
     } else if (!is_str(l) && is_str(r)) { \
-        if (!r->u.s->l) { \
+        if (!s_len(r->u.s)) { \
             set_int(l, !(0 op 0)); \
             return; \
         } \
@@ -200,7 +201,7 @@ Z_UOP(len) {
     case TYPE_FLT:
         l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
         break;
-    case TYPE_STR: l = v->u.s->l; break;
+    case TYPE_STR: l = s_len(v->u.s); break;
     case TYPE_TAB: l = t_logical_size(v->u.t); break;
     case TYPE_RE:   // TODO - extract something from PCRE pattern?
     case TYPE_RNG:  // TODO
@@ -243,7 +244,7 @@ Z_BINOP(cat) {
 static inline rf_int match(rf_val *l, rf_val *r) {
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
-        return re_match(l->u.s->str, l->u.s->l, r->u.r, 1);
+        return re_match(l->u.s->str, s_len(l->u.s), r->u.r, 1);
     char *lhs;
     size_t len = 0;
     char temp_lhs[32];
@@ -257,7 +258,7 @@ static inline rf_int match(rf_val *l, rf_val *r) {
         lhs = temp_lhs;
     } else {
         lhs = l->u.s->str;
-        len = l->u.s->l;
+        len = s_len(l->u.s);
     }
     if (!is_re(r)) {
         rf_re *temp_re;
@@ -269,7 +270,7 @@ static inline rf_int match(rf_val *l, rf_val *r) {
         case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
         case TYPE_STR:
             capture = 1;
-            temp_re = re_compile(r->u.s->str, r->u.s->l, 0, &errcode);
+            temp_re = re_compile(r->u.s->str, s_len(r->u.s), 0, &errcode);
             goto do_match;
         default:       temp_rhs[0] = '\0'; break;
         }
@@ -333,7 +334,7 @@ Z_BINOP(idx) {
             l->u.s = s_substr(l->u.s->str, r->u.q->from, r->u.q->to, r->u.q->itvl);
         } else {
             rf_int r1  = intval(r);
-            rf_int len = (rf_int) l->u.s->l;
+            rf_int len = (rf_int) s_len(l->u.s);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
@@ -374,7 +375,7 @@ static inline void new_iter(rf_val *set) {
         break;
     case TYPE_STR:
         iter->t = LOOP_STR;
-        iter->n = set->u.s->l;
+        iter->n = s_len(set->u.s);
         iter->keys = NULL;
         iter->set.str = set->u.s->str;
         break;

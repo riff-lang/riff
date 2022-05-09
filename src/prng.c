@@ -1,11 +1,10 @@
 #include "prng.h"
+#include "util.h"
 
 // Pseudo-random number generation
 
 // xoshiro256**
 // Source: https://prng.di.unimi.it
-
-#define rol(x,n) (((x)<<(n)) | ((x)>>(-(int)(n)&(8*sizeof(x)-1))))
 
 rf_uint prng_next(prng_state *s) {
     const rf_uint res = rol(s->u[1] * 5, 7) * 9;

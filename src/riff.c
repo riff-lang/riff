@@ -3,8 +3,8 @@
 #include "env.h"
 #include "mem.h"
 #include "parse.h"
+#include "string.h"
 #include "types.h"
-#include "util.h"
 #include "vm.h"
 
 #include <getopt.h>
@@ -26,7 +26,7 @@ int wasm_main(int flag, char *str) {
     e.main = main;
     e.pname = "<playground>";
     e.src = str;
-    main.name = TEMP_HASHED_STR((char *) e.pname, u_strhash(e.pname), strlen(e.pname));
+    main.name = s_newh(e.pname, strlen(e.pname));
     y_compile(&e);
     if (flag)
         z_exec(&e);
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
 
     // -l: List riff's arbitrary disassembly for the given program
     if (disas) {
-        main.name = TEMP_HASHED_STR((char *) e.pname, u_strhash(e.pname), strlen(e.pname));
+        main.name = s_newh(e.pname, strlen(e.pname));
         d_prog(&e);
     } else {
         main.name = NULL;

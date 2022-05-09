@@ -1,6 +1,8 @@
 #include "table.h"
 
 #include "mem.h"
+#include "string.h"
+#include "util.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -216,8 +218,6 @@ static inline double ht_potential_lf(rf_htab *h) {
     return n1 / n2;
 }
 
-// Ripped from LuaJIT
-#define rol(x,n) (((x)<<(n)) | ((x)>>(-(int)(n)&(8*sizeof(x)-1))))
 static inline uint32_t hashrot(uint32_t lo, uint32_t hi) {
     lo ^= hi; hi  = rol(hi, 14);
     lo -= hi; hi  = rol(hi, 5);
