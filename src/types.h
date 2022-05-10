@@ -42,12 +42,14 @@ typedef int64_t  rf_int;
 typedef uint64_t rf_uint;
 typedef double   rf_flt;
 typedef uint32_t rf_hash;
+typedef struct rf_str rf_str;
 
-typedef struct {
+struct rf_str {
     rf_hash  hash;
     size_t   len;
     char    *str;
-} rf_str;
+    rf_str  *next;
+};
 
 typedef pcre2_code rf_re;
 

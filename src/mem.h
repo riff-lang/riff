@@ -19,6 +19,4 @@
         b = realloc(b, sizeof(sz) * cap); \
     }
 
-#define m_freestr(s) free(s->str); free(s);
-
 #endif

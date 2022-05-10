@@ -549,7 +549,6 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 }
             }
             if (!is_null(iter->v)) {
-                m_freestr(iter->v->u.s);
                 iter->v->u.s = s_new(iter->set.str++, 1);
             } else {
                 *iter->v = (rf_val) {TYPE_STR, .u.s = s_new(iter->set.str++, 1)};

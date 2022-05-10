@@ -7,24 +7,129 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Create string and skip hashing
-rf_str *s_new(const char *start, size_t l) {
-    char *str = malloc(l * sizeof(char) + 1);
-    memcpy(str, start, l);
-    str[l] = '\0';
-    rf_str *s = malloc(sizeof(rf_str));
-    *s = (rf_str) {0, l, str};
-    return s;
+#define ST_MIN_CAP 8
+#define ST_MAX_LOAD_FACTOR 1.0
+
+typedef struct {
+    rf_str   **nodes;
+    uint32_t   size;
+    uint32_t   mask;
+    uint32_t   cap;
+    rf_str    *empty;
+} rf_stab;
+
+static rf_stab *st = NULL;
+
+void st_init(void) {
+    st = malloc(sizeof(rf_stab));
+    st->nodes = calloc(ST_MIN_CAP, sizeof(rf_str *));
+    st->size  = 0;
+    st->mask  = ST_MIN_CAP - 1;
+    st->cap   = ST_MIN_CAP;
+    rf_str *e = malloc(sizeof(rf_str));
+    *e = (rf_str) {0, 0, "", NULL};
+    st->empty = e;
 }
 
-// Create string with hash
-rf_str *s_newh(const char *start, size_t l) {
-    char *str = malloc(l * sizeof(char) + 1);
-    memcpy(str, start, l);
-    str[l] = '\0';
-    rf_str *s = malloc(sizeof(rf_str));
-    *s = (rf_str) {u_strhash(str), l, str};
-    return s;
+typedef union {
+    rf_hash u;
+    uint8_t b[sizeof(rf_hash)];
+} str_chunk;
+
+static inline rf_hash chunk(const void *p) {
+    return ((const str_chunk *)p)->u;
+}
+
+#define coercible_mask(s) (memchr("+-.0123456789", *s, 13) ? ~0u : ~0x80000000u)
+
+static inline rf_hash str_hash(const char *str, size_t len) {
+    rf_hash a, b, h = len;
+    if (len >= 4) {
+        a  = chunk(str);
+        h ^= chunk(str+len-4);
+        b  = chunk(str+(len>>1)-2);
+        h ^= b;
+        h -= rol(b,14);
+        b += chunk(str+(len>>2)-1);
+    } else {
+        a  = *(const uint8_t *)str;
+        h ^= *(const uint8_t *)(str+len-1);
+        b  = *(const uint8_t *)(str+(len>>1));
+        h ^= b;
+        h -= rol(b,14);
+    }
+    a ^= h; a -= rol(h, 11);
+    b ^= a; b -= rol(a, 25);
+    h ^= b; h -= rol(b, 16);
+    return h & coercible_mask(str);
+}
+
+static inline rf_str *next(rf_str *s) {
+    return s->next;
+}
+
+static inline double potential_lf(rf_stab *t) {
+    double n1 = (double) t->size + 1.0;
+    double n2 = (double) t->cap;
+    return n1 / n2;
+}
+
+static inline void insert_str(rf_str **nodes, rf_str *new, uint32_t i) {
+    rf_str *n = nodes[i];
+    if (!n) {
+        nodes[i] = new;
+        return;
+    }
+    while (n->next)
+        n = next(n);
+    n->next = new;
+}
+
+static inline rf_str *new_str(rf_str *s) {
+    size_t len = s_len(s);
+    rf_str *new = malloc(sizeof(rf_str));
+    char *str = malloc(len * sizeof(char) + 1);
+    memcpy(str, s->str, len);
+    str[len] = '\0';
+    *new = (rf_str) {s->hash, len, str, NULL};
+    return new;
+}
+
+static inline void st_resize(rf_stab *t, size_t new_cap) {
+    rf_str **new_nodes = calloc(new_cap, sizeof(rf_str *));
+    for (uint32_t i = 0; i < t->cap; ++i) {
+        rf_str *s = t->nodes[i];
+        while (s) {
+            insert_str(new_nodes, s, s->hash & (new_cap-1));
+            rf_str *p = s;
+            s = next(s);
+            p->next = NULL;
+        }
+    }
+    free(t->nodes);
+    t->nodes = new_nodes;
+    t->mask = new_cap - 1;
+    t->cap = new_cap;
+}
+
+static inline rf_str *st_lookup(rf_stab *t, rf_str *s) {
+    rf_str *n = t->nodes[s->hash & t->mask];
+    while (n) {
+        if (s_eq_raw(n,s))
+            return n;
+        n = next(n);
+    }
+    if (potential_lf(t) > ST_MAX_LOAD_FACTOR)
+        st_resize(t, t->cap << 1);
+    rf_str *new = new_str(s);
+    insert_str(t->nodes, new, s->hash & t->mask);
+    t->size++;
+    return new;
+}
+
+// Create string (does not assume null-terminated input)
+rf_str *s_new(const char *start, size_t len) {
+    return len ? st_lookup(st, &(rf_str){str_hash(start,len),len,(char *)start,NULL}) : st->empty;
 }
 
 // Assumes null-terminated strings
@@ -35,10 +140,7 @@ rf_str *s_new_concat(char *l, char *r) {
     char *new = malloc(new_len * sizeof(char) + 1);
     memcpy(new, l, l_len);
     memcpy(new + l_len, r, r_len);
-    new[new_len] = '\0';
-    rf_str *s = malloc(sizeof(rf_str));
-    *s = (rf_str) {0, new_len, new};
-    return s;
+    return s_new(new, new_len);
 }
 
 rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
@@ -65,8 +167,5 @@ rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
         str[i] = s[from];
         from += itvl;
     }
-    str[len] = '\0';
-    rf_str *ns = malloc(sizeof(rf_str));
-    *ns = (rf_str) {0, len, str};
-    return ns;
+    return s_new(str, len);
 }

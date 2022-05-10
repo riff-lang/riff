@@ -525,8 +525,6 @@ static uint8_t pop_locals(rf_parser *y, int depth, int f) {
     uint8_t count = 0;
     for (int i = y->nlcl - 1; i >= 0 && (y->lcl[i].d > depth); --i) {
         ++count;
-        if (f)
-            free(y->lcl[i].id);
     }
     if (count)
         c_pop(y->c, count);
@@ -607,7 +605,7 @@ static void do_stmt(rf_parser *y) {
 
 static void add_local(rf_parser *y, rf_str *id) {
     m_growarray(y->lcl, y->nlcl, y->lcap, local);
-    y->lcl[y->nlcl++] = (local) {s_newh(id->str, s_len(id)), y->ld};
+    y->lcl[y->nlcl++] = (local) {s_new(id->str, s_len(id)), y->ld};
 }
 
 // Returns the arity of the parsed function
@@ -707,7 +705,7 @@ static void fn_stmt(rf_parser *y) {
     if (!TK_KIND(TK_ID)) {
         err(y, "expected identifier for function definition");
     } else {
-        id = s_newh(y->x->tk.lexeme.s->str, s_len(y->x->tk.lexeme.s));
+        id = s_new(y->x->tk.lexeme.s->str, s_len(y->x->tk.lexeme.s));
         adv();
     }
     f_init(f, id);

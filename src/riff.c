@@ -16,6 +16,7 @@
 // Entry point for the Emscripten-compiled WASM/JS module
 #ifdef __EMSCRIPTEN__
 int wasm_main(int flag, char *str) {
+    st_init();
     rf_env e;
     e_init(&e);
     rf_fn main;
@@ -26,7 +27,7 @@ int wasm_main(int flag, char *str) {
     e.main = main;
     e.pname = "<playground>";
     e.src = str;
-    main.name = s_newh(e.pname, strlen(e.pname));
+    main.name = s_new(e.pname, strlen(e.pname));
     y_compile(&e);
     if (flag)
         z_exec(&e);
@@ -104,6 +105,7 @@ static char *file2str(const char *path) {
 }
 
 int main(int argc, char **argv) {
+    st_init();
     rf_env e;
     e_init(&e);
     rf_fn main;
@@ -172,7 +174,7 @@ int main(int argc, char **argv) {
 
     // -l: List riff's arbitrary disassembly for the given program
     if (disas) {
-        main.name = s_newh(e.pname, strlen(e.pname));
+        main.name = s_new(e.pname, strlen(e.pname));
         d_prog(&e);
     } else {
         main.name = NULL;

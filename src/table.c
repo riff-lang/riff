@@ -40,7 +40,7 @@ static rf_val *reduce_key(rf_val *s, rf_val *d) {
         }
         break;
     case TYPE_STR: {
-        if (s_numunlikely(s->u.s))
+        if (!s_coercible(s->u.s))
             return s;
         char *end;
         rf_int i = u_str2i64(s->u.s->str, &end, 0);
@@ -272,7 +272,7 @@ static inline void ht_resize_str(rf_htab *h, size_t new_cap) {
     HT_RESIZE(n->k.str->hash & (new_cap-1))
 }
 
-#define node_eq_str(s1, s2) (s_eq_fast(s1, s2))
+#define node_eq_str(s1, s2) (s_eq(s1, s2))
 
 static inline int node_eq_val(rf_val *v1, rf_val *v2) {
     if (v1->type != v2->type)
@@ -350,7 +350,7 @@ rf_val *ht_insert_str(rf_htab *h, rf_str *k, rf_val *v) {
 }
 
 rf_val *ht_insert_cstr(rf_htab *h, const char *k, rf_val *v) {
-    return ht_insert_str(h, s_newh(k, strlen(k)), v);
+    return ht_insert_str(h, s_new(k, strlen(k)), v);
 }
 
 static inline rf_val *ht_delete_val(rf_htab *h, rf_val *k) {

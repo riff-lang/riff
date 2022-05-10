@@ -270,7 +270,7 @@ str_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-    rf_str *s = s_newh(x->buf.c, x->buf.n);
+    rf_str *s = s_new(x->buf.c, x->buf.n);
     adv();
     tk->lexeme.s = s;
     return TK_STR;
@@ -452,7 +452,7 @@ static int read_id(rf_lexer *x, rf_token *tk) {
         ++count;
         adv();
     }
-    rf_str *s = s_newh(start, count);
+    rf_str *s = s_new(start, count);
     tk->lexeme.s = s;
     return TK_ID;
 }
@@ -618,11 +618,7 @@ void x_free(rf_lexer *x) {
 }
 
 int x_adv(rf_lexer *x, int mode) {
-
-    // Free previous string object
-    if (x->tk.kind == TK_STR || x->tk.kind == TK_ID) {
-        m_freestr(x->tk.lexeme.s);
-    } else if (x->tk.kind == TK_EOI)
+    if (x->tk.kind == TK_EOI)
         return 1;
 
     // If a lookahead token already exists, assign it to the current
