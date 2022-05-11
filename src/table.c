@@ -249,9 +249,7 @@ static inline void insert_node(ht_node **nodes, ht_node *new, uint32_t i) {
 }
 
 #define HT_RESIZE(mask_type) \
-    ht_node **new_nodes = malloc(sizeof(ht_node *) * new_cap); \
-    for (uint32_t i = 0; i < new_cap; ++i) \
-        new_nodes[i] = NULL; \
+    ht_node **new_nodes = calloc(new_cap, sizeof(ht_node *)); \
     for (uint32_t i = 0; i < h->cap; ++i) { \
         ht_node *n = h->nodes[i]; \
         while (n) { \
@@ -328,11 +326,9 @@ static inline ht_node *new_node_str(rf_str *k, rf_val *v) {
 
 #define HT_INSERT(type, mask_type) \
     if (h->nodes == NULL) { \
-        h->nodes = malloc(sizeof(ht_node *) * HT_MIN_CAP); \
+        h->nodes = calloc(HT_MIN_CAP, sizeof(ht_node *)); \
         h->mask = HT_MIN_CAP - 1; \
         h->cap = HT_MIN_CAP; \
-        for (int i = 0; i < HT_MIN_CAP; ++i) \
-            h->nodes[i] = NULL; \
     } else { \
         double lf = ht_potential_lf(h); \
         if (lf > HT_MAX_LOAD_FACTOR) \

@@ -13,10 +13,7 @@ rf_val *v_newtab(uint32_t cap) {
     t_init(t);
     if (cap > 0) {
         t->cap = cap;
-        t->v = malloc(cap * sizeof(rf_val));
-    }
-    for (int i = 0; i < cap; ++i) {
-        t->v[i] = NULL;
+        t->v = calloc(cap, sizeof(rf_val *));
     }
     *v = (rf_val) {TYPE_TAB, .u.t = t};
     return v;
