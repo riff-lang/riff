@@ -59,7 +59,7 @@ TESTS        += test/etc.bats
 CFLAGS       += -DRIFF_VERSION=\"$(shell git describe)\"
 
 # Homebrew-installed Clang
-BREW_CLANG    = /usr/local/opt/llvm/bin/clang
+BREW_CLANG    = /opt/homebrew/bin/clang
 
 .PHONY: clean
 
