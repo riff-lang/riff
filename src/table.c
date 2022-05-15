@@ -34,27 +34,27 @@ void t_init(rf_tab *t) {
 static rf_val *reduce_key(rf_val *s, rf_val *d) {
     switch (s->type) {
     case TYPE_FLT:
-        if (s->u.f == ceil(s->u.f)) {
-            set_int(d, (rf_int) s->u.f);
+        if (s->f == ceil(s->f)) {
+            set_int(d, (rf_int) s->f);
             return d;
         }
         break;
     case TYPE_STR: {
-        if (!s_coercible(s->u.s))
+        if (!s_coercible(s->s))
             return s;
         char *end;
-        rf_int i = u_str2i64(s->u.s->str, &end, 0);
+        rf_int i = u_str2i64(s->s->str, &end, 0);
         if (!*end) {
             set_int(d, i);
             if (!i)
-                return s_haszero(s->u.s) ? d : s;
+                return s_haszero(s->s) ? d : s;
             return d;
         }
-        rf_flt f = u_str2d(s->u.s->str, &end, 0);
+        rf_flt f = u_str2d(s->s->str, &end, 0);
         if (!*end) {
             set_flt(d, f);
             if (f == 0.0) {
-                if (s_haszero(s->u.s)) {
+                if (s_haszero(s->s)) {
                     set_int(d, 0);
                     return d;
                 } else {
@@ -94,7 +94,7 @@ static inline void ht_collect_keys(rf_htab *h, rf_val *keys, int *n) {
         ht_node *node = h->nodes[i];
         while (node) {
             if (!is_null(node->v))
-                keys[*n++] = (rf_val) {node->k.val->type, node->k.val->u};
+                keys[*n++] = (rf_val) {node->k.val->type, node->k.val->i};
             node = next(node);
         }
     }
@@ -110,13 +110,13 @@ rf_val *t_collect_keys(rf_tab *t) {
     int n = 0;
     for (uint32_t i = 0; i < t->cap && n <= len; ++i) {
         if (t_exists(t,i) && !is_null(t->v[i])) {
-            keys[n++] = (rf_val) {TYPE_INT, .u.i = i};
+            keys[n++] = (rf_val) {TYPE_INT, .i = i};
         }
     }
     // TODO pass `len`, allowing function to exit early if possible
     ht_collect_keys(t->h, keys, &n);
     if (t->nullx)
-        keys[n++] = (rf_val) {TYPE_NULL, .u.i = 0};
+        keys[n++] = (rf_val) {TYPE_NULL, .i = 0};
     return keys;
 }
 
@@ -140,8 +140,8 @@ rf_val *t_lookup(rf_tab *t, rf_val *k, int hint) {
         if (hint) t->nullx = 1;
         return t->nullv;
     case TYPE_INT:
-        if (k->u.i >= 0) {
-            rf_int ki = k->u.i;
+        if (k->i >= 0) {
+            rf_int ki = k->i;
             if (t_exists(t, ki))
                 return t->v[ki];
             if (would_fit(t, ki))
@@ -165,7 +165,7 @@ rf_val *t_insert_int(rf_tab *t, rf_int k, rf_val *v) {
         t->v = realloc(t->v, new_cap * sizeof(rf_val *));
         for (uint32_t i = old_cap; i < new_cap; ++i) {
             if (t_exists(t,i)) continue;
-            t->v[i] = ht_delete_val(t->h, &(rf_val){TYPE_INT, .u.i = i});
+            t->v[i] = ht_delete_val(t->h, &(rf_val){TYPE_INT, .i = i});
             if (t->v[i])
                 t->psize++;
         }
@@ -227,12 +227,12 @@ static inline uint32_t hashrot(uint32_t lo, uint32_t hi) {
 
 static inline uint32_t anchor(rf_val *k, uint32_t mask) {
     switch (k->type) {
-    case TYPE_INT: return ((uint32_t) k->u.i) & mask;
-    case TYPE_STR: return s_hash(k->u.s) & mask;
+    case TYPE_INT: return ((uint32_t) k->i) & mask;
+    case TYPE_STR: return s_hash(k->s) & mask;
     default:
         return hashrot(
-            (uint32_t) (k->u.i & UINT32_MAX),
-            (uint32_t) ((k->u.i >> 32) & UINT32_MAX)
+            (uint32_t) (k->i & UINT32_MAX),
+            (uint32_t) ((k->i >> 32) & UINT32_MAX)
         ) & mask;
     }
 }
@@ -278,9 +278,9 @@ static inline int node_eq_val(rf_val *v1, rf_val *v2) {
     if (v1->type != v2->type)
         return 0;
     switch (v1->type) {
-    case TYPE_FLT: return v1->u.f == v2->u.f;
-    case TYPE_STR: return node_eq_str(v1->u.s, v2->u.s);
-    default: return v1->u.i == v2->u.i;
+    case TYPE_FLT: return v1->f == v2->f;
+    case TYPE_STR: return node_eq_str(v1->s, v2->s);
+    default: return v1->i == v2->i;
     }
 }
 

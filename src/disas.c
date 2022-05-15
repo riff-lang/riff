@@ -25,10 +25,10 @@ static struct {
 #define INST2       "%*d: %02x %02x %02x %-6s %d\n"
 #define INST2ADDR   "%*d: %02x %02x %02x %-6s %-6d // %d\n"
 
-#define OPND(x)     (c->k[b1].u.x)
-#define OPND0(x)    (c->k[0].u.x)
-#define OPND1(x)    (c->k[1].u.x)
-#define OPND2(x)    (c->k[2].u.x)
+#define OPND(x)     (c->k[b1].x)
+#define OPND0(x)    (c->k[0].x)
+#define OPND1(x)    (c->k[1].x)
+#define OPND2(x)    (c->k[2].x)
 
 static int is_jump8(int op) {
     return op == OP_JMP8 || op == OP_JZ8 || op == OP_JNZ8 ||

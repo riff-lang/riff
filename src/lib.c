@@ -42,32 +42,35 @@ LIB_FN(tan)  { set_flt(fp-1, tan(fltval(fp)));           return 1; }
 
 // abs(x)
 LIB_FN(abs) {
-    if (is_int(fp))
-        set_int(fp-1, llabs(fp->u.i));
-    else
+    if (is_int(fp)) {
+        set_int(fp-1, llabs(fp->i));
+    } else {
         set_flt(fp-1, fabs(fltval(fp)));
+    }
     return 1;
 }
 
 // atan(y[,x])
 LIB_FN(atan) {
-    if (argc == 1)
+    if (argc == 1) {
         set_flt(fp-1, atan(fltval(fp)));
-    else if (argc > 1)
+    } else if (argc > 1) {
         set_flt(fp-1, atan2(fltval(fp), fltval(fp+1)));
+    }
     return 1;
 }
 
 // log(x[,b])
 LIB_FN(log) {
-    if (argc == 1)
+    if (argc == 1) {
         set_flt(fp-1, log(fltval(fp)));
-    else if (fltval(fp+1) == 2.0)
+    } else if (fltval(fp+1) == 2.0) {
         set_flt(fp-1, log2(fltval(fp)));
-    else if (fltval(fp+1) == 10.0)
+    } else if (fltval(fp+1) == 10.0) {
         set_flt(fp-1, log10(fltval(fp)));
-    else
+    } else {
         set_flt(fp-1, log(fltval(fp)) / log(fltval(fp+1)));
+    }
     return 1;
 }
 
@@ -76,14 +79,14 @@ LIB_FN(log) {
 // close(f)
 LIB_FN(close) {
     if (is_fh(fp))
-        if (!(fp->u.fh->flags & FH_STD))
-            fclose(fp->u.fh->p);
+        if (!(fp->fh->flags & FH_STD))
+            fclose(fp->fh->p);
     return 0;
 }
 
 // eof(f)
 LIB_FN(eof) {
-    set_int(fp-1, !is_fh(fp) || feof(fp->u.fh->p));
+    set_int(fp-1, !is_fh(fp) || feof(fp->fh->p));
     return 1;
 }
 
@@ -99,7 +102,7 @@ LIB_FN(eval) {
     main.code = &c;
     main.arity = 0;
     e.main = main;
-    e.src = fp->u.s->str;
+    e.src = fp->s->str;
     main.name = NULL;
     y_compile(&e);
     z_exec_reenter(&e, (rf_stack *) fp);
@@ -108,7 +111,7 @@ LIB_FN(eval) {
 
 // flush([f])
 LIB_FN(flush) {
-    FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdout;
+    FILE *f = argc && is_fh(fp) ? fp->fh->p : stdout;
     if (fflush(f))
         err("error flushing stream");
     return 0;
@@ -133,7 +136,7 @@ LIB_FN(get) {
 // getc([f])
 LIB_FN(getc) {
     rf_int c;
-    FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdin;
+    FILE *f = argc && is_fh(fp) ? fp->fh->p : stdin;
     if ((c = fgetc(f)) != EOF) {
         set_int(fp-1, c);
         return 1;
@@ -155,42 +158,42 @@ LIB_FN(open) {
     FILE *p;
     errno = 0;
     if (argc == 1 || !is_str(fp+1)) {
-        p = fopen(fp[0].u.s->str, "r");
+        p = fopen(fp[0].s->str, "r");
     } else {
-        if (!valid_fmode(fp[1].u.s->str)) {
+        if (!valid_fmode(fp[1].s->str)) {
             fprintf(stderr, "riff: error opening '%s': invalid file mode: '%s'\n",
-                    fp[0].u.s->str, fp[1].u.s->str);
+                    fp[0].s->str, fp[1].s->str);
             exit(1);
         }
-        p = fopen(fp[0].u.s->str, fp[1].u.s->str);
+        p = fopen(fp[0].s->str, fp[1].s->str);
     }
     if (!p) {
         fprintf(stderr, "riff: error opening '%s': %s\n",
-                fp[0].u.s->str, strerror(errno));
+                fp[0].s->str, strerror(errno));
         exit(1);
     }
     rf_fh *fh = malloc(sizeof(rf_fh));
     fh->p = p;
     fh->flags = 0;
-    fp[-1] = (rf_val) {TYPE_FH, .u.fh = fh};
+    fp[-1] = (rf_val) {TYPE_FH, .fh = fh};
     return 1;
 }
 
 static inline void fprintf_val(FILE *f, rf_val *v) {
     switch (v->type) {
     case TYPE_NULL: fprintf(f, "null");                 break;
-    case TYPE_INT:  fprintf(f, "%"PRId64, v->u.i);      break;
-    case TYPE_FLT:  fprintf(f, FLT_PRINT_FMT, v->u.f);  break;
-    case TYPE_STR:  fprintf(f, "%s", v->u.s->str);      break;
-    case TYPE_RE:   fprintf(f, "regex: %p", v->u.r);    break;
-    case TYPE_FH:   fprintf(f, "file: %p", v->u.fh->p); break;
+    case TYPE_INT:  fprintf(f, "%"PRId64, v->i);      break;
+    case TYPE_FLT:  fprintf(f, FLT_PRINT_FMT, v->f);  break;
+    case TYPE_STR:  fprintf(f, "%s", v->s->str);      break;
+    case TYPE_RE:   fprintf(f, "regex: %p", v->r);    break;
+    case TYPE_FH:   fprintf(f, "file: %p", v->fh->p); break;
     case TYPE_RNG:
         fprintf(f, "range: %"PRId64"..%"PRId64":%"PRId64,
-                v->u.q->from, v->u.q->to, v->u.q->itvl);
+                v->q->from, v->q->to, v->q->itvl);
         break;
-    case TYPE_TAB:  fprintf(f, "table: %p", v->u.t);    break;
+    case TYPE_TAB:  fprintf(f, "table: %p", v->t);    break;
     case TYPE_RFN:
-    case TYPE_CFN:  fprintf(f, "fn: %p", v->u.fn);      break;
+    case TYPE_CFN:  fprintf(f, "fn: %p", v->fn);      break;
     }
 }
 
@@ -211,7 +214,7 @@ LIB_FN(printf) {
         return 0;
     --argc;
     char buf[STR_BUF_SZ];
-    int n = fmt_snprintf(buf, sizeof buf, fp->u.s->str, fp + 1, argc);
+    int n = fmt_snprintf(buf, sizeof buf, fp->s->str, fp + 1, argc);
     buf[n] = '\0';
     fputs(buf, stdout);
     return 0;
@@ -253,7 +256,7 @@ LIB_FN(putc) {
 // read(f[,n])
 LIB_FN(read) {
     char buf[STR_BUF_SZ];
-    FILE *f = argc && is_fh(fp) ? fp->u.fh->p : stdin;
+    FILE *f = argc && is_fh(fp) ? fp->fh->p : stdin;
     if (argc > 1 && is_num(fp+1)) {
         size_t count = (size_t) intval(fp+1);
         size_t nread = fread(buf, sizeof *buf, count, f);
@@ -271,7 +274,7 @@ LIB_FN(read) {
 LIB_FN(write) {
     if (!argc)
         return 0;
-    FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].u.fh->p : stdout;
+    FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].fh->p : stdout;
     fprintf_val(f, fp);
     return 0;
 }
@@ -293,9 +296,9 @@ LIB_FN(rand) {
 
     // If first argument is a range, ignore any succeeding args
     else if (is_rng(fp)) {
-        rf_int from = fp->u.q->from;
-        rf_int to   = fp->u.q->to;
-        rf_int itvl = fp->u.q->itvl;
+        rf_int from = fp->q->from;
+        rf_int to   = fp->q->to;
+        rf_int itvl = fp->q->itvl;
         rf_uint range, offset;
         if (from < to) {
             //           <<<
@@ -378,7 +381,7 @@ LIB_FN(srand) {
         seed = time(0);
     else if (!is_null(fp))
         // Seed the PRNG with whatever 64 bits are in the rf_val union
-        seed = fp->u.i;
+        seed = fp->i;
     prng_seed(&prngs, seed);
     set_int(fp-1, seed);
     return 1;
@@ -393,9 +396,9 @@ LIB_FN(srand) {
 LIB_FN(byte) {
     int idx = argc > 1 ? intval(fp+1) : 0;
     if (is_str(fp)) {
-        if (idx > s_len(fp->u.s))
-            idx = s_len(fp->u.s);
-        set_int(fp-1, (uint8_t) fp->u.s->str[idx]);
+        if (idx > s_len(fp->s))
+            idx = s_len(fp->s);
+        set_int(fp-1, (uint8_t) fp->s->str[idx]);
     } else {
         set_int(fp-1, 0);
     }
@@ -422,7 +425,7 @@ LIB_FN(fmt) {
         return 0;
     --argc;
     char buf[STR_BUF_SZ];
-    int n = fmt_snprintf(buf, sizeof buf, fp->u.s->str, fp + 1, argc);
+    int n = fmt_snprintf(buf, sizeof buf, fp->s->str, fp + 1, argc);
     set_str(fp-1, s_new(buf, n));
     return 1;
 }
@@ -439,15 +442,15 @@ static int xsub(rf_val *fp, int argc, int flags) {
     // String `s`
     if (!is_str(fp)) {
         if (is_int(fp))
-            len = u_int2str(fp->u.i, temp_s);
+            len = u_int2str(fp->i, temp_s);
         else if (is_flt(fp))
-            len = u_flt2str(fp->u.f, temp_s);
+            len = u_flt2str(fp->f, temp_s);
         else
             return 0;
         s = temp_s;
     } else {
-        s = fp->u.s->str;
-        len = s_len(fp->u.s);
+        s = fp->s->str;
+        len = s_len(fp->s);
     }
 
     // Pattern `p`
@@ -456,31 +459,31 @@ static int xsub(rf_val *fp, int argc, int flags) {
         if (is_num(fp+1)) {
             char temp_p[32];
             if (is_int(fp+1))
-                u_int2str(fp[1].u.i, temp_p);
+                u_int2str(fp[1].i, temp_p);
             else if (is_flt(fp+1))
-                u_flt2str(fp[1].u.f, temp_p);
+                u_flt2str(fp[1].f, temp_p);
             p = re_compile(temp_p, PCRE2_ZERO_TERMINATED, 0, &errcode);
         } else if (is_str(fp+1)) {
-            p = re_compile(fp[1].u.s->str, s_len(fp[1].u.s), 0, &errcode);
+            p = re_compile(fp[1].s->str, s_len(fp[1].s), 0, &errcode);
         } else {
             return 0;
         }
     } else {
-        p = fp[1].u.r;
+        p = fp[1].r;
     }
 
     // If replacement `r` provided
     if (argc > 2) {
         if (!is_str(fp+2)) {
             if (is_int(fp+2))
-                u_int2str(fp[2].u.i, temp_r);
+                u_int2str(fp[2].i, temp_r);
             else if (is_flt(fp+2))
-                u_flt2str(fp[2].u.f, temp_r);
+                u_flt2str(fp[2].f, temp_r);
             else
                 temp_r[0] = '\0';
             r = temp_r;
         } else {
-            r = fp[2].u.s->str;
+            r = fp[2].s->str;
         }
     }
 
@@ -547,11 +550,11 @@ LIB_FN(hex) {
 static int allxcase(rf_val *fp, int c) {
     if (!is_str(fp))
         return 0;
-    size_t len = s_len(fp->u.s);
+    size_t len = s_len(fp->s);
     char str[len + 1];
     for (int i = 0; i < len; ++i) {
-        str[i] = c ? toupper(fp->u.s->str[i])
-                   : tolower(fp->u.s->str[i]);
+        str[i] = c ? toupper(fp->s->str[i])
+                   : tolower(fp->s->str[i]);
     }
     str[len] = '\0';
     set_str(fp-1, s_new(str, len));
@@ -570,9 +573,9 @@ LIB_FN(upper) { return allxcase(fp, 1); }
 LIB_FN(num) {
     if (!is_str(fp)) {
         if (is_int(fp)) {
-            set_int(fp-1, fp->u.i);
+            set_int(fp-1, fp->i);
         } else if (is_flt(fp)) {
-            set_flt(fp-1, fp->u.f);
+            set_flt(fp-1, fp->f);
         } else {
             set_int(fp-1, 0);
         }
@@ -583,7 +586,7 @@ LIB_FN(num) {
         base = intval(fp+1);
     char *end;
     errno = 0;
-    rf_int i = u_str2i64(fp->u.s->str, &end, base);
+    rf_int i = u_str2i64(fp->s->str, &end, base);
     if (errno == ERANGE || isdigit(*end))
         goto ret_flt;
     if (*end == '.') {
@@ -598,7 +601,7 @@ LIB_FN(num) {
     set_int(fp-1, i);
     return 1;
 ret_flt:
-    set_flt(fp-1, u_str2d(fp->u.s->str, &end, base));
+    set_flt(fp-1, u_str2d(fp->s->str, &end, base));
     return 1;
 }
 
@@ -614,15 +617,15 @@ LIB_FN(split) {
     char temp_s[20];
     if (!is_str(fp)) {
         if (is_int(fp))
-            len = u_int2str(fp->u.i, temp_s);
+            len = u_int2str(fp->i, temp_s);
         else if (is_flt(fp))
-            len = u_flt2str(fp->u.f, temp_s);
+            len = u_flt2str(fp->f, temp_s);
         else
             return 0;
         str = temp_s;
     } else {
-        str = fp->u.s->str;
-        len = s_len(fp->u.s);
+        str = fp->s->str;
+        len = s_len(fp->s);
     }
     rf_str *s;
     rf_tab *t = malloc(sizeof(rf_tab));
@@ -634,19 +637,19 @@ LIB_FN(split) {
     } else if (!is_re(fp+1)) {
         char temp[32];
         switch (fp[1].type) {
-        case TYPE_INT: u_int2str(fp[1].u.i, temp); break;
-        case TYPE_FLT: u_flt2str(fp[1].u.f, temp); break;
+        case TYPE_INT: u_int2str(fp[1].i, temp); break;
+        case TYPE_FLT: u_flt2str(fp[1].f, temp); break;
         case TYPE_STR:
-            if (!s_len(fp[1].u.s))
+            if (!s_len(fp[1].s))
                 goto split_chars;
-            delim = re_compile(fp[1].u.s->str, s_len(fp[1].u.s), 0, &errcode);
+            delim = re_compile(fp[1].s->str, s_len(fp[1].s), 0, &errcode);
             goto do_split;
         default:
             goto split_chars;
         }
         delim = re_compile(temp, PCRE2_ZERO_TERMINATED, 0, &errcode);
     } else {
-        delim = fp[1].u.r;
+        delim = fp[1].r;
     }
 
     // Split on regular expression
@@ -680,7 +683,7 @@ do_split: {
             s = s_new(p, l);
             p += l + 1;
             n -= l + 1;
-            t_insert_int(t, i++, &(rf_val) {TYPE_STR, .u.s = s});
+            t_insert_int(t, i++, &(rf_val) {TYPE_STR, .s = s});
         }
     }
     set_tab(fp-1, t);
@@ -691,7 +694,7 @@ do_split: {
 split_chars: {
     for (rf_int i = 0; i < len; ++i) {
         s = s_new(str + i, 1);
-        t_insert_int(t, i, &(rf_val) {TYPE_STR, .u.s = s});
+        t_insert_int(t, i, &(rf_val) {TYPE_STR, .s = s});
     }
     set_tab(fp-1, t);
     return 1;
@@ -791,15 +794,15 @@ static void register_funcs(rf_htab *g) {
     prng_seed(&prngs, time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
         rf_val *fn = malloc(sizeof(rf_val));
-        *fn = (rf_val) {TYPE_CFN, .u.cfn = &lib_fn[i].fn};
+        *fn = (rf_val) {TYPE_CFN, .cfn = &lib_fn[i].fn};
         ht_insert_cstr(g, lib_fn[i].name, fn);
     }
 }
 
 static void register_streams(rf_htab *g) {
-    ht_insert_cstr(g, "stdin", &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdin, FH_STD}});
-    ht_insert_cstr(g, "stdout", &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stdout, FH_STD}});
-    ht_insert_cstr(g, "stderr", &(rf_val){TYPE_FH, .u.fh = &(rf_fh){stderr, FH_STD}});
+    ht_insert_cstr(g, "stdin", &(rf_val){TYPE_FH, .fh = &(rf_fh){stdin, FH_STD}});
+    ht_insert_cstr(g, "stdout", &(rf_val){TYPE_FH, .fh = &(rf_fh){stdout, FH_STD}});
+    ht_insert_cstr(g, "stderr", &(rf_val){TYPE_FH, .fh = &(rf_fh){stderr, FH_STD}});
 }
 
 void l_register_builtins(rf_htab *g) {

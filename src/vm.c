@@ -32,7 +32,7 @@ static rf_stack  stack[VM_STACK_SIZE];
 // "Polymorphic" arithmetic (add, sub, mul)
 #define num_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
-        l->u.i = (l->u.i op r->u.i); \
+        l->i = (l->i op r->i); \
     } else { \
         set_flt(l, (numval(l) op numval(r))); \
     }
@@ -40,25 +40,25 @@ static rf_stack  stack[VM_STACK_SIZE];
 // Return boolean result of value (0/1)
 static inline int test(rf_val *v) {
     switch (v->type) {
-    case TYPE_INT: return !!(v->u.i);
-    case TYPE_FLT: return !!(v->u.f);
+    case TYPE_INT: return !!(v->i);
+    case TYPE_FLT: return !!(v->f);
 
     // If entire string is a numeric value, return logical result of
     // the number. Otherwise, return whether the string is longer than
     // 0.
     case TYPE_STR: {
         char *end;
-        rf_flt f = u_str2d(v->u.s->str, &end, 0);
+        rf_flt f = u_str2d(v->s->str, &end, 0);
         if (!*end) {
             // Check for literal '0' character in string
-            if (f == 0.0 && s_haszero(v->u.s))
+            if (f == 0.0 && s_haszero(v->s))
                 return 0;
             else
                 return !!f;
         }
-        return !!s_len(v->u.s);
+        return !!s_len(v->s);
     }
-    case TYPE_TAB: return !!t_logical_size(v->u.t);
+    case TYPE_TAB: return !!t_logical_size(v->t);
     case TYPE_RE:
     case TYPE_RNG:
     case TYPE_RFN:
@@ -102,7 +102,7 @@ Z_UOP(num) {
     case TYPE_FLT:
         break;
     case TYPE_STR:
-        set_flt(v, str2flt(v->u.s));
+        set_flt(v, str2flt(v->s));
         break;
     default:
         set_int(v, 0);
@@ -113,13 +113,13 @@ Z_UOP(num) {
 Z_UOP(neg) {
     switch (v->type) {
     case TYPE_INT:
-        v->u.i = -v->u.i;
+        v->i = -v->i;
         break;
     case TYPE_FLT:
-        v->u.f = -v->u.f;
+        v->f = -v->f;
         break;
     case TYPE_STR:
-        set_flt(v, -str2flt(v->u.s));
+        set_flt(v, -str2flt(v->s));
         break;
     default:
         set_int(v, 0);
@@ -132,30 +132,30 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
 // == and != operators
 #define cmp_eq(l,r,op) \
     if (is_int(l) && is_int(r)) { \
-        l->u.i = (l->u.i op r->u.i); \
+        l->i = (l->i op r->i); \
     } else if (is_null(l) ^ is_null(r)) { \
         set_int(l, !(0 op 0)); \
     } else if (is_str(l) && is_str(r)) { \
-        set_int(l, (s_hash(l->u.s) op s_hash(r->u.s))); \
+        set_int(l, (s_hash(l->s) op s_hash(r->s))); \
     } else if (is_str(l) && !is_str(r)) { \
-        if (!s_len(l->u.s)) { \
+        if (!s_len(l->s)) { \
             set_int(l, !(0 op 0)); \
             return; \
         } \
         char *end; \
-        rf_flt f = u_str2d(l->u.s->str, &end, 0); \
+        rf_flt f = u_str2d(l->s->str, &end, 0); \
         if (*end) { \
             set_int(l, 0); \
         } else { \
             set_int(l, (f op numval(r))); \
         } \
     } else if (!is_str(l) && is_str(r)) { \
-        if (!s_len(r->u.s)) { \
+        if (!s_len(r->s)) { \
             set_int(l, !(0 op 0)); \
             return; \
         } \
         char *end; \
-        rf_flt f = u_str2d(r->u.s->str, &end, 0); \
+        rf_flt f = u_str2d(r->s->str, &end, 0); \
         if (*end) { \
             set_int(l, 0); \
         } else { \
@@ -168,7 +168,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
 // >, <, >= and <= operators
 #define cmp_rel(l,r,op) \
     if (is_int(l) && is_int(r)) { \
-        l->u.i = (l->u.i op r->u.i); \
+        l->i = (l->i op r->i); \
     } else { \
         set_int(l, (numval(l) op numval(r))); \
     }
@@ -190,19 +190,19 @@ Z_UOP(len) {
     //   #x = ⌊log10(x)⌋  + 1 for x > 0
     //        ⌊log10(-x)⌋ + 2 for x < 0
     case TYPE_INT:
-        if (v->u.i == INT64_MIN) {
+        if (v->i == INT64_MIN) {
             l = 20;
         } else {
-            l = v->u.i > 0 ? (rf_int) log10(v->u.i)  + 1 :
-                v->u.i < 0 ? (rf_int) log10(-v->u.i) + 2 : 1;
+            l = v->i > 0 ? (rf_int) log10(v->i)  + 1 :
+                v->i < 0 ? (rf_int) log10(-v->i) + 2 : 1;
         }
-        v->u.i = l;
+        v->i = l;
         return;
     case TYPE_FLT:
-        l = (rf_int) snprintf(NULL, 0, "%g", v->u.f);
+        l = (rf_int) snprintf(NULL, 0, "%g", v->f);
         break;
-    case TYPE_STR: l = s_len(v->u.s); break;
-    case TYPE_TAB: l = t_logical_size(v->u.t); break;
+    case TYPE_STR: l = s_len(v->s); break;
+    case TYPE_TAB: l = t_logical_size(v->t); break;
     case TYPE_RE:   // TODO - extract something from PCRE pattern?
     case TYPE_RNG:  // TODO
     case TYPE_RFN:
@@ -220,23 +220,23 @@ Z_BINOP(cat) {
     char temp_rhs[32];
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: u_int2str(l->u.i, temp_lhs); break;
-        case TYPE_FLT: u_flt2str(l->u.f, temp_lhs); break;
+        case TYPE_INT: u_int2str(l->i, temp_lhs); break;
+        case TYPE_FLT: u_flt2str(l->f, temp_lhs); break;
         default:       temp_lhs[0] = '\0';          break;
         }
         lhs = temp_lhs;
     } else {
-        lhs = l->u.s->str;
+        lhs = l->s->str;
     }
     if (!is_str(r)) {
         switch (r->type) {
-        case TYPE_INT: u_int2str(r->u.i, temp_rhs); break;
-        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
+        case TYPE_INT: u_int2str(r->i, temp_rhs); break;
+        case TYPE_FLT: u_flt2str(r->f, temp_rhs); break;
         default:       temp_rhs[0] = '\0';          break;
         }
         rhs = temp_rhs;
     } else {
-        rhs = r->u.s->str;
+        rhs = r->s->str;
     }
     set_str(l, s_new_concat(lhs, rhs));
 }
@@ -244,21 +244,21 @@ Z_BINOP(cat) {
 static inline rf_int match(rf_val *l, rf_val *r) {
     // Common case: LHS string, RHS regex
     if (is_str(l) && is_re(r))
-        return re_match(l->u.s->str, s_len(l->u.s), r->u.r, 1);
+        return re_match(l->s->str, s_len(l->s), r->r, 1);
     char *lhs;
     size_t len = 0;
     char temp_lhs[32];
     char temp_rhs[32];
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT: len = u_int2str(l->u.i, temp_lhs); break;
-        case TYPE_FLT: len = u_flt2str(l->u.f, temp_lhs); break;
+        case TYPE_INT: len = u_int2str(l->i, temp_lhs); break;
+        case TYPE_FLT: len = u_flt2str(l->f, temp_lhs); break;
         default:       temp_lhs[0] = '\0';                break;
         }
         lhs = temp_lhs;
     } else {
-        lhs = l->u.s->str;
-        len = s_len(l->u.s);
+        lhs = l->s->str;
+        len = s_len(l->s);
     }
     if (!is_re(r)) {
         rf_re *temp_re;
@@ -266,11 +266,11 @@ static inline rf_int match(rf_val *l, rf_val *r) {
         int errcode;
         int capture = 0;
         switch (r->type) {
-        case TYPE_INT: u_int2str(r->u.i, temp_rhs); break;
-        case TYPE_FLT: u_flt2str(r->u.f, temp_rhs); break;
+        case TYPE_INT: u_int2str(r->i, temp_rhs); break;
+        case TYPE_FLT: u_flt2str(r->f, temp_rhs); break;
         case TYPE_STR:
             capture = 1;
-            temp_re = re_compile(r->u.s->str, s_len(r->u.s), 0, &errcode);
+            temp_re = re_compile(r->s->str, s_len(r->s), 0, &errcode);
             goto do_match;
         default:       temp_rhs[0] = '\0'; break;
         }
@@ -287,7 +287,7 @@ do_match:
         re_free(temp_re);
         return res;
     } else {
-        return re_match(lhs, len, r->u.r, 1);
+        return re_match(lhs, len, r->r, 1);
     }
 }
 
@@ -298,9 +298,9 @@ Z_BINOP(idx) {
     char temp[32];
     switch (l->type) {
     case TYPE_INT: {
-        u_int2str(l->u.i, temp);
+        u_int2str(l->i, temp);
         if (is_rng(r)) {
-            set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
+            set_str(l, s_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
             rf_int r1  = intval(r);
             rf_int len = (rf_int) strlen(temp);
@@ -314,9 +314,9 @@ Z_BINOP(idx) {
         break;
     }
     case TYPE_FLT: {
-        u_flt2str(l->u.f, temp);
+        u_flt2str(l->f, temp);
         if (is_rng(r)) {
-            set_str(l, s_substr(temp, r->u.q->from, r->u.q->to, r->u.q->itvl));
+            set_str(l, s_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
             rf_int r1  = intval(r);
             rf_int len = (rf_int) strlen(temp);
@@ -331,21 +331,21 @@ Z_BINOP(idx) {
     }
     case TYPE_STR: {
         if (is_rng(r)) {
-            l->u.s = s_substr(l->u.s->str, r->u.q->from, r->u.q->to, r->u.q->itvl);
+            l->s = s_substr(l->s->str, r->q->from, r->q->to, r->q->itvl);
         } else {
             rf_int r1  = intval(r);
-            rf_int len = (rf_int) s_len(l->u.s);
+            rf_int len = (rf_int) s_len(l->s);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
                 set_null(l);
             else
-                l->u.s = s_new(&l->u.s->str[r1], 1);
+                l->s = s_new(&l->s->str[r1], 1);
         }
         break;
     }
     case TYPE_TAB:
-        *l = *t_lookup(l->u.t, r, 0);
+        *l = *t_lookup(l->t, r, 0);
         break;
     default:
         set_null(l);
@@ -359,47 +359,47 @@ static inline void new_iter(rf_val *set) {
     iter = new;
     switch (set->type) {
     case TYPE_FLT:
-        set->u.i = (rf_int) set->u.f;
+        set->i = (rf_int) set->f;
         // Fall-through
     case TYPE_INT:
         iter->keys = NULL;
         iter->t = LOOP_RNG;
         iter->st = 0;
-        if (set->u.i >= 0) {
-            iter->n = set->u.i + 1; // Inclusive
+        if (set->i >= 0) {
+            iter->n = set->i + 1; // Inclusive
             iter->set.itvl = 1;
         } else {
-            iter->n = -(set->u.i) + 1; // Inclusive
+            iter->n = -(set->i) + 1; // Inclusive
             iter->set.itvl = -1;
         }
         break;
     case TYPE_STR:
         iter->t = LOOP_STR;
-        iter->n = s_len(set->u.s);
+        iter->n = s_len(set->s);
         iter->keys = NULL;
-        iter->set.str = set->u.s->str;
+        iter->set.str = set->s->str;
         break;
     case TYPE_RE:
         err("cannot iterate over regular expression");
     case TYPE_RNG:
         iter->keys = NULL;
         iter->t = LOOP_RNG;
-        iter->set.itvl = set->u.q->itvl;
+        iter->set.itvl = set->q->itvl;
         if (iter->set.itvl > 0)
-            iter->on = (set->u.q->to - set->u.q->from) + 1;
+            iter->on = (set->q->to - set->q->from) + 1;
         else
-            iter->on = (set->u.q->from - set->u.q->to) + 1;
+            iter->on = (set->q->from - set->q->to) + 1;
         if (iter->on <= 0)
             iter->n = UINT64_MAX; // TODO "Infinite" loop
         else
             iter->n = (rf_uint) ceil(fabs(iter->on / (double) iter->set.itvl));
-        iter->st = set->u.q->from;
+        iter->st = set->q->from;
         break;
     case TYPE_TAB:
         iter->t = LOOP_TAB;
-        iter->on = iter->n = t_logical_size(set->u.t);
-        iter->keys = t_collect_keys(set->u.t);
-        iter->set.tab = set->u.t;
+        iter->on = iter->n = t_logical_size(set->t);
+        iter->keys = t_collect_keys(set->t);
+        iter->set.tab = set->t;
         break;
     case TYPE_RFN:
     case TYPE_CFN:
@@ -425,11 +425,11 @@ static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv
     for (rf_int i = 0; i < rf_argc; ++i) {
         rf_val v = (rf_val) {
             TYPE_STR,
-            .u.s = s_new(rf_argv[i], strlen(rf_argv[i]))
+            .s = s_new(rf_argv[i], strlen(rf_argv[i]))
         };
         rf_int idx = i - arg0;
         if (idx < 0)
-            ht_insert_val(t->h, &(rf_val){TYPE_INT, .u.i = idx}, &v);
+            ht_insert_val(t->h, &(rf_val){TYPE_INT, .i = idx}, &v);
         else
             t_insert_int(t, idx, &v);
     }
@@ -440,7 +440,7 @@ static inline int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
 #define add_user_funcs() \
     for (int i = 0; i < e->nf; ++i) { \
         if (e->fn[i]->name->hash) { \
-            ht_insert_str(&globals, e->fn[i]->name, &(rf_val){TYPE_RFN, .u.fn = e->fn[i]} \
+            ht_insert_str(&globals, e->fn[i]->name, &(rf_val){TYPE_RFN, .fn = e->fn[i]} \
             ); \
         } \
     }
@@ -452,7 +452,7 @@ int z_exec(rf_env *e) {
     t_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, e->arg0, e->argc, e->argv);
-    ht_insert_cstr(&globals, "arg", &(rf_val){TYPE_TAB, .u.t = &argv});
+    ht_insert_cstr(&globals, "arg", &(rf_val){TYPE_TAB, .t = &argv});
     l_register_builtins(&globals);
     // Add user-defined functions to the global hash table
     add_user_funcs();
@@ -536,22 +536,22 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         switch (iter->t) {
         case LOOP_RNG:
             if (is_null(iter->v))
-                *iter->v = (rf_val) {TYPE_INT, .u.i = iter->st};
+                *iter->v = (rf_val) {TYPE_INT, .i = iter->st};
             else
-                iter->v->u.i += iter->set.itvl;
+                iter->v->i += iter->set.itvl;
             break;
         case LOOP_STR:
             if (iter->k != NULL) {
                 if (is_null(iter->k)) {
                     set_int(iter->k, 0);
                 } else {
-                    iter->k->u.i += 1;
+                    iter->k->i += 1;
                 }
             }
             if (!is_null(iter->v)) {
-                iter->v->u.s = s_new(iter->set.str++, 1);
+                iter->v->s = s_new(iter->set.str++, 1);
             } else {
-                *iter->v = (rf_val) {TYPE_STR, .u.s = s_new(iter->set.str++, 1)};
+                *iter->v = (rf_val) {TYPE_STR, .s = s_new(iter->set.str++, 1)};
             }
             break;
         case LOOP_TAB:
@@ -566,13 +566,13 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 if (is_null(iter->k)) {
                     set_int(iter->k, 0);
                 } else {
-                    iter->k->u.i += 1;
+                    iter->k->i += 1;
                 }
             }
             if (is_null(iter->v)) {
-                *iter->v = (rf_val) {TYPE_INT, .u.i = *iter->set.code++};
+                *iter->v = (rf_val) {TYPE_INT, .i = *iter->set.code++};
             } else {
-                iter->v->u.i = *iter->set.code++;
+                iter->v->i = *iter->set.code++;
             }
             break;
         default: break;
@@ -660,10 +660,10 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // element with a copy of the value.
 #define pre(x) \
     switch (sp[-1].a->type) { \
-    case TYPE_INT: sp[-1].a->u.i += x; break; \
-    case TYPE_FLT: sp[-1].a->u.f += x; break; \
+    case TYPE_INT: sp[-1].a->i += x; break; \
+    case TYPE_FLT: sp[-1].a->f += x; break; \
     case TYPE_STR: \
-        set_flt(sp[-1].a, str2flt(sp[-1].a->u.s) + x); \
+        set_flt(sp[-1].a, str2flt(sp[-1].a->s) + x); \
         break; \
     default: \
         set_int(sp[-1].a, x); \
@@ -684,10 +684,10 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     tp = sp[-1].a; \
     sp[-1].v = *tp; \
     switch (tp->type) { \
-    case TYPE_INT: tp->u.i += x; break; \
-    case TYPE_FLT: tp->u.f += x; break; \
+    case TYPE_INT: tp->i += x; break; \
+    case TYPE_FLT: tp->f += x; break; \
     case TYPE_STR: \
-        set_flt(tp, str2flt(tp->u.s) + x); \
+        set_flt(tp, str2flt(tp->s) + x); \
         break; \
     default: \
         set_int(tp, x); \
@@ -756,7 +756,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // ht_lookup() will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-#define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].u.s)
+#define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].s)
 
     z_case(GBLA)  gbla(ip[1]); ip += 2; z_break;
     z_case(GBLA0) gbla(0);     ++ip;    z_break;
@@ -769,7 +769,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the
 // value, e.g. arithmetic.
-#define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].u.s)
+#define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].s)
 
     z_case(GBLV)  gblv(ip[1]); ip += 2; z_break;
     z_case(GBLV0) gblv(0);     ++ip;    z_break;
@@ -802,7 +802,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             err("attempt to call non-function value");
         if (is_rfn(&sp[-nargs].v)) {
             sp -= nargs;
-            rf_fn *fn = sp->v.u.fn;
+            rf_fn *fn = sp->v.fn;
             int ar1 = sp - fp - 1;  // Current frame's "arity"
             int ar2 = fn->arity;    // Callee's arity
 
@@ -870,7 +870,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         // User-defined functions
         if (is_rfn(&sp[-nargs-1].v)) {
 
-            rf_fn *fn = sp[-nargs-1].v.u.fn;
+            rf_fn *fn = sp[-nargs-1].v.fn;
             arity = fn->arity;
 
             // If user called function with too few arguments,
@@ -906,7 +906,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             
         // Built-in/C functions
         else {
-            c_fn *fn = sp[-nargs-1].v.u.cfn;
+            c_fn *fn = sp[-nargs-1].v.cfn;
             arity = fn->arity;
 
             // Most library functions are somewhat variadic; their
@@ -949,14 +949,14 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     tp = v_newtab(x); \
     for (int i = (x) - 1; i >= 0; --i) { \
         --sp; \
-        t_insert_int(tp->u.t, i, &sp->v); \
+        t_insert_int(tp->t, i, &sp->v); \
     } \
     sp++->v = *tp
 
     z_case(TAB0) new_tab(0);     ++ip;    z_break;
     z_case(TAB)  new_tab(ip[1]); ip += 2; z_break;
     z_case(TABK)
-        new_tab(k[ip[1]].u.i);
+        new_tab(k[ip[1]].i);
         ip += 2;
         z_break;
 
@@ -974,7 +974,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 *sp[i+1].a = *v_newtab(0);
                 // Fall-through
             case TYPE_TAB:
-                sp[i+1].v = *t_lookup(sp[i].a->u.t, &sp[i+1].v, 0);
+                sp[i+1].v = *t_lookup(sp[i].a->t, &sp[i+1].v, 0);
                 break;
 
             // Dereference and call z_idx().
@@ -1011,7 +1011,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
                 *tp = *v_newtab(0);
                 // Fall-through
             case TYPE_TAB:
-                sp[i+1].a = t_lookup(tp->u.t, &sp[i+1].v, 1);
+                sp[i+1].a = t_lookup(tp->t, &sp[i+1].v, 1);
                 break;
 
             // IDXA is invalid for all other types
@@ -1042,7 +1042,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             *tp = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].a = t_lookup(tp->u.t, &sp[-1].v, 1);
+            sp[-2].a = t_lookup(tp->t, &sp[-1].v, 1);
             break;
 
         // IDXA is invalid for all other types
@@ -1078,7 +1078,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             *sp[-2].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].v = *t_lookup(sp[-2].a->u.t, &sp[-1].v, 0);
+            sp[-2].v = *t_lookup(sp[-2].a->t, &sp[-1].v, 0);
             --sp;
             ++ip;
             break;
@@ -1111,7 +1111,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             *tp = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].a = ht_lookup_val(tp->u.t->h, &sp[-1].v);
+            sp[-2].a = ht_lookup_val(tp->t->h, &sp[-1].v);
             break;
         default:
             err("invalid assignment");
@@ -1133,7 +1133,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             *sp[-2].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].v = *ht_lookup_val(sp[-2].a->u.t->h, &sp[-1].v);
+            sp[-2].v = *ht_lookup_val(sp[-2].a->t->h, &sp[-1].v);
             --sp;
             ++ip;
             break;
@@ -1172,7 +1172,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     rf_int to   = rng->to = (t); \
     rf_int itvl = (i); \
     rng->itvl   = itvl ? itvl : from > to ? -1 : 1; \
-    s = (rf_val) {TYPE_RNG, .u.q = rng}; \
+    s = (rf_val) {TYPE_RNG, .q = rng}; \
 }
     // x..y
     z_case(RNG)

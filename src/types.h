@@ -99,7 +99,10 @@ typedef struct {
     // an implicit type tag in the VM stack object. This is necessary
     // for distinguishing values from addresses on the VM stack for
     // instructions which operate on both. E.g. array subscripting.
-    uintptr_t type;
+    union {
+        uint8_t   type;
+        uintptr_t ptr_type;
+    };
     union {
         rf_int  i;
         rf_flt  f;
@@ -110,25 +113,25 @@ typedef struct {
         rf_tab *t;
         rf_fn  *fn;
         c_fn   *cfn;
-    } u;
+    };
 } rf_val;
 
 // Assign value x to rf_val *p
 #define set_null(p)   (p)->type = TYPE_NULL
-#define set_int(p, x) *(p) = (rf_val) {TYPE_INT, .u.i = (x)}
-#define set_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .u.f = (x)}
-#define set_str(p, x) *(p) = (rf_val) {TYPE_STR, .u.s = (x)}
-#define set_tab(p, x) *(p) = (rf_val) {TYPE_TAB, .u.t = (x)}
+#define set_int(p, x) *(p) = (rf_val) {TYPE_INT, .i = (x)}
+#define set_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .f = (x)}
+#define set_str(p, x) *(p) = (rf_val) {TYPE_STR, .s = (x)}
+#define set_tab(p, x) *(p) = (rf_val) {TYPE_TAB, .t = (x)}
 
-#define numval(x) (is_int(x) ? (x)->u.i : \
-                   is_flt(x) ? (x)->u.f : \
-                   is_str(x) ? str2flt((x)->u.s) : 0)
-#define intval(x) (is_int(x) ? (x)->u.i : \
-                   is_flt(x) ? (rf_int) (x)->u.f : \
-                   is_str(x) ? str2int((x)->u.s) : 0)
-#define fltval(x) (is_flt(x) ? (x)->u.f : \
-                   is_int(x) ? (rf_flt) (x)->u.i : \
-                   is_str(x) ? str2flt((x)->u.s) : 0)
+#define numval(x) (is_int(x) ? (x)->i : \
+                   is_flt(x) ? (x)->f : \
+                   is_str(x) ? str2flt((x)->s) : 0)
+#define intval(x) (is_int(x) ? (x)->i : \
+                   is_flt(x) ? (rf_int) (x)->f : \
+                   is_str(x) ? str2int((x)->s) : 0)
+#define fltval(x) (is_flt(x) ? (x)->f : \
+                   is_int(x) ? (rf_flt) (x)->i : \
+                   is_str(x) ? str2flt((x)->s) : 0)
 
 static inline rf_int str2int(rf_str *s) {
     char *end;

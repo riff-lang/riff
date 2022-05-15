@@ -3,7 +3,7 @@
 
 rf_val *v_newnull(void) {
     rf_val *v = malloc(sizeof(rf_val));
-    *v = (rf_val) {TYPE_NULL, .u.s = NULL};
+    *v = (rf_val) {TYPE_NULL, .s = NULL};
     return v;
 }
 
@@ -15,13 +15,13 @@ rf_val *v_newtab(uint32_t cap) {
         t->cap = cap;
         t->v = calloc(cap, sizeof(rf_val *));
     }
-    *v = (rf_val) {TYPE_TAB, .u.t = t};
+    *v = (rf_val) {TYPE_TAB, .t = t};
     return v;
 }
 
 rf_val *v_copy(rf_val *v) {
     rf_val *copy = malloc(sizeof(rf_val));
     copy->type = v->type;
-    copy->u = v->u;
+    copy->i = v->i;
     return copy;
 }

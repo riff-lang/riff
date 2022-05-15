@@ -155,7 +155,7 @@ static void c_pushk(rf_code *c, int i) {
 
 void c_fn_constant(rf_code *c, rf_fn *fn) {
     m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk++] = (rf_val) {TYPE_RFN, .u.fn = fn};
+    c->k[c->nk++] = (rf_val) {TYPE_RFN, .fn = fn};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     c_pushk(c, c->nk - 1);
@@ -169,7 +169,7 @@ void c_constant(rf_code *c, rf_token *tk) {
         return;
     } else if (tk->kind == TK_RE) {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_RE, .u.r = tk->lexeme.r};
+        c->k[c->nk++] = (rf_val) {TYPE_RE, .r = tk->lexeme.r};
         c_pushk(c, c->nk - 1);
         return;
     }
@@ -180,7 +180,7 @@ void c_constant(rf_code *c, rf_token *tk) {
         case TK_FLT:
             if (c->k[i].type != TYPE_FLT)
                 break;
-            else if (tk->lexeme.f == c->k[i].u.f) {
+            else if (tk->lexeme.f == c->k[i].f) {
                 c_pushk(c, i);
                 return;
             }
@@ -188,7 +188,7 @@ void c_constant(rf_code *c, rf_token *tk) {
         case TK_INT:
             if (c->k[i].type != TYPE_INT)
                 break;
-            else if (tk->lexeme.i == c->k[i].u.i) {
+            else if (tk->lexeme.i == c->k[i].i) {
                 c_pushk(c, i);
                 return;
             }
@@ -196,7 +196,7 @@ void c_constant(rf_code *c, rf_token *tk) {
         case TK_STR:
             if (c->k[i].type != TYPE_STR)
                 break;
-            else if (s_eq(tk->lexeme.s, c->k[i].u.s)) {
+            else if (s_eq(tk->lexeme.s, c->k[i].s)) {
                 c_pushk(c, i);
                 return;
             }
@@ -209,7 +209,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     switch (tk->kind) {
     case TK_FLT:
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_FLT, .u.f = tk->lexeme.f};
+        c->k[c->nk++] = (rf_val) {TYPE_FLT, .f = tk->lexeme.f};
         break;
     case TK_INT: {
         rf_int i = tk->lexeme.i;
@@ -229,7 +229,7 @@ void c_constant(rf_code *c, rf_token *tk) {
                 return;
             } else {
                 m_growarray(c->k, c->nk, c->kcap, rf_val);
-                c->k[c->nk++] = (rf_val) {TYPE_INT, .u.i = i};
+                c->k[c->nk++] = (rf_val) {TYPE_INT, .i = i};
             }
             break;
         }
@@ -238,7 +238,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     case TK_STR: case TK_ID: {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
         rf_str *s = s_new(tk->lexeme.s->str, s_len(tk->lexeme.s));
-        c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
+        c->k[c->nk++] = (rf_val) {TYPE_STR, .s = s};
         break;
     }
     default: break;
@@ -281,7 +281,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
 
     // Search for existing symbol
     for (int i = 0; i < c->nk; ++i) {
-        if (c->k[i].type == TYPE_STR && s_eq(tk->lexeme.s, c->k[i].u.s)) {
+        if (c->k[i].type == TYPE_STR && s_eq(tk->lexeme.s, c->k[i].s)) {
             if (mode)
                 push_global_addr(c, i);
             else
@@ -291,7 +291,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
     }
     rf_str *s = s_new(tk->lexeme.s->str, s_len(tk->lexeme.s));
     m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
+    c->k[c->nk++] = (rf_val) {TYPE_STR, .s = s};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     if (mode) push_global_addr(c, c->nk - 1);
@@ -345,7 +345,7 @@ void c_table(rf_code *c, int n) {
         for (int i = 0; i < c->nk; ++i) {
             if (c->k[i].type != TYPE_INT)
                 continue;
-            if (c->k[i].u.i == n) {
+            if (c->k[i].i == n) {
                 push((uint8_t) i);
                 return;
             }
@@ -353,7 +353,7 @@ void c_table(rf_code *c, int n) {
 
         // Otherwise, add `n` to constants pool
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_INT, .u.i = (rf_int) n};
+        c->k[c->nk++] = (rf_val) {TYPE_INT, .i = (rf_int) n};
         push((uint8_t) c->nk - 1);
     }
 }

@@ -341,7 +341,7 @@ redir_flt:
         case 's':
             if (argc--) {
                 if (is_str(argv+arg)) {
-                    fmt_str(buf, n, argv[arg].u.s->str);
+                    fmt_str(buf, n, argv[arg].s->str);
                 } else if (is_int(argv+arg)) {
                     goto redir_int;
                 } else if (is_flt(argv+arg)) {
