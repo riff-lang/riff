@@ -452,8 +452,7 @@ static int read_id(rf_lexer *x, rf_token *tk) {
         ++count;
         adv();
     }
-    rf_str *s = s_new(start, count);
-    tk->lexeme.s = s;
+    tk->lexeme.s = s_new(start, count);
     return TK_ID;
 }
 

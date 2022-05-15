@@ -1037,7 +1037,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
         switch (tp->type) {
 
-        // Create array if sp[-2].a is an uninitialized variable
+        // Create table if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
             *tp = *v_newtab(0);
             // Fall-through
@@ -1095,6 +1095,50 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             err("attempt to subscript a function");
         default:
             break;
+        }
+        z_break;
+
+    z_case(SIDXA)
+        if (sp[-2].t <= TYPE_CFN)
+            tp = &sp[-2].v;
+        else
+            tp = sp[-2].a;
+
+        switch (tp->type) {
+
+        // Create table if sp[-2].a is an uninitialized variable
+        case TYPE_NULL:
+            *tp = *v_newtab(0);
+            // Fall-through
+        case TYPE_TAB:
+            sp[-2].a = ht_lookup_val(tp->u.t->h, &sp[-1].v);
+            break;
+        default:
+            err("invalid assignment");
+        }
+        --sp;
+        ++ip;
+        z_break;
+
+    z_case(SIDXV)
+        if (sp[-2].t <= TYPE_CFN) {
+            binop(idx);
+            z_break;
+        }
+
+        switch (sp[-2].a->type) {
+
+        // Create table if sp[-2].a is an uninitialized variable
+        case TYPE_NULL:
+            *sp[-2].a = *v_newtab(0);
+            // Fall-through
+        case TYPE_TAB:
+            sp[-2].v = *ht_lookup_val(sp[-2].a->u.t->h, &sp[-1].v);
+            --sp;
+            ++ip;
+            break;
+        default:
+            err("invalid member access (non-table value)");
         }
         z_break;
 

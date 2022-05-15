@@ -196,7 +196,7 @@ void c_constant(rf_code *c, rf_token *tk) {
         case TK_STR:
             if (c->k[i].type != TYPE_STR)
                 break;
-            else if (tk->lexeme.s->hash == c->k[i].u.s->hash) {
+            else if (s_eq(tk->lexeme.s, c->k[i].u.s)) {
                 c_pushk(c, i);
                 return;
             }
@@ -235,7 +235,7 @@ void c_constant(rf_code *c, rf_token *tk) {
         }
         break;
     }
-    case TK_STR: {
+    case TK_STR: case TK_ID: {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
         rf_str *s = s_new(tk->lexeme.s->str, s_len(tk->lexeme.s));
         c->k[c->nk++] = (rf_val) {TYPE_STR, .u.s = s};
@@ -281,10 +281,11 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
 
     // Search for existing symbol
     for (int i = 0; i < c->nk; ++i) {
-        if (c->k[i].type == TYPE_STR &&
-            tk->lexeme.s->hash == c->k[i].u.s->hash) {
-            if (mode) push_global_addr(c, i);
-            else      push_global_val(c, i);
+        if (c->k[i].type == TYPE_STR && s_eq(tk->lexeme.s, c->k[i].u.s)) {
+            if (mode)
+                push_global_addr(c, i);
+            else
+                push_global_val(c, i);
             return;
         }
     }
@@ -372,6 +373,10 @@ void c_index(rf_code *c, int n, int type) {
             push((uint8_t) n);
         }
     }
+}
+
+void c_str_index(rf_code *c, int type) {
+    push(type ? OP_SIDXA : OP_SIDXV);
 }
 
 // TODO this function will be used to evaluate infix expression

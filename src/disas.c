@@ -214,18 +214,10 @@ void d_prog(rf_env *e) {
            e->main.code->n);
     d_code_obj(e->main.code, w);
     for (int i = 0; i < e->nf; ++i) {
-        printf("\n");
-        if (e->fn[i]->name->hash) {
-            printf("fn %s @ %p -> %d bytes\n",
-                   e->fn[i]->name->str,
-                   e->fn[i]->code,
-                   e->fn[i]->code->n);
-        } else {
-            printf("%s @ %p -> %d bytes\n",
-                   e->fn[i]->name->str,
-                   e->fn[i]->code,
-                   e->fn[i]->code->n);
-        }
+        printf("\nfn %s @ %p -> %d bytes\n",
+               e->fn[i]->name->str,
+               e->fn[i],
+               e->fn[i]->code->n);
         d_code_obj(e->fn[i]->code, w);
     }
 }

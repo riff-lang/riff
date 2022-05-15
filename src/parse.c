@@ -82,7 +82,7 @@ static void consume_mode(rf_parser *y, int mode, int tk, const char *msg) {
 // LBP for non-prefix operators
 static int lbp(int tk) {
     switch (tk) {
-    case '(': case'[':
+    case '.': case '(': case'[':
     case TK_INC: case TK_DEC:     return 16;
     case TK_POW:                  return 15;
     case '*': case '/': case '%': return 13;
@@ -115,7 +115,7 @@ static int lbop(int tk) {
     return tk == '#' || tk == '%' || tk == '&' || tk == '(' ||
            tk == '*' || tk == '+' || tk == '-' || tk == '/' ||
            tk == '<' || tk == '>' || tk == '^' || tk == '|' ||
-           tk == '[' || tk == '~' ||
+           tk == '.' || tk == '[' || tk == '~' ||
            tk == TK_AND || tk == TK_EQ  || tk == TK_NE ||
            tk == TK_GE  || tk == TK_LE  || tk == TK_OR ||
            tk == TK_SHL || tk == TK_SHR || tk == TK_NMATCH;
@@ -150,8 +150,7 @@ static int resolve_local(rf_parser *y, rf_str *s) {
     i -= !!y->fx;
 
     for (; i >= 0; --i) {
-        if (y->lcl[i].id->hash == s->hash &&
-            y->lcl[i].d <= y->ld)
+        if (s_eq(y->lcl[i].id, s) && y->lcl[i].d <= y->ld)
             return i;
     }
     return -1;
@@ -178,7 +177,7 @@ static void identifier(rf_parser *y, uint32_t flags) {
     if ((!(flags & EXPR_FIELD) || flags & EXPR_UNARY) &&
             (is_incdec(y->x->la.kind) ||
              is_asgmt(y->x->la.kind)  ||
-             LA_KIND('['))) {
+             LA_KIND('.') || LA_KIND('['))) {
         if (scope >= 0)
             c_local(y->c, scope, 1);
         else
@@ -271,11 +270,20 @@ static int paren_expr_list(rf_parser *y, int c) {
     return n;
 }
 
-// Retrieve index of a set (string/table, but works for numbers as well)
+// Index into set w/ member access syntax
+static void member_access(rf_parser *y, uint32_t flags) {
+    if (!TK_KIND(TK_ID))
+        err(y, "expected identifier in member access expression");
+    c_constant(y->c, &y->x->tk);
+    adv_mode(LEX_LED);
+    c_str_index(y->c, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['));
+}
+
+// Index into set w/ subscript expression
 static void subscript(rf_parser *y, uint32_t flags) {
     int n = paren_expr_list(y, ']');
     consume_mode(y, LEX_LED, ']', "expected ']' following subscript expression");
-    c_index(y->c, n, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('['));
+    c_index(y->c, n, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['));
 }
 
 static void call(rf_parser *y) {
@@ -285,18 +293,16 @@ static void call(rf_parser *y) {
     push((uint8_t) n);
 }
 
-// TODO Support arbitrary indexing a la C99 designators
 static void table(rf_parser *y, int tk) {
     int n = expr_list(y, tk);
     consume_mode(y, LEX_LED, tk, "expected closing brace/bracket");
     c_table(y->c, n);
 }
 
-// Anonymous functions in expressions, e.g.
-//   f = fn () {...}
+// Function literals
 static void anon_fn(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
-    rf_str *name = s_new("<anonymous fn>", 14);
+    rf_str *name = s_new("<anonymous>", 11);
     f_init(f, name);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
@@ -453,6 +459,10 @@ static int led(rf_parser *y, uint32_t flags, int p, int tk) {
         set(ox);
         adv();
         logical(y, flags & ~EXPR_REF, tk);
+        return y->x->tk.kind;
+    case '.':
+        adv();
+        member_access(y, flags);
         return y->x->tk.kind;
     case '[':
         adv();
@@ -659,7 +669,7 @@ static void local_fn(rf_parser *y) {
     int idx = resolve_local(y, id);
 
     // Create string for disassembly
-    rf_str *fn_name = s_new_concat("local fn ", y->x->tk.lexeme.s->str);
+    rf_str *fn_name = s_new_concat("local ", y->x->tk.lexeme.s->str);
 
     // If the identifier doesn't already exist as a local at the
     // current scope, add a new local
