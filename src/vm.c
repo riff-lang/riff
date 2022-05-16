@@ -136,7 +136,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
     } else if (is_null(l) ^ is_null(r)) { \
         set_int(l, !(0 op 0)); \
     } else if (is_str(l) && is_str(r)) { \
-        set_int(l, (s_hash(l->s) op s_hash(r->s))); \
+        set_int(l, ((l->s) op (r->s))); \
     } else if (is_str(l) && !is_str(r)) { \
         if (!s_len(l->s)) { \
             set_int(l, !(0 op 0)); \
