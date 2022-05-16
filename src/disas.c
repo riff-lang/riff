@@ -208,16 +208,19 @@ void d_prog(rf_env *e) {
         w = w < fw ? fw : w;
     }
 
-    printf("source:%s @ %p -> %d bytes\n",
+    printf("source:%s @ %p -> %d %s\n",
            e->pname,
-           e->main.code,
-           e->main.code->n);
+           &e->main,
+           e->main.code->n,
+           e->main.code->n == 1 ? "byte" : "bytes");
     d_code_obj(e->main.code, w);
     for (int i = 0; i < e->nf; ++i) {
-        printf("\nfn %s @ %p -> %d bytes\n",
-               e->fn[i]->name->str,
-               e->fn[i],
-               e->fn[i]->code->n);
+        rf_fn *f = e->fn[i];
+        printf("\nfn %s @ %p -> %d %s\n",
+               f->name->hash ? f->name->str : "<anonymous>",
+               f,
+               f->code->n,
+               f->code->n == 1 ? "byte" : "bytes");
         d_code_obj(e->fn[i]->code, w);
     }
 }

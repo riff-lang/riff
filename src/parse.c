@@ -302,7 +302,7 @@ static void table(rf_parser *y, int tk) {
 // Function literals
 static void anon_fn(rf_parser *y) {
     rf_fn *f = malloc(sizeof(rf_fn));
-    rf_str *name = s_new("<anonymous>", 11);
+    rf_str *name = s_new("", 0);
     f_init(f, name);
     m_growarray(y->e->fn, y->e->nf, y->e->fcap, rf_fn *);
     y->e->fn[y->e->nf++] = f;
