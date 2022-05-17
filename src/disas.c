@@ -15,7 +15,7 @@ static struct {
 };
 
 #define OP_ARITY    (opcode_info[b0].arity)
-#define MNEMONIC (opcode_info[b0].mnemonic)
+#define MNEMONIC    (opcode_info[b0].mnemonic)
 
 #define INST0       "%*d: %02x       %s\n"
 #define INST0DEREF  "%*d: %02x       %-6s      // %s\n"
@@ -77,6 +77,7 @@ static void d_code_obj(rf_code *c, int ipw) {
                 printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
             case OP_GBLA: case OP_GBLV:
+            case OP_SIDXA: case OP_SIDXV:
                 sprintf(s, "%s", OPND(s->str));
                 printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
@@ -86,23 +87,20 @@ static void d_code_obj(rf_code *c, int ipw) {
                 } else if (is_jump16(b0)) {
                     b2 = c->code[ip+2];
                     int16_t a = (b1 << 8) + b2;
-                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC,
-                            a, ip + a);
+                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, a, ip + a);
                     ip += 1;
                 } else if (b0 == OP_LOOP8) {
                     printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, -b1, ip - (uint8_t) b1);
                 } else if (b0 == OP_LOOP16) {
                     b2 = c->code[ip+2];
                     int a = (b1 << 8) + b2;
-                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC,
-                            -a, ip - a);
+                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, -a, ip - a);
                     ip += 1;
                 } else if (b0 == OP_IMM16) {
                     b2 = c->code[ip+2];
                     int a = (b1 << 8) + b2;
                     printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, a);
                     ip += 1;
-
                 } else {
                     printf(INST1, ipw, ip, b0, b1, MNEMONIC, b1);
                 }

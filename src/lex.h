@@ -9,13 +9,13 @@
 // Lexical Analyzer
 
 typedef struct {
+    int kind;
     union {
-        rf_flt  f;
         rf_int  i;
+        rf_flt  f;
         rf_str *s;
         rf_re  *r;
     } lexeme;
-    int kind;
 } rf_token;
 
 enum tokens {

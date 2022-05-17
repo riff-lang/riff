@@ -1099,10 +1099,10 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         z_break;
 
     z_case(SIDXA)
-        if (sp[-2].t <= TYPE_CFN)
-            tp = &sp[-2].v;
+        if (sp[-1].t <= TYPE_CFN)
+            tp = &sp[-1].v;
         else
-            tp = sp[-2].a;
+            tp = sp[-1].a;
 
         switch (tp->type) {
 
@@ -1111,31 +1111,29 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
             *tp = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].a = ht_lookup_val(tp->t->h, &sp[-1].v);
+            sp[-1].a = ht_lookup_val(tp->t->h, &k[ip[1]]);
             break;
         default:
             err("invalid assignment");
         }
-        --sp;
-        ++ip;
+        ip += 2;
         z_break;
 
     z_case(SIDXV)
-        if (sp[-2].t <= TYPE_CFN) {
+        if (sp[-1].t <= TYPE_CFN) {
             binop(idx);
             z_break;
         }
 
-        switch (sp[-2].a->type) {
+        switch (sp[-1].a->type) {
 
         // Create table if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *sp[-2].a = *v_newtab(0);
+            *sp[-1].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].v = *ht_lookup_val(sp[-2].a->t->h, &sp[-1].v);
-            --sp;
-            ++ip;
+            sp[-1].v = *ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
+            ip += 2;
             break;
         default:
             err("invalid member access (non-table value)");

@@ -137,8 +137,8 @@ void c_patch(rf_code *c, int l) {
     int jmp = c->n - l + 1;
     if (jmp > INT16_MAX)
         err(c, "forward jump too large to patch");
-    c->code[l]     = ((jmp >> 8) & 0xff);
-    c->code[l + 1] = (jmp & 0xff);
+    c->code[l]   = ((jmp >> 8) & 0xff);
+    c->code[l+1] = (jmp & 0xff);
 }
 
 static void c_pushk(rf_code *c, int i) {
@@ -161,6 +161,27 @@ void c_fn_constant(rf_code *c, rf_fn *fn) {
     c_pushk(c, c->nk - 1);
 }
 
+static int find_constant(rf_code *c, rf_token *tk) {
+    for (int i = 0; i < c->nk; ++i) {
+        switch (tk->kind) {
+        case TK_INT:
+            if (is_int(&c->k[i]) && tk->lexeme.i == c->k[i].i)
+                return i;
+            break;
+        case TK_FLT:
+            if (is_flt(&c->k[i]) && tk->lexeme.f == c->k[i].f)
+                return i;
+            break;
+        case TK_STR:
+        case TK_ID:
+            if (is_str(&c->k[i]) && s_eq(tk->lexeme.s, c->k[i].s))
+                return i;
+            break;
+        }
+    }
+    return -1;
+}
+
 // Add a rf_val literal to a code object's constant table, if
 // necessary
 void c_constant(rf_code *c, rf_token *tk) {
@@ -170,39 +191,16 @@ void c_constant(rf_code *c, rf_token *tk) {
     } else if (tk->kind == TK_RE) {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
         c->k[c->nk++] = (rf_val) {TYPE_RE, .r = tk->lexeme.r};
+        if (c->nk > (UINT8_MAX + 1))
+            err(c, "Exceeded max number of unique literals");
         c_pushk(c, c->nk - 1);
         return;
     }
 
-    // Search for existing duplicate literal
-    for (int i = 0; i < c->nk; i++) {
-        switch (tk->kind) {
-        case TK_FLT:
-            if (c->k[i].type != TYPE_FLT)
-                break;
-            else if (tk->lexeme.f == c->k[i].f) {
-                c_pushk(c, i);
-                return;
-            }
-            break;
-        case TK_INT:
-            if (c->k[i].type != TYPE_INT)
-                break;
-            else if (tk->lexeme.i == c->k[i].i) {
-                c_pushk(c, i);
-                return;
-            }
-            break;
-        case TK_STR:
-            if (c->k[i].type != TYPE_STR)
-                break;
-            else if (s_eq(tk->lexeme.s, c->k[i].s)) {
-                c_pushk(c, i);
-                return;
-            }
-            break;
-        default: break;
-        }
+    int index = find_constant(c, tk);
+    if (index >= 0) {
+        c_pushk(c, index);
+        return;
     }
 
     // Provided literal does not already exist in constant table
@@ -237,8 +235,7 @@ void c_constant(rf_code *c, rf_token *tk) {
     }
     case TK_STR: case TK_ID: {
         m_growarray(c->k, c->nk, c->kcap, rf_val);
-        rf_str *s = s_new(tk->lexeme.s->str, s_len(tk->lexeme.s));
-        c->k[c->nk++] = (rf_val) {TYPE_STR, .s = s};
+        c->k[c->nk++] = (rf_val) {TYPE_STR, .s = tk->lexeme.s};
         break;
     }
     default: break;
@@ -281,7 +278,7 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
 
     // Search for existing symbol
     for (int i = 0; i < c->nk; ++i) {
-        if (c->k[i].type == TYPE_STR && s_eq(tk->lexeme.s, c->k[i].s)) {
+        if (is_str(&c->k[i]) && s_eq(tk->lexeme.s, c->k[i].s)) {
             if (mode)
                 push_global_addr(c, i);
             else
@@ -289,9 +286,8 @@ void c_global(rf_code *c, rf_token *tk, int mode) {
             return;
         }
     }
-    rf_str *s = s_new(tk->lexeme.s->str, s_len(tk->lexeme.s));
     m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk++] = (rf_val) {TYPE_STR, .s = s};
+    c->k[c->nk++] = (rf_val) {TYPE_STR, .s = tk->lexeme.s};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     if (mode) push_global_addr(c, c->nk - 1);
@@ -343,9 +339,7 @@ void c_table(rf_code *c, int n) {
 
         // Search for exisitng `n` in the constants pool
         for (int i = 0; i < c->nk; ++i) {
-            if (c->k[i].type != TYPE_INT)
-                continue;
-            if (c->k[i].i == n) {
+            if (is_int(&c->k[i]) && c->k[i].i == n) {
                 push((uint8_t) i);
                 return;
             }
@@ -354,6 +348,8 @@ void c_table(rf_code *c, int n) {
         // Otherwise, add `n` to constants pool
         m_growarray(c->k, c->nk, c->kcap, rf_val);
         c->k[c->nk++] = (rf_val) {TYPE_INT, .i = (rf_int) n};
+        if (c->nk > (UINT8_MAX + 1))
+            err(c, "Exceeded max number of unique literals");
         push((uint8_t) c->nk - 1);
     }
 }
@@ -375,8 +371,23 @@ void c_index(rf_code *c, int n, int type) {
     }
 }
 
-void c_str_index(rf_code *c, int type) {
+void c_str_index(rf_code *c, rf_str *k, int type) {
+    int index = -1;
+    for (int i = 0; i < c->nk; ++i) {
+        if (is_str(&c->k[i]) && s_eq(c->k[i].s, k)) {
+            index = i;
+            break;
+        }
+    }
+    if (index < 0) {
+        m_growarray(c->k, c->nk, c->kcap, rf_val);
+        c->k[c->nk++] = (rf_val) {TYPE_STR, .s = k};
+        if (c->nk > (UINT8_MAX + 1))
+            err(c, "Exceeded max number of unique literals");
+        index = c->nk - 1;
+    }
     push(type ? OP_SIDXA : OP_SIDXV);
+    push((uint8_t) index);
 }
 
 // TODO this function will be used to evaluate infix expression

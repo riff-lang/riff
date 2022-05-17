@@ -43,7 +43,7 @@ void c_global(rf_code *, rf_token *, int);
 void c_local(rf_code *, int, int);
 void c_table(rf_code *, int);
 void c_index(rf_code *, int, int);
-void c_str_index(rf_code *, int);
+void c_str_index(rf_code *, rf_str *, int);
 void c_prefix(rf_code *, int);
 void c_infix(rf_code *, int);
 void c_postfix(rf_code *, int);

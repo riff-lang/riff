@@ -274,9 +274,9 @@ static int paren_expr_list(rf_parser *y, int c) {
 static void member_access(rf_parser *y, uint32_t flags) {
     if (!TK_KIND(TK_ID))
         err(y, "expected identifier in member access expression");
-    c_constant(y->c, &y->x->tk);
+    rf_str *s = y->x->tk.lexeme.s;
     adv_mode(LEX_LED);
-    c_str_index(y->c, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['));
+    c_str_index(y->c, s, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['));
 }
 
 // Index into set w/ subscript expression

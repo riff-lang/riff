@@ -159,8 +159,8 @@ OP_STR(IDXA,    1),
 // Index into value
 OPCODE(IDXA1,   0, "IDXA"),
 OPCODE(IDXV1,   0, "IDXV"),
-OP_STR(SIDXA,   0),
-OP_STR(SIDXV,   0),
+OP_STR(SIDXA,   1),
+OP_STR(SIDXV,   1),
 
 // Index into field table (fldv)
 OP_STR(FLDA,    0),
