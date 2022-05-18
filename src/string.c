@@ -40,7 +40,7 @@ static inline rf_hash chunk(const void *p) {
     return ((const str_chunk *)p)->u;
 }
 
-#define coercible_mask(s) (memchr("+-.0123456789", *s, 13) ? ~0u : ~0x80000000u)
+#define coercible_mask(s) (memchr("+-.0123456789", *s, 13) ? 0x80000000u : 0)
 
 static inline rf_hash str_hash(const char *str, size_t len) {
     rf_hash a, b, h = len;
@@ -61,7 +61,9 @@ static inline rf_hash str_hash(const char *str, size_t len) {
     a ^= h; a -= rol(h, 11);
     b ^= a; b -= rol(a, 25);
     h ^= b; h -= rol(b, 16);
-    return h & coercible_mask(str);
+
+    h &= ~0x80000000u; // clear MSB
+    return h | coercible_mask(str);
 }
 
 static inline rf_str *next(rf_str *s) {
