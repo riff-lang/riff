@@ -27,14 +27,14 @@ static rf_stack  stack[VM_STACK_SIZE];
 #define int_arith(l,r,op) set_int(l, (intval(l) op intval(r)))
 
 // Floating-point arithmetic (div)
-#define flt_arith(l,r,op) set_flt(l, (numval(l) op numval(r)))
+#define flt_arith(l,r,op) set_flt(l, (fltval(l) op fltval(r)))
 
 // "Polymorphic" arithmetic (add, sub, mul)
 #define num_arith(l,r,op) \
     if (is_int(l) && is_int(r)) { \
         l->i = (l->i op r->i); \
     } else { \
-        set_flt(l, (numval(l) op numval(r))); \
+        flt_arith(l,r,op); \
     }
 
 // Return boolean result of value (0/1)
