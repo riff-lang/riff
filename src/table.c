@@ -94,7 +94,7 @@ static inline void ht_collect_keys(rf_htab *h, rf_val *keys, int *n) {
         ht_node *node = h->nodes[i];
         while (node) {
             if (!is_null(node->v))
-                keys[*n++] = (rf_val) {node->k.val->type, node->k.val->i};
+                keys[(*n)++] = (rf_val) {node->k.val->type, node->k.val->i};
             node = next(node);
         }
     }
