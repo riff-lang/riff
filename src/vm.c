@@ -112,18 +112,10 @@ Z_UOP(num) {
 
 Z_UOP(neg) {
     switch (v->type) {
-    case TYPE_INT:
-        v->i = -v->i;
-        break;
-    case TYPE_FLT:
-        v->f = -v->f;
-        break;
-    case TYPE_STR:
-        set_flt(v, -str2flt(v->s));
-        break;
-    default:
-        set_int(v, 0);
-        break;
+    case TYPE_INT: v->i = -v->i;               break;
+    case TYPE_FLT: v->f = -v->f;               break;
+    case TYPE_STR: set_flt(v, -str2flt(v->s)); break;
+    default:       set_int(v, 0);              break;
     }
 }
 
@@ -222,7 +214,7 @@ Z_BINOP(cat) {
         switch (l->type) {
         case TYPE_INT: u_int2str(l->i, temp_lhs); break;
         case TYPE_FLT: u_flt2str(l->f, temp_lhs); break;
-        default:       temp_lhs[0] = '\0';          break;
+        default:       temp_lhs[0] = '\0';        break;
         }
         lhs = temp_lhs;
     } else {
@@ -232,7 +224,7 @@ Z_BINOP(cat) {
         switch (r->type) {
         case TYPE_INT: u_int2str(r->i, temp_rhs); break;
         case TYPE_FLT: u_flt2str(r->f, temp_rhs); break;
-        default:       temp_rhs[0] = '\0';          break;
+        default:       temp_rhs[0] = '\0';        break;
         }
         rhs = temp_rhs;
     } else {
@@ -253,7 +245,7 @@ static inline rf_int match(rf_val *l, rf_val *r) {
         switch (l->type) {
         case TYPE_INT: len = u_int2str(l->i, temp_lhs); break;
         case TYPE_FLT: len = u_flt2str(l->f, temp_lhs); break;
-        default:       temp_lhs[0] = '\0';                break;
+        default:       temp_lhs[0] = '\0';              break;
         }
         lhs = temp_lhs;
     } else {
@@ -440,8 +432,7 @@ static inline int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
 #define add_user_funcs() \
     for (int i = 0; i < e->nf; ++i) { \
         if (e->fn[i]->name->hash) { \
-            ht_insert_str(&globals, e->fn[i]->name, &(rf_val){TYPE_RFN, .fn = e->fn[i]} \
-            ); \
+            ht_insert_str(&globals, e->fn[i]->name, &(rf_val){TYPE_RFN, .fn = e->fn[i]}); \
         } \
     }
 
@@ -483,181 +474,176 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 #ifndef COMPUTED_GOTO
 // Use standard while loop with switch/case if computed goto is
 // disabled or unavailable
-#define z_case(l) case OP_##l:
-#define z_break   break
+#define L(l) case OP_##l:
+#define BREAK   break
     while (1) { switch (*ip) {
 #else
-#define z_case(l)  L_##l:
-#define z_break    dispatch()
-#define dispatch() goto *dispatch_labels[*ip]
+#define L(l)  L_##l:
+#define BREAK    DISPATCH()
+#define DISPATCH() goto *dispatch_labels[*ip]
     static void *dispatch_labels[] = {
 #define OPCODE(x,y,z) &&L_##x
 #include "opcodes.h"
     };
-    dispatch();
+    DISPATCH();
 #endif
 
 // Unconditional jumps
-#define j8  (ip += (int8_t) ip[1])
-#define j16 (ip += (int16_t) ((ip[1] << 8) + ip[2]))
+#define j8()  (ip += (int8_t) ip[1])
+#define j16() (ip += (int16_t) ((ip[1] << 8) + ip[2]))
 
-    z_case(JMP8)  j8;  z_break;
-    z_case(JMP16) j16; z_break;
+L(JMP8)     j8();  BREAK;
+L(JMP16)    j16(); BREAK;
 
 // Conditional jumps (pop stack unconditionally)
-#define jc8(x)  (x ? j8  : (ip += 2)); --sp
-#define jc16(x) (x ? j16 : (ip += 3)); --sp
+#define jc8(x)  (x ? j8()  : (ip += 2)); --sp
+#define jc16(x) (x ? j16() : (ip += 3)); --sp
 
-    z_case(JNZ8)  jc8(test(&sp[-1].v));   z_break;
-    z_case(JNZ16) jc16(test(&sp[-1].v));  z_break;
-    z_case(JZ8)   jc8(!test(&sp[-1].v));  z_break;
-    z_case(JZ16)  jc16(!test(&sp[-1].v)); z_break;
+L(JNZ8)     jc8(test(&sp[-1].v));   BREAK;
+L(JNZ16)    jc16(test(&sp[-1].v));  BREAK;
+L(JZ8)      jc8(!test(&sp[-1].v));  BREAK;
+L(JZ16)     jc16(!test(&sp[-1].v)); BREAK;
 
 
 // Conditional jumps (pop stack if jump not taken)
-#define xjc8(x)  if (x) j8;  else {--sp; ip += 2;}
-#define xjc16(x) if (x) j16; else {--sp; ip += 3;}
+#define xjc8(x)  if (x) j8();  else {--sp; ip += 2;}
+#define xjc16(x) if (x) j16(); else {--sp; ip += 3;}
 
-    z_case(XJNZ8)  xjc8(test(&sp[-1].v));   z_break;
-    z_case(XJNZ16) xjc16(test(&sp[-1].v));  z_break;
-    z_case(XJZ8)   xjc8(!test(&sp[-1].v));  z_break;
-    z_case(XJZ16)  xjc16(!test(&sp[-1].v)); z_break;
+L(XJNZ8)    xjc8(test(&sp[-1].v));   BREAK;
+L(XJNZ16)   xjc16(test(&sp[-1].v));  BREAK;
+L(XJZ8)     xjc8(!test(&sp[-1].v));  BREAK;
+L(XJZ16)    xjc16(!test(&sp[-1].v)); BREAK;
 
-    // Initialize/cycle current iterator
-    z_case(LOOP8) z_case(LOOP16) {
-        int jmp16 = *ip == OP_LOOP16;
-        if (!iter->n--) {
-            if (jmp16)
-                ip += 3;
-            else
-                ip += 2;
-            z_break;
-        }
-        switch (iter->t) {
-        case LOOP_RNG:
-            if (is_null(iter->v))
-                *iter->v = (rf_val) {TYPE_INT, .i = iter->st};
-            else
-                iter->v->i += iter->set.itvl;
-            break;
-        case LOOP_STR:
-            if (iter->k != NULL) {
-                if (is_null(iter->k)) {
-                    set_int(iter->k, 0);
-                } else {
-                    iter->k->i += 1;
-                }
-            }
-            if (!is_null(iter->v)) {
-                iter->v->s = s_new(iter->set.str++, 1);
-            } else {
-                *iter->v = (rf_val) {TYPE_STR, .s = s_new(iter->set.str++, 1)};
-            }
-            break;
-        case LOOP_TAB:
-            if (iter->k != NULL) {
-                *iter->k = *iter->keys;
-            }
-            *iter->v = *t_lookup(iter->set.tab, iter->keys, 0);
-            iter->keys++;
-            break;
-        case LOOP_FN:
-            if (iter->k != NULL) {
-                if (is_null(iter->k)) {
-                    set_int(iter->k, 0);
-                } else {
-                    iter->k->i += 1;
-                }
-            }
-            if (is_null(iter->v)) {
-                *iter->v = (rf_val) {TYPE_INT, .i = *iter->set.code++};
-            } else {
-                iter->v->i = *iter->set.code++;
-            }
-            break;
-        default: break;
-        }
-
-        // Treat byte(s) following OP_LOOP as unsigned since jumps
-        // are always backward
+// Initialize/cycle current iterator
+L(LOOP8)
+L(LOOP16) {
+    int jmp16 = *ip == OP_LOOP16;
+    if (!iter->n--) {
         if (jmp16)
-            ip -= (ip[1] << 8) + ip[2];
+            ip += 3;
         else
-            ip -= ip[1];
-        z_break;
+            ip += 2;
+        BREAK;
     }
-
-    // Destroy the current iterator struct
-    z_case(POPL) {
-        destroy_iter();
-        ++ip;
-        z_break;
-    }
-
-    // Create iterator and jump to the corresponding OP_LOOP
-    // instruction for initialization
-    z_case(ITERV) z_case(ITERKV) {
-        int k = *ip == OP_ITERKV;
-        new_iter(&sp[-1].v); 
-        --sp;
-        set_null(&sp++->v);
-
-        // Reserve extra stack slot for k,v iterators
-        if (k) {
-            set_null(&sp++->v);
-            iter->k = &sp[-2].v;
-        } else {
-            iter->k = NULL;
+    switch (iter->t) {
+    case LOOP_RNG:
+        if (is_null(iter->v))
+            *iter->v = (rf_val) {TYPE_INT, .i = iter->st};
+        else
+            iter->v->i += iter->set.itvl;
+        break;
+    case LOOP_STR:
+        if (iter->k != NULL) {
+            if (is_null(iter->k)) {
+                set_int(iter->k, 0);
+            } else {
+                iter->k->i += 1;
+            }
         }
-        iter->v = &sp[-1].v;
-        j16;
-        z_break;
+        if (!is_null(iter->v)) {
+            iter->v->s = s_new(iter->set.str++, 1);
+        } else {
+            *iter->v = (rf_val) {TYPE_STR, .s = s_new(iter->set.str++, 1)};
+        }
+        break;
+    case LOOP_TAB:
+        if (iter->k != NULL) {
+            *iter->k = *iter->keys;
+        }
+        *iter->v = *t_lookup(iter->set.tab, iter->keys, 0);
+        iter->keys++;
+        break;
+    case LOOP_FN:
+        if (iter->k != NULL) {
+            if (is_null(iter->k)) {
+                set_int(iter->k, 0);
+            } else {
+                iter->k->i += 1;
+            }
+        }
+        if (is_null(iter->v)) {
+            *iter->v = (rf_val) {TYPE_INT, .i = *iter->set.code++};
+        } else {
+            iter->v->i = *iter->set.code++;
+        }
+        break;
+    default: break;
     }
+
+    // Treat byte(s) following OP_LOOP as unsigned since jumps are always
+    // backward
+    if (jmp16)
+        ip -= (ip[1] << 8) + ip[2];
+    else
+        ip -= ip[1];
+    BREAK;
+}
+
+// Destroy the current iterator struct
+L(POPL)     destroy_iter();
+            ++ip;
+            BREAK;
+
+// Create iterator and jump to the corresponding OP_LOOP instruction for
+// initialization
+L(ITERV)
+L(ITERKV) {
+    int k = *ip == OP_ITERKV;
+    new_iter(&sp[-1].v); 
+    --sp;
+    set_null(&sp++->v);
+
+    // Reserve extra stack slot for k,v iterators
+    if (k) {
+        set_null(&sp++->v);
+        iter->k = &sp[-2].v;
+    } else {
+        iter->k = NULL;
+    }
+    iter->v = &sp[-1].v;
+    j16();
+    BREAK;
+}
 
 // Unary operations
 // sp[-1].v is assumed to be safe to overwrite
-#define unop(x) \
-    z_##x(&sp[-1].v); \
-    ++ip
+#define unop(x) z_##x(&sp[-1].v); ++ip
 
-    z_case(LEN)  unop(len);  z_break;
-    z_case(LNOT) unop(lnot); z_break;
-    z_case(NEG)  unop(neg);  z_break;
-    z_case(NOT)  unop(not);  z_break;
-    z_case(NUM)  unop(num);  z_break;
+L(LEN)      unop(len);  BREAK;
+L(LNOT)     unop(lnot); BREAK;
+L(NEG)      unop(neg);  BREAK;
+L(NOT)      unop(not);  BREAK;
+L(NUM)      unop(num);  BREAK;
 
 // Standard binary operations
 // sp[-2].v and sp[-1].v are assumed to be safe to overwrite
-#define binop(x) \
-    z_##x(&sp[-2].v, &sp[-1].v); \
-    --sp; \
-    ++ip
+#define binop(x) z_##x(&sp[-2].v, &sp[-1].v); --sp; ++ip
 
-    z_case(ADD)    binop(add);    z_break;
-    z_case(SUB)    binop(sub);    z_break;
-    z_case(MUL)    binop(mul);    z_break;
-    z_case(DIV)    binop(div);    z_break;
-    z_case(MOD)    binop(mod);    z_break;
-    z_case(POW)    binop(pow);    z_break;
-    z_case(AND)    binop(and);    z_break;
-    z_case(OR)     binop(or);     z_break;
-    z_case(XOR)    binop(xor);    z_break;
-    z_case(SHL)    binop(shl);    z_break;
-    z_case(SHR)    binop(shr);    z_break;
-    z_case(EQ)     binop(eq);     z_break;
-    z_case(NE)     binop(ne);     z_break;
-    z_case(GT)     binop(gt);     z_break;
-    z_case(GE)     binop(ge);     z_break;
-    z_case(LT)     binop(lt);     z_break;
-    z_case(LE)     binop(le);     z_break;
-    z_case(CAT)    binop(cat);    z_break;
-    z_case(MATCH)  binop(match);  z_break;
-    z_case(NMATCH) binop(nmatch); z_break;
+L(ADD)      binop(add);    BREAK;
+L(SUB)      binop(sub);    BREAK;
+L(MUL)      binop(mul);    BREAK;
+L(DIV)      binop(div);    BREAK;
+L(MOD)      binop(mod);    BREAK;
+L(POW)      binop(pow);    BREAK;
+L(AND)      binop(and);    BREAK;
+L(OR)       binop(or);     BREAK;
+L(XOR)      binop(xor);    BREAK;
+L(SHL)      binop(shl);    BREAK;
+L(SHR)      binop(shr);    BREAK;
+L(EQ)       binop(eq);     BREAK;
+L(NE)       binop(ne);     BREAK;
+L(GT)       binop(gt);     BREAK;
+L(GE)       binop(ge);     BREAK;
+L(LT)       binop(lt);     BREAK;
+L(LE)       binop(le);     BREAK;
+L(CAT)      binop(cat);    BREAK;
+L(MATCH)    binop(match);  BREAK;
+L(NMATCH)   binop(nmatch); BREAK;
 
 // Pre-increment/decrement
 // sp[-1].a is address of some variable's rf_val.
-// Increment/decrement this value directly and replace the stack
-// element with a copy of the value.
+// Increment/decrement this value directly and replace the stack element with a
+// copy of the value.
 #define pre(x) \
     switch (sp[-1].a->type) { \
     case TYPE_INT: sp[-1].a->i += x; break; \
@@ -672,14 +658,14 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     sp[-1].v = *sp[-1].a; \
     ++ip
 
-    z_case(PREINC) pre(1);  z_break;
-    z_case(PREDEC) pre(-1); z_break;
+L(PREINC)   pre(1);  BREAK;
+L(PREDEC)   pre(-1); BREAK;
 
 // Post-increment/decrement
-// sp[-1].a is address of some variable's rf_val. Create a copy of
-// the raw value, then increment/decrement the rf_val at the given
-// address.  Replace the stack element with the previously made copy
-// and coerce to a numeric value if needed.
+// sp[-1].a is address of some variable's rf_val. Create a copy of the raw
+// value, then increment/decrement the rf_val at the given address. Replace the
+// stack element with the previously made copy and coerce to a numeric value if
+// needed.
 #define post(x) \
     tp = sp[-1].a; \
     sp[-1].v = *tp; \
@@ -695,256 +681,244 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     } \
     unop(num)
 
-    z_case(POSTINC) post(1);  z_break;
-    z_case(POSTDEC) post(-1); z_break;
+L(POSTINC)  post(1);  BREAK;
+L(POSTDEC)  post(-1); BREAK;
 
 // Compound assignment operations
-// sp[-2].a is address of some variable's rf_val. Save the address
-// and place a copy of the value in sp[-2].v. Perform the binary
-// operation x and assign the result to the saved address.
+// sp[-2].a is address of some variable's rf_val. Save the address and place a
+// copy of the value in sp[-2].v. Perform the binary operation x and assign the
+// result to the saved address.
 #define cbinop(x) \
     tp = sp[-2].a; \
     sp[-2].v = *tp; \
     binop(x); \
     *tp = sp[-1].v
 
-    z_case(ADDX) cbinop(add); z_break;
-    z_case(SUBX) cbinop(sub); z_break;
-    z_case(MULX) cbinop(mul); z_break;
-    z_case(DIVX) cbinop(div); z_break;
-    z_case(MODX) cbinop(mod); z_break;
-    z_case(CATX) cbinop(cat); z_break;
-    z_case(POWX) cbinop(pow); z_break;
-    z_case(ANDX) cbinop(and); z_break;
-    z_case(ORX)  cbinop(or);  z_break;
-    z_case(SHLX) cbinop(shl); z_break;
-    z_case(SHRX) cbinop(shr); z_break;
-    z_case(XORX) cbinop(xor); z_break;
+L(ADDX)     cbinop(add); BREAK;
+L(SUBX)     cbinop(sub); BREAK;
+L(MULX)     cbinop(mul); BREAK;
+L(DIVX)     cbinop(div); BREAK;
+L(MODX)     cbinop(mod); BREAK;
+L(CATX)     cbinop(cat); BREAK;
+L(POWX)     cbinop(pow); BREAK;
+L(ANDX)     cbinop(and); BREAK;
+L(ORX)      cbinop(or);  BREAK;
+L(SHLX)     cbinop(shl); BREAK;
+L(SHRX)     cbinop(shr); BREAK;
+L(XORX)     cbinop(xor); BREAK;
 
-    // Simple pop operation
-    z_case(POP) --sp; ++ip; z_break;
+// Simple pop operation
+L(POP)      --sp; ++ip; BREAK;
 
-    // Pop IP+1 values from stack
-    z_case(POPI) sp -= ip[1]; ip += 2; z_break;
+// Pop IP+1 values from stack
+L(POPI)     sp -= ip[1]; ip += 2; BREAK;
 
-    // Push null literal on stack
-    z_case(NUL) set_null(&sp++->v); ++ip; z_break;
+// Push null literal on stack
+L(NUL)      set_null(&sp++->v); ++ip; BREAK;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
 #define imm(x) set_int(&sp++->v, x)
 
-    z_case(IMM8)  imm(ip[1]);              ip += 2; z_break;
-    z_case(IMM16) imm((ip[1]<<8) + ip[2]); ip += 3; z_break;
-    z_case(IMM0)  imm(0);                  ++ip;    z_break;
-    z_case(IMM1)  imm(1);                  ++ip;    z_break;
-    z_case(IMM2)  imm(2);                  ++ip;    z_break;
+L(IMM8)     imm(ip[1]);              ip += 2; BREAK;
+L(IMM16)    imm((ip[1]<<8) + ip[2]); ip += 3; BREAK;
+L(IMM0)     imm(0);                  ++ip;    BREAK;
+L(IMM1)     imm(1);                  ++ip;    BREAK;
+L(IMM2)     imm(2);                  ++ip;    BREAK;
 
 // Push constant
-// Copy constant x from code object's constant table to the top of the
-// stack.
+// Copy constant x from code object's constant table to the top of the stack.
 #define pushk(x) sp++->v = k[(x)]
 
-    z_case(CONST)  pushk(ip[1]); ip += 2; z_break;
-    z_case(CONST0) pushk(0);     ++ip;    z_break;
-    z_case(CONST1) pushk(1);     ++ip;    z_break;
-    z_case(CONST2) pushk(2);     ++ip;    z_break;
+L(CONST)    pushk(ip[1]); ip += 2; BREAK;
+L(CONST0)   pushk(0);     ++ip;    BREAK;
+L(CONST1)   pushk(1);     ++ip;    BREAK;
+L(CONST2)   pushk(2);     ++ip;    BREAK;
 
 // Push global address
-// Assign the address of global variable x's rf_val in the globals
-// table.
-// ht_lookup() will create an entry if needed, accommodating
+// Assign the address of global variable x's rf_val in the globals table.
+// The lookup will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
 #define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].s)
 
-    z_case(GBLA)  gbla(ip[1]); ip += 2; z_break;
-    z_case(GBLA0) gbla(0);     ++ip;    z_break;
-    z_case(GBLA1) gbla(1);     ++ip;    z_break;
-    z_case(GBLA2) gbla(2);     ++ip;    z_break;
+L(GBLA)     gbla(ip[1]); ip += 2; BREAK;
+L(GBLA0)    gbla(0);     ++ip;    BREAK;
+L(GBLA1)    gbla(1);     ++ip;    BREAK;
+L(GBLA2)    gbla(2);     ++ip;    BREAK;
 
 // Push global value
 // Copy the value of global variable x to the top of the stack.
-// ht_lookup() will create an entry if needed, accommodating
+// The lookup will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
-// Parser signals for this opcode to be used when only needing the
-// value, e.g. arithmetic.
+// Parser signals for this opcode to be used when only needing the value, e.g.
+// arithmetic.
 #define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].s)
 
-    z_case(GBLV)  gblv(ip[1]); ip += 2; z_break;
-    z_case(GBLV0) gblv(0);     ++ip;    z_break;
-    z_case(GBLV1) gblv(1);     ++ip;    z_break;
-    z_case(GBLV2) gblv(2);     ++ip;    z_break;
+L(GBLV)     gblv(ip[1]); ip += 2; BREAK;
+L(GBLV0)    gblv(0);     ++ip;    BREAK;
+L(GBLV1)    gblv(1);     ++ip;    BREAK;
+L(GBLV2)    gblv(2);     ++ip;    BREAK;
 
 // Push local address
 // Push the address of FP[x] to the top of the stack.
 #define lcla(x) sp++->a = &fp[(x)].v
 
-    z_case(LCLA)  lcla(ip[1]); ip += 2; z_break;
-    z_case(LCLA0) lcla(0);     ++ip;    z_break;
-    z_case(LCLA1) lcla(1);     ++ip;    z_break;
-    z_case(LCLA2) lcla(2);     ++ip;    z_break;
+L(LCLA)     lcla(ip[1]); ip += 2; BREAK;
+L(LCLA0)    lcla(0);     ++ip;    BREAK;
+L(LCLA1)    lcla(1);     ++ip;    BREAK;
+L(LCLA2)    lcla(2);     ++ip;    BREAK;
 
 // Push local value
 // Copy the value of FP[x] to the top of the stack.
 #define lclv(x) sp++->v = fp[(x)].v
 
-    z_case(LCLV)  lclv(ip[1]); ip += 2; z_break;
-    z_case(LCLV0) lclv(0);     ++ip;    z_break;
-    z_case(LCLV1) lclv(1);     ++ip;    z_break;
-    z_case(LCLV2) lclv(2);     ++ip;    z_break;
+L(LCLV)     lclv(ip[1]); ip += 2; BREAK;
+L(LCLV0)    lclv(0);     ++ip;    BREAK;
+L(LCLV1)    lclv(1);     ++ip;    BREAK;
+L(LCLV2)    lclv(2);     ++ip;    BREAK;
 
-    // Tailcalls
-    // Recycle current call frame
-    z_case(TCALL) {
-        int nargs = ip[1] + 1;
-        if (!is_fn(&sp[-nargs].v))
-            err("attempt to call non-function value");
-        if (is_rfn(&sp[-nargs].v)) {
-            sp -= nargs;
-            rf_fn *fn = sp->v.fn;
-            int ar1 = sp - fp - 1;  // Current frame's "arity"
-            int ar2 = fn->arity;    // Callee's arity
+// Tailcalls
+// Recycle current call frame
+L(TCALL) {
+    int nargs = ip[1] + 1;
+    if (!is_fn(&sp[-nargs].v))
+        err("attempt to call non-function value");
+    if (is_rfn(&sp[-nargs].v)) {
+        sp -= nargs;
+        rf_fn *fn = sp->v.fn;
+        int ar1 = sp - fp - 1;  // Current frame's "arity"
+        int ar2 = fn->arity;    // Callee's arity
 
-            // Recycle call frame
-            for (int i = 0; i <= ar2; ++i) {
-                fp[i].v = sp[i].v;
-            }
-
-            // Increment SP without nullifying slots (preserving
-            // values) if number of arguments exceeds the frame's
-            // current "arity"
-            if (nargs-1 > ar1) {
-                sp += (nargs - ar1 - 1);
-                ar1 = nargs - 1;
-            }
-
-            // In the case of direct recursion and no call frame
-            // adjustments needed, quickly reset IP and dispatch
-            // control
-            if (ep == fn->code->code && ar1 == ar2) {
-                ip = ep;
-                z_break;
-            }
-
-            // If callee's arity is larger than the current frame,
-            // create stack space and nullify slots
-            if (ar2 > ar1) {
-                while (ar1++ < ar2)
-                    set_null(&sp++->v);
-            }
-
-            // Else, if the current frame is too large for the next
-            // call, decrement SP
-            else if (ar2 < ar1) {
-                sp -= ar1 - ar2;
-            }
-
-            // Else else, if the size of the call frame is fine, but
-            // the user didn't provide enough arguments, create stack
-            // space and nullify slots
-            else if (nargs <= ar2) {
-                while (nargs++ <= ar2)
-                    set_null(&sp++->v);
-            }
-            ip = ep = fn->code->code;
-            k  = fn->code->k;
-            z_break;
+        // Recycle call frame
+        for (int i = 0; i <= ar2; ++i) {
+            fp[i].v = sp[i].v;
         }
 
-        // Fall-through to OP_CALL for C function calls
+        // Increment SP without nullifying slots (preserving values) if number
+        // of arguments exceeds the frame's current "arity"
+        if (nargs-1 > ar1) {
+            sp += (nargs - ar1 - 1);
+            ar1 = nargs - 1;
+        }
+
+        // In the case of direct recursion and no call frame adjustments needed,
+        // quickly reset IP and dispatch control
+        if (ep == fn->code->code && ar1 == ar2) {
+            ip = ep;
+            BREAK;
+        }
+
+        // If callee's arity is larger than the current frame, create stack
+        // space and nullify slots
+        if (ar2 > ar1) {
+            while (ar1++ < ar2)
+                set_null(&sp++->v);
+        }
+
+        // Else, if the current frame is too large for the next call, decrement
+        // SP
+        else if (ar2 < ar1) {
+            sp -= ar1 - ar2;
+        }
+
+        // Else else, if the size of the call frame is fine, but the user didn't
+        // provide enough arguments, create stack space and nullify slots
+        else if (nargs <= ar2) {
+            while (nargs++ <= ar2)
+                set_null(&sp++->v);
+        }
+        ip = ep = fn->code->code;
+        k  = fn->code->k;
+        BREAK;
     }
 
-    // Calling convention Arguments are pushed in-order following the
-    // rf_val containing a pointer to the function to be called.
-    // Caller sets SP and FP to appropriate positions and cleans up
-    // stack afterward. Callee returns from exec() the number of
-    // values to be returned to the caller.
-    z_case(CALL) {
-        int nargs = ip[1];
-        if (!is_fn(&sp[-nargs-1].v))
-            err("attempt to call non-function value");
+    // Fall-through to OP_CALL for C function calls
+}
 
-        int arity, nret;
+// Calling convention
+// Arguments are pushed in-order following the rf_val containing a pointer to
+// the function to be called.  Caller sets SP and FP to appropriate positions
+// and cleans up stack afterward. Callee returns from exec() the number of
+// values to be returned to the caller.
+L(CALL) {
+    int nargs = ip[1];
+    if (!is_fn(&sp[-nargs-1].v))
+        err("attempt to call non-function value");
 
-        // User-defined functions
-        if (is_rfn(&sp[-nargs-1].v)) {
+    int arity, nret;
 
-            rf_fn *fn = sp[-nargs-1].v.fn;
-            arity = fn->arity;
+    // User-defined functions
+    if (is_rfn(&sp[-nargs-1].v)) {
 
-            // If user called function with too few arguments,
-            // nullify stack slots and increment SP.
-            if (nargs < arity) {
-                for (int i = nargs; i < arity; ++i) {
-                    set_null(&sp++->v);
-                }
-            }
-            
-            // If user called function with too many arguments,
-            // decrement SP so it points to the appropriate slot
-            // for control transfer.
-            else if (nargs > arity) {
-                sp -= (nargs - arity);
-            }
+    rf_fn *fn = sp[-nargs-1].v.fn;
+    arity = fn->arity;
 
-            // Pass SP-arity-1 as the FP for the succeeding call
-            // frame. Since the function is already at this location
-            // in the stack, the compiler can reserve the slot to
-            // accommodate any references a named function makes to
-            // itself without any other work required from the VM
-            // here. This is completely necessary for local named
-            // functions, but globals benefit as well.
-            nret = exec(fn->code->code, fn->code->k, sp, sp - arity - 1);
-            sp -= arity;
-
-            // Copy the function's return value to the stack top -
-            // this should be where the caller pushed the original
-            // function.
-            sp[-1].v = sp[arity].v;
+    // If user called function with too few arguments, nullify stack slots and
+    // increment SP.
+    if (nargs < arity) {
+        for (int i = nargs; i < arity; ++i) {
+            set_null(&sp++->v);
         }
-            
-        // Built-in/C functions
-        else {
-            c_fn *fn = sp[-nargs-1].v.cfn;
-            arity = fn->arity;
-
-            // Most library functions are somewhat variadic; their
-            // arity refers to the minimum number of arguments
-            // they require.
-            if (arity && nargs < arity) {
-                // If user called function with too few arguments,
-                // nullify stack slots.
-                for (int i = nargs; i < arity; ++i) {
-                    set_null(&sp[i].v);
-                }
-            }
-            // Decrement SP to serve as the FP for the function
-            // call. Library functions assign their own return
-            // values to SP-1.
-            sp -= nargs;
-            nret = fn->fn(&sp->v, nargs);
-        }
-        ip += 2;
-        // Nulllify stack slot if callee returns nothing
-        if (!nret) { 
-            set_null(&sp[-1].v);
-        }
-        z_break;
+    }
+    
+    // If user called function with too many arguments, decrement SP so it
+    // points to the appropriate slot for control transfer.
+    else if (nargs > arity) {
+        sp -= (nargs - arity);
     }
 
-    z_case(RET) return 0;
+        // Pass SP-arity-1 as the FP for the succeeding call frame. Since the
+        // function is already at this location in the stack, the compiler can
+        // reserve the slot to accommodate any references a named function makes
+        // to itself without any other work required from the VM here. This is
+        // completely necessary for local named functions, but globals benefit
+        // as well.
+        nret = exec(fn->code->code, fn->code->k, sp, sp - arity - 1);
+        sp -= arity;
 
-    // Caller expects return value to be at its original SP +
-    // arity of the function. "clean up" any created locals by
-    // copying the return value to the appropriate slot.
-    z_case(RET1)
-        retp->v = sp[-1].v;
-        return 1;
+        // Copy the function's return value to the stack top - this should be
+        // where the caller pushed the original function.
+        sp[-1].v = sp[arity].v;
+    }
+            
+    // Built-in/C functions
+    else {
+        c_fn *fn = sp[-nargs-1].v.cfn;
+        arity = fn->arity;
 
-// Create a sequential table of x elements from the top
-// of the stack. Leave the table rf_val on the stack.
-// Tables index at 0 by default.
+        // Most library functions are somewhat variadic; their arity refers to
+        // the minimum number of arguments they require.
+        if (arity && nargs < arity) {
+            // If user called function with too few arguments, nullify stack
+            // slots.
+            for (int i = nargs; i < arity; ++i) {
+                set_null(&sp[i].v);
+            }
+        }
+        // Decrement SP to serve as the FP for the function call. Library
+        // functions assign their own return values to SP-1.
+        sp -= nargs;
+        nret = fn->fn(&sp->v, nargs);
+    }
+    ip += 2;
+    // Nulllify stack slot if callee returns nothing
+    if (!nret) { 
+        set_null(&sp[-1].v);
+    }
+    BREAK;
+}
+
+L(RET)      return 0;
+
+// Caller expects return value to be at its original SP + arity of the function.
+// "clean up" any created locals by copying the return value to the appropriate
+// slot.
+L(RET1)     retp->v = sp[-1].v;
+            return 1;
+
+// Create a sequential table of x elements from the top of the stack. Leave the
+// table rf_val on the stack. Tables index at 0 by default.
 #define new_tab(x) \
     tp = v_newtab(x); \
     for (int i = (x) - 1; i >= 0; --i) { \
@@ -953,142 +927,34 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     } \
     sp++->v = *tp
 
-    z_case(TAB0) new_tab(0);     ++ip;    z_break;
-    z_case(TAB)  new_tab(ip[1]); ip += 2; z_break;
-    z_case(TABK)
-        new_tab(k[ip[1]].i);
-        ip += 2;
-        z_break;
+L(TAB0)     new_tab(0);          ++ip;    BREAK;
+L(TAB)      new_tab(ip[1]);      ip += 2; BREAK;
+L(TABK)     new_tab(k[ip[1]].i); ip += 2; BREAK;
 
-    z_case(IDXV)
-        for (int i = -ip[1] - 1; i < -1; ++i) {
-            if (sp[i].t <= TYPE_CFN) {
-                z_idx(&sp[i].v, &sp[i+1].v);
-                sp[i+1].v = sp[i].v;
-                continue;
-            }
-            switch (sp[i].a->type) {
-
-            // Create table if sp[-2].a is an uninitialized variable
-            case TYPE_NULL:
-                *sp[i+1].a = *v_newtab(0);
-                // Fall-through
-            case TYPE_TAB:
-                sp[i+1].v = *t_lookup(sp[i].a->t, &sp[i+1].v, 0);
-                break;
-
-            // Dereference and call z_idx().
-            case TYPE_INT:
-            case TYPE_FLT:
-            case TYPE_STR:
-                sp[i].v = *sp[-i].a;
-                z_idx(&sp[i].v, &sp[i+1].v);
-                sp[i+1].v = sp[i].v;
-                break;
-            case TYPE_RFN:
-            case TYPE_CFN:
-                err("attempt to subscript a function");
-            default:
-                break;
-            }
+L(IDXV)
+    for (int i = -ip[1] - 1; i < -1; ++i) {
+        if (sp[i].t <= TYPE_CFN) {
+            z_idx(&sp[i].v, &sp[i+1].v);
+            sp[i+1].v = sp[i].v;
+            continue;
         }
-        sp -= ip[1];
-        sp[-1].v = sp[ip[1] - 1].v;
-        ip += 2;
-        z_break;
-
-    z_case(IDXA)
-        for (int i = -ip[1] - 1; i < -1; ++i) {
-            if (sp[i].t <= TYPE_CFN)
-                tp = &sp[i].v;
-            else
-                tp = sp[i].a;
-
-            switch (tp->type) {
-
-            // Create table if sp[i].a is an uninitialized variable
-            case TYPE_NULL:
-                *tp = *v_newtab(0);
-                // Fall-through
-            case TYPE_TAB:
-                sp[i+1].a = t_lookup(tp->t, &sp[i+1].v, 1);
-                break;
-
-            // IDXA is invalid for all other types
-            default:
-                err("invalid assignment");
-            }
-        }
-        sp -= ip[1];
-        sp[-1].a = sp[ip[1] - 1].a;
-        ip += 2;
-        z_break;
-
-    // IDXA
-    // Perform the lookup and leave the corresponding element's
-    // rf_val address on the stack.
-    z_case(IDXA1)
-
-        // Accomodate OP_IDXA calls when SP-2 is a raw value
-        if (sp[-2].t <= TYPE_CFN)
-            tp = &sp[-2].v;
-        else
-            tp = sp[-2].a;
-
-        switch (tp->type) {
+        switch (sp[i].a->type) {
 
         // Create table if sp[-2].a is an uninitialized variable
         case TYPE_NULL:
-            *tp = *v_newtab(0);
+            *sp[i+1].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-2].a = t_lookup(tp->t, &sp[-1].v, 1);
-            break;
-
-        // IDXA is invalid for all other types
-        default:
-            err("invalid assignment");
-        }
-        --sp;
-        ++ip;
-        z_break;
-
-    // IDXV
-    // Perform the lookup and leave a copy of the corresponding
-    // element's value on the stack.
-    z_case(IDXV1)
-
-        // All expressions e.g. x[y] are compiled to push the address
-        // of the identifier being subscripted. However OP_IDXV is
-        // emitted for all expressions not requiring the address of
-        // the set element to be left on the stack.  In the event the
-        // instruction is OP_IDXV and SP-2 contains a raw value (not a
-        // pointer), the high order 64 bits will be the type tag of
-        // the rf_val instead of a memory address. When that happens,
-        // defer to z_idx().
-        if (sp[-2].t <= TYPE_CFN) {
-            binop(idx);
-            z_break;
-        }
-
-        switch (sp[-2].a->type) {
-
-        // Create table if sp[-2].a is an uninitialized variable
-        case TYPE_NULL:
-            *sp[-2].a = *v_newtab(0);
-            // Fall-through
-        case TYPE_TAB:
-            sp[-2].v = *t_lookup(sp[-2].a->t, &sp[-1].v, 0);
-            --sp;
-            ++ip;
+            sp[i+1].v = *t_lookup(sp[i].a->t, &sp[i+1].v, 0);
             break;
 
         // Dereference and call z_idx().
         case TYPE_INT:
         case TYPE_FLT:
         case TYPE_STR:
-            sp[-2].v = *sp[-2].a;
-            binop(idx);
+            sp[i].v = *sp[-i].a;
+            z_idx(&sp[i].v, &sp[i+1].v);
+            sp[i+1].v = sp[i].v;
             break;
         case TYPE_RFN:
         case TYPE_CFN:
@@ -1096,63 +962,165 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
         default:
             break;
         }
-        z_break;
+    }
+    sp -= ip[1];
+    sp[-1].v = sp[ip[1] - 1].v;
+    ip += 2;
+    BREAK;
 
-    z_case(SIDXA)
-        if (sp[-1].t <= TYPE_CFN)
-            tp = &sp[-1].v;
+L(IDXA)
+    for (int i = -ip[1] - 1; i < -1; ++i) {
+        if (sp[i].t <= TYPE_CFN)
+            tp = &sp[i].v;
         else
-            tp = sp[-1].a;
+            tp = sp[i].a;
 
         switch (tp->type) {
 
-        // Create table if sp[-2].a is an uninitialized variable
+        // Create table if sp[i].a is an uninitialized variable
         case TYPE_NULL:
             *tp = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[-1].a = ht_lookup_val(tp->t->h, &k[ip[1]]);
+            sp[i+1].a = t_lookup(tp->t, &sp[i+1].v, 1);
             break;
+
+        // IDXA is invalid for all other types
         default:
             err("invalid assignment");
         }
+    }
+    sp -= ip[1];
+    sp[-1].a = sp[ip[1] - 1].a;
+    ip += 2;
+    BREAK;
+
+// IDXA
+// Perform the lookup and leave the corresponding element's rf_val address on
+// the stack.
+L(IDXA1)
+
+    // Accomodate OP_IDXA calls when SP-2 is a raw value
+    if (sp[-2].t <= TYPE_CFN)
+        tp = &sp[-2].v;
+    else
+        tp = sp[-2].a;
+
+    switch (tp->type) {
+
+    // Create table if sp[-2].a is an uninitialized variable
+    case TYPE_NULL:
+        *tp = *v_newtab(0);
+        // Fall-through
+    case TYPE_TAB:
+        sp[-2].a = t_lookup(tp->t, &sp[-1].v, 1);
+        break;
+
+    // IDXA is invalid for all other types
+    default:
+        err("invalid assignment");
+    }
+    --sp;
+    ++ip;
+    BREAK;
+
+// IDXV
+// Perform the lookup and leave a copy of the corresponding element's value on
+// the stack.
+L(IDXV1)
+
+    // All expressions e.g. x[y] are compiled to push the address of the
+    // identifier being subscripted. However OP_IDXV is emitted for all
+    // expressions not requiring the address of the set element to be left on
+    // the stack. In the event the instruction is OP_IDXV and SP-2 contains a
+    // raw value (not a pointer), the high order 64 bits will be the type tag of
+    // the rf_val instead of a memory address. When that happens, defer to
+    // z_idx().
+    if (sp[-2].t <= TYPE_CFN) {
+        binop(idx);
+        BREAK;
+    }
+
+    switch (sp[-2].a->type) {
+
+    // Create table if sp[-2].a is an uninitialized variable
+    case TYPE_NULL:
+        *sp[-2].a = *v_newtab(0);
+        // Fall-through
+    case TYPE_TAB:
+        sp[-2].v = *t_lookup(sp[-2].a->t, &sp[-1].v, 0);
+        --sp;
+        ++ip;
+        break;
+
+    // Dereference and call z_idx().
+    case TYPE_INT:
+    case TYPE_FLT:
+    case TYPE_STR:
+        sp[-2].v = *sp[-2].a;
+        binop(idx);
+        break;
+    case TYPE_RFN:
+    case TYPE_CFN:
+        err("attempt to subscript a function");
+    default:
+        break;
+    }
+    BREAK;
+
+// Fast paths for table lookups with string literal keys
+L(SIDXA)
+    if (sp[-1].t <= TYPE_CFN)
+        tp = &sp[-1].v;
+    else
+        tp = sp[-1].a;
+
+    switch (tp->type) {
+
+    // Create table if sp[-2].a is an uninitialized variable
+    case TYPE_NULL:
+        *tp = *v_newtab(0);
+        // Fall-through
+    case TYPE_TAB:
+        sp[-1].a = ht_lookup_val(tp->t->h, &k[ip[1]]);
+        break;
+    default:
+        err("invalid assignment");
+    }
+    ip += 2;
+    BREAK;
+
+L(SIDXV)
+    if (sp[-1].t <= TYPE_CFN) {
+        binop(idx);
+        BREAK;
+    }
+
+    switch (sp[-1].a->type) {
+
+    // Create table if sp[-2].a is an uninitialized variable
+    case TYPE_NULL:
+        *sp[-1].a = *v_newtab(0);
+        // Fall-through
+    case TYPE_TAB:
+        sp[-1].v = *ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
         ip += 2;
-        z_break;
+        break;
+    default:
+        err("invalid member access (non-table value)");
+    }
+    BREAK;
 
-    z_case(SIDXV)
-        if (sp[-1].t <= TYPE_CFN) {
-            binop(idx);
-            z_break;
-        }
+L(FLDA)     sp[-1].a = t_lookup(&fldv, &sp[-1].v, 1);
+            ++ip;
+            BREAK;
 
-        switch (sp[-1].a->type) {
-
-        // Create table if sp[-2].a is an uninitialized variable
-        case TYPE_NULL:
-            *sp[-1].a = *v_newtab(0);
-            // Fall-through
-        case TYPE_TAB:
-            sp[-1].v = *ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
-            ip += 2;
-            break;
-        default:
-            err("invalid member access (non-table value)");
-        }
-        z_break;
-
-    z_case(FLDA)
-        sp[-1].a = t_lookup(&fldv, &sp[-1].v, 1);
-        ++ip;
-        z_break;
-
-    z_case(FLDV)
-        sp[-1].v = *t_lookup(&fldv, &sp[-1].v, 0);
-        ++ip;
-        z_break;
+L(FLDV)     sp[-1].v = *t_lookup(&fldv, &sp[-1].v, 0);
+            ++ip;
+            BREAK;
 
 // Create a new "range" value.
-// There are 8 different valid forms of a range; each has their own
-// instruction.
+// There are 8 different valid forms of a range; each has their own instruction.
 //   rng:   x..y        SP[-2]..SP[-1]
 //   rngf:  x..         SP[-1]..INT_MAX
 //   rngt:  ..y         0..SP[-1]
@@ -1161,10 +1129,9 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 //   srngf: x..:z       SP[-2]..INT_MAX:SP[-1]
 //   srngt: ..y:z       0..SP[-2]:SP[-1]
 //   srnge: ..:z        0..INT_MAX:SP[-1]
-// If `z` is not provided, the interval is set to -1 if x > y
-// (downward ranges). Otherwise, the interval is set to 1 (upward
-// ranges).
-#define z_rng(f,t,i,s) { \
+// If `z` is not provided, the interval is set to -1 if x > y (downward ranges).
+// Otherwise, the interval is set to 1 (upward ranges).
+#define z_range(f,t,i,s) { \
     rf_rng *rng = malloc(sizeof(rf_rng)); \
     rf_int from = rng->from = (f); \
     rf_int to   = rng->to = (t); \
@@ -1172,83 +1139,58 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
     rng->itvl   = itvl ? itvl : from > to ? -1 : 1; \
     s = (rf_val) {TYPE_RNG, .q = rng}; \
 }
-    // x..y
-    z_case(RNG)
-        z_rng(intval(&sp[-2].v),
-              intval(&sp[-1].v),
-              0,
-              sp[-2].v);
-        --sp;
-        ++ip;
-        z_break;
-    // x..
-    z_case(RNGF)
-        z_rng(intval(&sp[-1].v),
-              INT64_MAX,
-              0,
-              sp[-1].v);
-        ++ip;
-        z_break;
-    // ..y
-    z_case(RNGT)
-        z_rng(0,
-              intval(&sp[-1].v),
-              0,
-              sp[-1].v);
-        ++ip;
-        z_break;
-    // ..
-    z_case(RNGI)
-        ++sp;
-        z_rng(0,
-              INT64_MAX,
-              0,
-              sp[-1].v);
-        ++ip;
-        z_break;
-    // x..y:z
-    z_case(SRNG)
-        z_rng(intval(&sp[-3].v),
-              intval(&sp[-2].v),
-              intval(&sp[-1].v),
-              sp[-3].v);
-        sp -= 2;
-        ++ip;
-        z_break;
-    // x..:z
-    z_case(SRNGF)
-        z_rng(intval(&sp[-2].v),
-              INT64_MAX,
-              intval(&sp[-1].v),
-              sp[-2].v);
-        --sp;
-        ++ip;
-        z_break;
-    // ..y:z
-    z_case(SRNGT)
-        z_rng(0,
-              intval(&sp[-2].v),
-              intval(&sp[-1].v),
-              sp[-2].v);
-        --sp;
-        ++ip;
-        z_break;
-    // ..:z
-    z_case(SRNGI)
-        z_rng(0,
-              INT64_MAX,
-              intval(&sp[-1].v),
-              sp[-1].v);
-        ++ip;
-        z_break;
+// x..y
+L(RNG)      z_range(intval(&sp[-2].v), intval(&sp[-1].v), 0, sp[-2].v);
+            --sp;
+            ++ip;
+            BREAK;
 
-    // Simple assignment
-    // copy SP[-1] to *SP[-2] and leave value on stack.
-    z_case(SET)
-        sp[-2].v = *sp[-2].a = sp[-1].v;
-        --sp;
-        ++ip;
-        z_break;
+// x..
+L(RNGF)     z_range(intval(&sp[-1].v), INT64_MAX, 0, sp[-1].v);
+            ++ip;
+            BREAK;
+
+// ..y
+L(RNGT)     z_range(0, intval(&sp[-1].v), 0, sp[-1].v);
+            ++ip;
+            BREAK;
+
+// ..
+L(RNGI)     ++sp;
+            z_range(0, INT64_MAX, 0, sp[-1].v);
+            ++ip;
+            BREAK;
+
+// x..y:z
+L(SRNG)     z_range(intval(&sp[-3].v), intval(&sp[-2].v), intval(&sp[-1].v), sp[-3].v);
+            sp -= 2;
+            ++ip;
+            BREAK;
+
+// x..:z
+L(SRNGF)    z_range(intval(&sp[-2].v), INT64_MAX, intval(&sp[-1].v), sp[-2].v);
+            --sp;
+            ++ip;
+            BREAK;
+
+// ..y:z
+L(SRNGT)    z_range(0, intval(&sp[-2].v), intval(&sp[-1].v), sp[-2].v);
+            --sp;
+            ++ip;
+            BREAK;
+
+// ..:z
+L(SRNGI)    z_range(0, INT64_MAX, intval(&sp[-1].v), sp[-1].v);
+            ++ip;
+            BREAK;
+
+// Simple assignment
+// copy SP[-1] to *SP[-2] and leave value on stack.
+L(SET)      sp[-2].v = *sp[-2].a = sp[-1].v;
+            --sp;
+            ++ip;
+            BREAK;
+
 #ifndef COMPUTED_GOTO
     } }
 #endif
