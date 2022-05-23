@@ -350,6 +350,11 @@ static inline void new_iter(rf_val *set) {
     new->p = iter;
     iter = new;
     switch (set->type) {
+    case TYPE_NULL:
+        iter->t = LOOP_NULL;
+        iter->keys = NULL;
+        iter->n = 1;
+        break;
     case TYPE_FLT:
         set->i = (rf_int) set->f;
         // Fall-through
@@ -553,18 +558,10 @@ L(LOOP16) {
         *iter->v = *t_lookup(iter->set.tab, iter->keys, 0);
         iter->keys++;
         break;
-    case LOOP_FN:
+    case LOOP_NULL:
+        set_null(iter->v);
         if (iter->k != NULL) {
-            if (is_null(iter->k)) {
-                set_int(iter->k, 0);
-            } else {
-                iter->k->i += 1;
-            }
-        }
-        if (is_null(iter->v)) {
-            *iter->v = (rf_val) {TYPE_INT, .i = *iter->set.code++};
-        } else {
-            iter->v->i = *iter->set.code++;
+            set_null(iter->k);
         }
         break;
     default: break;

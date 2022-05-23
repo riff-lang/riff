@@ -17,7 +17,7 @@ enum loops {
     LOOP_RNG,
     LOOP_STR,
     LOOP_TAB,
-    LOOP_FN
+    LOOP_NULL
 };
 
 typedef struct rf_iter rf_iter;
