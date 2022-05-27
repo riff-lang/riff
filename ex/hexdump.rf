@@ -4,8 +4,7 @@
 
 fn dump(f) {
     while !eof(f) {
-        s = read(f,16)
-        if !#s break
+        if !(s = read(f,16)) break
         printf("%07x0: ", ln++)
         for i in #s-1
             printf(i == 7 ? "%02x  " : "%02x ", byte(s,i))
