@@ -105,39 +105,39 @@ OPCODE(NUL,     0, "NULL"),
 // Push immediate value on the stack
 OPCODE(IMM8,    1, "IMM"), // IP+1
 OPCODE(IMM16,   2, "IMM"), // ((IP+1) << 8) + (IP+2)
-OPCODE(IMM0,    0, "IMM    0"), // Literal `0`
-OPCODE(IMM1,    0, "IMM    1"), // Literal `1`
-OPCODE(IMM2,    0, "IMM    2"), // Literal `2`
+OPCODE(IMM0,    0, "IMM     0"), // Literal `0`
+OPCODE(IMM1,    0, "IMM     1"), // Literal `1`
+OPCODE(IMM2,    0, "IMM     2"), // Literal `2`
 
 // Push constant from constants table on stack as a value
 OP_STR(CONST,   1), // K[IP+1]
-OPCODE(CONST0,  0, "CONST  0"), // K[0]
-OPCODE(CONST1,  0, "CONST  1"), // K[1]
-OPCODE(CONST2,  0, "CONST  2"), // K[2]
+OPCODE(CONST0,  0, "CONST   0"), // K[0]
+OPCODE(CONST1,  0, "CONST   1"), // K[1]
+OPCODE(CONST2,  0, "CONST   2"), // K[2]
 
 // Push address of a global var on the stack
 OP_STR(GBLA,    1), // K[IP+1]
-OPCODE(GBLA0,   0, "GBLA   0"), // K[0]
-OPCODE(GBLA1,   0, "GBLA   1"), // K[1]
-OPCODE(GBLA2,   0, "GBLA   2"), // K[2]
+OPCODE(GBLA0,   0, "GBLA    0"), // K[0]
+OPCODE(GBLA1,   0, "GBLA    1"), // K[1]
+OPCODE(GBLA2,   0, "GBLA    2"), // K[2]
 
 // Copy value of global var onto stack
 OP_STR(GBLV,    1), // K[IP+1]
-OPCODE(GBLV0,   0, "GBLV   0"), // K[0]
-OPCODE(GBLV1,   0, "GBLV   1"), // K[1]
-OPCODE(GBLV2,   0, "GBLV   2"), // K[2]
+OPCODE(GBLV0,   0, "GBLV    0"), // K[0]
+OPCODE(GBLV1,   0, "GBLV    1"), // K[1]
+OPCODE(GBLV2,   0, "GBLV    2"), // K[2]
 
 // Push address of local var on the stack
 OP_STR(LCLA,    1), // stack[FP+IP+1]
-OPCODE(LCLA0,   0, "LCLA   0"), // stack[FP+0]
-OPCODE(LCLA1,   0, "LCLA   1"), // stack[FP+1]
-OPCODE(LCLA2,   0, "LCLA   2"), // stack[FP+2]
+OPCODE(LCLA0,   0, "LCLA    0"), // stack[FP+0]
+OPCODE(LCLA1,   0, "LCLA    1"), // stack[FP+1]
+OPCODE(LCLA2,   0, "LCLA    2"), // stack[FP+2]
 
 // Copy local value to top of stack
 OP_STR(LCLV,    1), // stack[FP+IP+1]
-OPCODE(LCLV0,   0, "LCLV   0"), // stack[FP+0]
-OPCODE(LCLV1,   0, "LCLV   1"), // stack[FP+1]
-OPCODE(LCLV2,   0, "LCLV   2"), // stack[FP+2]
+OPCODE(LCLV0,   0, "LCLV    0"), // stack[FP+0]
+OPCODE(LCLV1,   0, "LCLV    1"), // stack[FP+1]
+OPCODE(LCLV2,   0, "LCLV    2"), // stack[FP+2]
 
 // Function calls
 OP_STR(TCALL,   1),
@@ -148,7 +148,7 @@ OP_STR(RET,     0), // Void return
 OPCODE(RET1,    0, "RET"), // Return 1 value
 
 // Table initialization
-OPCODE(TAB0,    0, "TAB    0"), // Empty
+OPCODE(TAB0,    0, "TAB     0"), // Empty
 OP_STR(TAB,     1), // IP+1 stack elements
 OP_STR(TABK,    1), // K[IP+1] stack elements
 

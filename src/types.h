@@ -148,5 +148,6 @@ rf_int  re_match(char *, size_t, rf_re *, int);
 rf_val *v_newnull(void);
 rf_val *v_newtab(uint32_t);
 rf_val *v_copy(rf_val *);
+void    v_tostring(char *, rf_val *);
 
 #endif

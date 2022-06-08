@@ -179,29 +179,17 @@ LIB_FN(open) {
     return 1;
 }
 
-static inline void fprintf_val(FILE *f, rf_val *v) {
-    switch (v->type) {
-    case TYPE_NULL: fprintf(f, "null");                 break;
-    case TYPE_INT:  fprintf(f, "%"PRId64, v->i);      break;
-    case TYPE_FLT:  fprintf(f, FLT_PRINT_FMT, v->f);  break;
-    case TYPE_STR:  fprintf(f, "%s", v->s->str);      break;
-    case TYPE_RE:   fprintf(f, "regex: %p", v->r);    break;
-    case TYPE_FH:   fprintf(f, "file: %p", v->fh->p); break;
-    case TYPE_RNG:
-        fprintf(f, "range: %"PRId64"..%"PRId64":%"PRId64,
-                v->q->from, v->q->to, v->q->itvl);
-        break;
-    case TYPE_TAB:  fprintf(f, "table: %p", v->t);    break;
-    case TYPE_RFN:
-    case TYPE_CFN:  fprintf(f, "fn: %p", v->fn);      break;
-    }
+static inline void fputs_val(FILE *f, rf_val *v) {
+    char buf[STR_BUF_SZ];
+    v_tostring(buf, v);
+    fputs(buf, f);
 }
 
 // print(...)
 LIB_FN(print) {
     for (int i = 0; i < argc; ++i) {
         if (i) fputs(" ", stdout);
-        fprintf_val(stdout, fp+i);
+        fputs_val(stdout, fp+i);
     }
     fputs("\n", stdout);
     set_int(fp-1, argc);
@@ -275,7 +263,7 @@ LIB_FN(write) {
     if (!argc)
         return 0;
     FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].fh->p : stdout;
-    fprintf_val(f, fp);
+    fputs_val(f, fp);
     return 0;
 }
 

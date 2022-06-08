@@ -26,6 +26,26 @@ void c_push(rf_code *c, uint8_t b) {
     c->code[c->n++] = b;
 }
 
+static void push_i16(rf_code *c, int16_t i) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    push((int8_t) (i & 0xff));
+    push((int8_t) ((i >> 8) & 0xff));
+#else
+    push((int8_t) ((i >> 8) & 0xff));
+    push((int8_t) (i & 0xff));
+#endif
+}
+
+static void push_u16(rf_code *c, uint16_t i) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    push((uint8_t) (i & 0xff));
+    push((uint8_t) ((i >> 8) & 0xff));
+#else
+    push((uint8_t) ((i >> 8) & 0xff));
+    push((uint8_t) (i & 0xff));
+#endif
+}
+
 void c_free(rf_code *c) {
     free(c);
     c_init(c);
@@ -81,8 +101,7 @@ void c_jump(rf_code *c, int type, int l) {
         case XJNZ: push(OP_XJNZ16); break;
         default: break;
         }
-        push((int8_t) ((d >> 8) & 0xff));
-        push((int8_t) (d & 0xff));
+        push_i16(c, (int16_t) d);
     } else {
         err(c, "backward jump larger than INT16_MAX");
     }
@@ -95,8 +114,7 @@ void c_loop(rf_code *c, int l) {
         push((uint8_t) d);
     } else if (d <= UINT16_MAX) {
         push(OP_LOOP16);
-        push((uint8_t) ((d >> 8) & 0xff));
-        push((uint8_t) d);
+        push_u16(c, (uint16_t) d);
     } else {
         err(c, "backward loop too large");
     }
@@ -137,8 +155,13 @@ void c_patch(rf_code *c, int l) {
     int jmp = c->n - l + 1;
     if (jmp > INT16_MAX)
         err(c, "forward jump too large to patch");
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    c->code[l]   = (jmp & 0xff);
+    c->code[l+1] = ((jmp >> 8) & 0xff);
+#else
     c->code[l]   = ((jmp >> 8) & 0xff);
     c->code[l+1] = (jmp & 0xff);
+#endif
 }
 
 static void c_pushk(rf_code *c, int i) {
@@ -222,8 +245,7 @@ void c_constant(rf_code *c, rf_token *tk) {
                 return;
             } else if (i >= 256 && i <= UINT16_MAX) {
                 push(OP_IMM16);
-                push((uint8_t) ((i >> 8) & 0xff));
-                push((uint8_t) i);
+                push_u16(c, (uint16_t) i);
                 return;
             } else {
                 m_growarray(c->k, c->nk, c->kcap, rf_val);

@@ -495,7 +495,7 @@ static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
 
 // Unconditional jumps
 #define j8()  (ip += (int8_t) ip[1])
-#define j16() (ip += (int16_t) ((ip[1] << 8) + ip[2]))
+#define j16() (ip += *(int16_t *) &ip[1])
 
 L(JMP8)     j8();  BREAK;
 L(JMP16)    j16(); BREAK;
@@ -570,7 +570,7 @@ L(LOOP16) {
     // Treat byte(s) following OP_LOOP as unsigned since jumps are always
     // backward
     if (jmp16)
-        ip -= (ip[1] << 8) + ip[2];
+        ip -= *(uint16_t *) &ip[1];
     else
         ip -= ip[1];
     BREAK;
@@ -717,11 +717,11 @@ L(NUL)      set_null(&sp++->v); ++ip; BREAK;
 // Assign integer value x to the top of the stack.
 #define imm(x) set_int(&sp++->v, x)
 
-L(IMM8)     imm(ip[1]);              ip += 2; BREAK;
-L(IMM16)    imm((ip[1]<<8) + ip[2]); ip += 3; BREAK;
-L(IMM0)     imm(0);                  ++ip;    BREAK;
-L(IMM1)     imm(1);                  ++ip;    BREAK;
-L(IMM2)     imm(2);                  ++ip;    BREAK;
+L(IMM8)     imm(ip[1]);               ip += 2; BREAK;
+L(IMM16)    imm(*(int16_t *) &ip[1]); ip += 3; BREAK;
+L(IMM0)     imm(0);                   ++ip;    BREAK;
+L(IMM1)     imm(1);                   ++ip;    BREAK;
+L(IMM2)     imm(2);                   ++ip;    BREAK;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the stack.

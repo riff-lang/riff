@@ -17,184 +17,122 @@ static struct {
 #define OP_ARITY    (opcode_info[b0].arity)
 #define MNEMONIC    (opcode_info[b0].mnemonic)
 
-#define INST0       "%*d: %02x       %s\n"
-#define INST0DEREF  "%*d: %02x       %-6s      // %s\n"
-#define INST1       "%*d: %02x %02x    %-6s %d\n"
-#define INST1DEREF  "%*d: %02x %02x    %-6s %-6d // %s\n"
-#define INST1ADDR   "%*d: %02x %02x    %-6s %-6d // %d\n"
-#define INST2       "%*d: %02x %02x %02x %-6s %d\n"
-#define INST2ADDR   "%*d: %02x %02x %02x %-6s %-6d // %d\n"
+// Convenience macros for format specifiers
+#define F_IP        "%*d: "
+#define F_XX        "%02x "
+#define F_MNEMONIC  "%s"
+#define F_OPERAND   "%d"
+#define F_LMNEMONIC "%-7s "
+#define F_LOPERAND  "%-6d "
+#define F_DEREF     " // %s"
+#define F_ADDR      " // %d"
 
-#define OPND(x)     (c->k[b1].x)
-#define OPND0(x)    (c->k[0].x)
-#define OPND1(x)    (c->k[1].x)
-#define OPND2(x)    (c->k[2].x)
+// Common format strings
+#define INST0       F_IP F_XX "      "   F_MNEMONIC                     "\n"
+#define INST0DEREF  F_IP F_XX "      "   F_LMNEMONIC "     "    F_DEREF "\n"
+#define INST1       F_IP F_XX F_XX "   " F_LMNEMONIC F_OPERAND          "\n"
+#define INST1DEREF  F_IP F_XX F_XX "   " F_LMNEMONIC F_LOPERAND F_DEREF "\n"
+#define INST1ADDR   F_IP F_XX F_XX "   " F_LMNEMONIC F_LOPERAND F_ADDR  "\n"
+#define INST2       F_IP F_XX F_XX F_XX  F_LMNEMONIC F_OPERAND          "\n"
+#define INST2ADDR   F_IP F_XX F_XX F_XX  F_LMNEMONIC F_LOPERAND F_ADDR  "\n"
 
-static int is_jump8(int op) {
-    return op == OP_JMP8 || op == OP_JZ8 || op == OP_JNZ8 ||
-           op == OP_XJZ8 || op == OP_XJNZ8;
+static int16_t toi16(uint8_t b1, uint8_t b2) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return (int16_t) (b1 | (b2 << 8));
+#else
+    return (int16_t) ((b1 << 8) | b2);
+#endif
 }
 
-static int is_jump16(int op) {
-    return op == OP_JMP16 || op == OP_JZ16 || op == OP_JNZ16 ||
-           op == OP_XJZ16 || op == OP_XJNZ16 ||
-           op == OP_ITERV || op == OP_ITERKV;
+static uint16_t tou16(uint8_t b1, uint8_t b2) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return (uint16_t) (b1 | (b2 << 8));
+#else
+    return (uint16_t) ((b1 << 8) | b2);
+#endif
 }
 
-// TODO This function is way too big for its own good
+// Wrap string in quotes
+// TODO deconstruct bytes that correspond to escape sequences into their literal
+//      forms
+static void disas_tostring(char *buf, rf_val *v) {
+    if (is_str(v)) {
+        sprintf(buf, "\"%s\"", v->s->str);
+    } else {
+        v_tostring(buf, v);
+    }
+}
+
 static void d_code_obj(rf_code *c, int ipw) {
-    int sz = c->n;
     int ip = 0;
-
     char s[STR_BUF_SZ];
-    uint8_t b0, b1, b2;
-    while (ip < sz) {
-        b0 = c->code[ip];
+    while (ip < c->n) {
+        uint8_t  b0  = c->code[ip];
+        uint8_t  b1  = c->code[ip+1];
+        uint8_t  b2  = c->code[ip+2];
+        int16_t  i16 = toi16(b1, b2);
+        uint16_t u16 = tou16(b1, b2);
         if (OP_ARITY) {
-            b1 = c->code[ip+1];
             switch (b0) {
             case OP_CONST:
-            case OP_TABK:
-                switch (c->k[b1].type) {
-                case TYPE_FLT:
-                    sprintf(s, "%g", OPND(f));
-                    break;
-                case TYPE_INT:
-                    sprintf(s, "%"PRId64, OPND(i));
-                    break;
-                case TYPE_STR:
-                    sprintf(s, "\"%s\"", OPND(s->str));
-                    break;
-                case TYPE_RE:
-                    sprintf(s, "regex: %p", OPND(r));
-                    break;
-                case TYPE_RFN:
-                    sprintf(s, "fn: %p", OPND(fn));
-                    break;
-                default:
-                    break;
-                }
+                disas_tostring(s, &c->k[b1]);
                 printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
-            case OP_GBLA: case OP_GBLV:
-            case OP_SIDXA: case OP_SIDXV:
-                sprintf(s, "%s", OPND(s->str));
+            case OP_TABK:
+            case OP_GBLA:
+            case OP_GBLV:
+            case OP_SIDXA:
+            case OP_SIDXV:
+                v_tostring(s, &c->k[b1]);
                 printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
+                break;
+            case OP_JMP8:
+            case OP_JZ8:
+            case OP_JNZ8:
+            case OP_XJZ8:
+            case OP_XJNZ8:
+                printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
+                break;
+            case OP_JMP16:
+            case OP_JZ16:
+            case OP_JNZ16:
+            case OP_XJZ16:
+            case OP_XJNZ16:
+            case OP_ITERV:
+            case OP_ITERKV:
+                printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, i16, ip + i16);
+                break;
+            case OP_LOOP8:
+                printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, -b1, ip - b1);
+                break;
+            case OP_LOOP16:
+                printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, -u16, ip - u16);
+                break;
+            case OP_IMM16:
+                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, i16);
                 break;
             default:
-                if (is_jump8(b0)) {
-                    printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
-                } else if (is_jump16(b0)) {
-                    b2 = c->code[ip+2];
-                    int16_t a = (b1 << 8) + b2;
-                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, a, ip + a);
-                    ip += 1;
-                } else if (b0 == OP_LOOP8) {
-                    printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, -b1, ip - (uint8_t) b1);
-                } else if (b0 == OP_LOOP16) {
-                    b2 = c->code[ip+2];
-                    int a = (b1 << 8) + b2;
-                    printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, -a, ip - a);
-                    ip += 1;
-                } else if (b0 == OP_IMM16) {
-                    b2 = c->code[ip+2];
-                    int a = (b1 << 8) + b2;
-                    printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, a);
-                    ip += 1;
-                } else {
-                    printf(INST1, ipw, ip, b0, b1, MNEMONIC, b1);
-                }
+                printf(INST1, ipw, ip, b0, b1, MNEMONIC, b1);
                 break;
             }
-            ip += 2;
         } else if (b0 >= OP_CONST0 && b0 <= OP_GBLV2) {
             switch (b0) {
-            case OP_CONST0:
-                switch (c->k[0].type) {
-                case TYPE_FLT:
-                    sprintf(s, "%g", OPND0(f));
-                    break;
-                case TYPE_INT:
-                    sprintf(s, "%"PRId64, OPND0(i));
-                    break;
-                case TYPE_STR:
-                    sprintf(s, "\"%s\"", OPND0(s->str));
-                    break;
-                case TYPE_RE:
-                    sprintf(s, "regex: %p", OPND0(r));
-                    break;
-                case TYPE_RFN:
-                    sprintf(s, "fn: %p", OPND0(fn));
-                    break;
-                default:
-                    break;
-                }
-                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
-                break;
-            case OP_CONST1:
-                switch (c->k[1].type) {
-                case TYPE_FLT:
-                    sprintf(s, "%g", OPND1(f));
-                    break;
-                case TYPE_INT:
-                    sprintf(s, "%"PRId64, OPND1(i));
-                    break;
-                case TYPE_STR:
-                    sprintf(s, "\"%s\"", OPND1(s->str));
-                    break;
-                case TYPE_RE:
-                    sprintf(s, "regex: %p", OPND1(r));
-                    break;
-                case TYPE_RFN:
-                    sprintf(s, "fn: %p", OPND1(fn));
-                    break;
-                default:
-                    break;
-                }
-                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
-                break;
-            case OP_CONST2:
-                switch (c->k[2].type) {
-                case TYPE_FLT:
-                    sprintf(s, "%g", OPND2(f));
-                    break;
-                case TYPE_INT:
-                    sprintf(s, "%"PRId64, OPND2(i));
-                    break;
-                case TYPE_STR:
-                    sprintf(s, "\"%s\"", OPND2(s->str));
-                    break;
-                case TYPE_RE:
-                    sprintf(s, "regex: %p", OPND2(r));
-                    break;
-                case TYPE_RFN:
-                    sprintf(s, "fn: %p", OPND2(fn));
-                    break;
-                default:
-                    break;
-                }
-                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
-                break;
-            case OP_GBLA0: case OP_GBLV0:
-                sprintf(s, "%s", OPND0(s->str));
-                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
-                break;
-            case OP_GBLA1: case OP_GBLV1:
-                sprintf(s, "%s", OPND1(s->str));
-                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
-                break;
-            case OP_GBLA2: case OP_GBLV2:
-                sprintf(s, "%s", OPND2(s->str));
-                printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
-                break;
-            default:
-                break;
+            case OP_CONST0: disas_tostring(s, &c->k[0]); break;
+            case OP_CONST1: disas_tostring(s, &c->k[1]); break;
+            case OP_CONST2: disas_tostring(s, &c->k[2]); break;
+            case OP_GBLA0:
+            case OP_GBLV0:  v_tostring(s, &c->k[0]);     break;
+            case OP_GBLA1:
+            case OP_GBLV1:  v_tostring(s, &c->k[1]);     break;
+            case OP_GBLA2:
+            case OP_GBLV2:  v_tostring(s, &c->k[2]);     break;
+            default: break;
             }
-            ip += 1;
+            printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
         } else {
             printf(INST0, ipw, ip, b0, MNEMONIC);
-            ip += 1;
         }
+        ip += OP_ARITY + 1;
     }
 }
 
