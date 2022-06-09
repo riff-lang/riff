@@ -18,11 +18,11 @@ static struct {
 #define MNEMONIC    (opcode_info[b0].mnemonic)
 
 // Convenience macros for format specifiers
-#define F_IP        "%*d: "
+#define F_IP        "%*d:  "
 #define F_XX        "%02x "
-#define F_MNEMONIC  "%s"
+#define F_MNEMONIC  " %s"
 #define F_OPERAND   "%d"
-#define F_LMNEMONIC "%-7s "
+#define F_LMNEMONIC " %-7s "
 #define F_LOPERAND  "%-6d "
 #define F_DEREF     " // %s"
 #define F_ADDR      " // %d"
@@ -32,9 +32,7 @@ static struct {
 #define INST0DEREF  F_IP F_XX "      "   F_LMNEMONIC "     "    F_DEREF "\n"
 #define INST1       F_IP F_XX F_XX "   " F_LMNEMONIC F_OPERAND          "\n"
 #define INST1DEREF  F_IP F_XX F_XX "   " F_LMNEMONIC F_LOPERAND F_DEREF "\n"
-#define INST1ADDR   F_IP F_XX F_XX "   " F_LMNEMONIC F_LOPERAND F_ADDR  "\n"
 #define INST2       F_IP F_XX F_XX F_XX  F_LMNEMONIC F_OPERAND          "\n"
-#define INST2ADDR   F_IP F_XX F_XX F_XX  F_LMNEMONIC F_LOPERAND F_ADDR  "\n"
 
 static int16_t toi16(uint8_t b1, uint8_t b2) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -91,7 +89,7 @@ static void d_code_obj(rf_code *c, int ipw) {
             case OP_JNZ8:
             case OP_XJZ8:
             case OP_XJNZ8:
-                printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, (int8_t) b1, ip + (int8_t) b1);
+                printf(INST1, ipw, ip, b0, b1, MNEMONIC, ip + (int8_t) b1);
                 break;
             case OP_JMP16:
             case OP_JZ16:
@@ -100,13 +98,13 @@ static void d_code_obj(rf_code *c, int ipw) {
             case OP_XJNZ16:
             case OP_ITERV:
             case OP_ITERKV:
-                printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, i16, ip + i16);
+                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, ip + i16);
                 break;
             case OP_LOOP8:
-                printf(INST1ADDR, ipw, ip, b0, b1, MNEMONIC, -b1, ip - b1);
+                printf(INST1, ipw, ip, b0, b1, MNEMONIC, ip - b1);
                 break;
             case OP_LOOP16:
-                printf(INST2ADDR, ipw, ip, b0, b1, b2, MNEMONIC, -u16, ip - u16);
+                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, ip - u16);
                 break;
             case OP_IMM16:
                 printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, i16);
