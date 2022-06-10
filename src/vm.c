@@ -848,22 +848,22 @@ L(CALL) {
     // User-defined functions
     if (is_rfn(&sp[-nargs-1].v)) {
 
-    rf_fn *fn = sp[-nargs-1].v.fn;
-    arity = fn->arity;
+        rf_fn *fn = sp[-nargs-1].v.fn;
+        arity = fn->arity;
 
-    // If user called function with too few arguments, nullify stack slots and
-    // increment SP.
-    if (nargs < arity) {
-        for (int i = nargs; i < arity; ++i) {
-            set_null(&sp++->v);
+        // If user called function with too few arguments, nullify stack slots and
+        // increment SP.
+        if (nargs < arity) {
+            for (int i = nargs; i < arity; ++i) {
+                set_null(&sp++->v);
+            }
         }
-    }
-    
-    // If user called function with too many arguments, decrement SP so it
-    // points to the appropriate slot for control transfer.
-    else if (nargs > arity) {
-        sp -= (nargs - arity);
-    }
+        
+        // If user called function with too many arguments, decrement SP so it
+        // points to the appropriate slot for control transfer.
+        else if (nargs > arity) {
+            sp -= (nargs - arity);
+        }
 
         // Pass SP-arity-1 as the FP for the succeeding call frame. Since the
         // function is already at this location in the stack, the compiler can
