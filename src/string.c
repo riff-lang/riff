@@ -147,7 +147,7 @@ rf_str *s_new_concat(char *l, char *r) {
 
 rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
     // Correct out-of-bounds ranges
-    size_t sl = strlen(s);
+    size_t sl = strlen(s) - 1;
     from = from > sl ? sl : from < 0 ? 0 : from;
     to   = to   > sl ? sl : to   < 0 ? 0 : to;
 
@@ -163,8 +163,8 @@ rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
         (from > to && itvl > -1))
         itvl = -itvl;
 
-    len = (size_t) ceil(fabs(len / (double) itvl));
-    char *str = malloc(len * sizeof(char) + 1);
+    len = (size_t) ceil(fabs((double) len / (double) itvl));
+    char *str = malloc(len * sizeof(char));
     for (size_t i = 0; i < len; ++i) {
         str[i] = s[from];
         from += itvl;
