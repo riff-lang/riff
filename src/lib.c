@@ -781,16 +781,21 @@ static void register_funcs(rf_htab *g) {
     // Initialize the PRNG with the current time
     prng_seed(&prngs, time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
-        rf_val *fn = malloc(sizeof(rf_val));
-        *fn = (rf_val) {TYPE_CFN, .cfn = &lib_fn[i].fn};
-        ht_insert_cstr(g, lib_fn[i].name, fn);
+        ht_insert_cstr(g, lib_fn[i].name, &(rf_val) {TYPE_CFN, .cfn = &lib_fn[i].fn});
     }
 }
 
+// NOTE: Standard streams can't be cleanly declared in a static struct like the
+// lib functions since the names (e.g. stdin) aren't compile-time constants
+#define REGISTER_LIB_STREAM(name) \
+    rf_fh *name##_fh = malloc(sizeof(rf_fh)); \
+    *name##_fh = (rf_fh) {name, FH_STD}; \
+    ht_insert_cstr(g, #name, &(rf_val){TYPE_FH, .fh = name##_fh});
+
 static void register_streams(rf_htab *g) {
-    ht_insert_cstr(g, "stdin", &(rf_val){TYPE_FH, .fh = &(rf_fh){stdin, FH_STD}});
-    ht_insert_cstr(g, "stdout", &(rf_val){TYPE_FH, .fh = &(rf_fh){stdout, FH_STD}});
-    ht_insert_cstr(g, "stderr", &(rf_val){TYPE_FH, .fh = &(rf_fh){stderr, FH_STD}});
+    REGISTER_LIB_STREAM(stdin);
+    REGISTER_LIB_STREAM(stdout);
+    REGISTER_LIB_STREAM(stderr);
 }
 
 void l_register_builtins(rf_htab *g) {
