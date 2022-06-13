@@ -135,6 +135,23 @@
     [ "$output" -eq 1 ]
 }
 
+@test "Substring expressions" {
+    run bin/riff -e 'print("abc"[0])'
+    [ "$output" = "a" ]
+
+    run bin/riff -e 'print("abc"[2..])'
+    [ "$output" = "c" ]
+
+    run bin/riff -e 'print("abc"[-1])'
+    [ "$output" = "c" ]
+
+    run bin/riff -e 'print(#"abc"[2..])'
+    [ "$output" -eq 1 ]
+
+    run bin/riff -e 'print("abc"[2..0])'
+    [ "$output" = "cba" ]
+}
+
 @test "Misc. edge case expressions" {
     run bin/riff -e 'print(a=b=7)'
     [ "$output" -eq 7 ]
