@@ -343,11 +343,15 @@ static void push_local_val(rf_code *c, int i) {
 // mode = 1 => VM will push the pointer to the rf_val at stack[i]
 // mode = 0 => VM will make a copy of the rf_val at stack[i] and
 //             push onto the stack
-void c_local(rf_code *c, int i, int mode) {
-    if (mode)
-        push_local_addr(c, i);
-    else
+void c_local(rf_code *c, int i, int mode, int reserve) {
+    if (mode) {
+        if (reserve)
+            push(OP_DUPA);
+        else
+            push_local_addr(c, i);
+    } else {
         push_local_val(c, i);
+    }
 }
 
 void c_table(rf_code *c, int n) {
@@ -475,11 +479,19 @@ void c_postfix(rf_code *c, int op) {
 }
 
 void c_pop(rf_code *c, int n) {
-    if (n == 1)
+    if (n == 1) {
         push(OP_POP);
-    else {
+    } else {
         push(OP_POPI);
         push((uint8_t) n);
+    }
+}
+
+void c_pop_expr_stmt(rf_code *c, int n) {
+    if (n == 1 && c->code[c->n-1] == OP_SET) {
+        c->code[c->n-1] = OP_SETP;
+    } else {
+        c_pop(c, n);
     }
 }
 

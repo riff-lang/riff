@@ -133,6 +133,9 @@ OPCODE(LCLA0,   0, "LCLA    0"), // stack[FP+0]
 OPCODE(LCLA1,   0, "LCLA    1"), // stack[FP+1]
 OPCODE(LCLA2,   0, "LCLA    2"), // stack[FP+2]
 
+// Reserve and duplicate address of SP
+OP_STR(DUPA,    0),
+
 // Copy local value to top of stack
 OP_STR(LCLV,    1), // stack[FP+IP+1]
 OPCODE(LCLV0,   0, "LCLV    0"), // stack[FP+0]
@@ -178,6 +181,7 @@ OP_STR(SRNGI,   0), // .. (empty/infinite) w/ interval SP[-1]
 
 // Assignment
 OP_STR(SET,     0),
+OP_STR(SETP,    0),
 
 #undef OP_STR
 #undef OPCODE

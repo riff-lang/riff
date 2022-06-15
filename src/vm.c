@@ -766,6 +766,12 @@ L(LCLA0)    lcla(0);     ++ip;    BREAK;
 L(LCLA1)    lcla(1);     ++ip;    BREAK;
 L(LCLA2)    lcla(2);     ++ip;    BREAK;
 
+L(DUPA)     set_null(&sp->v);
+            sp[1].a = &sp->v;
+            sp += 2;
+            ++ip;
+            BREAK;
+
 // Push local value
 // Copy the value of FP[x] to the top of the stack.
 #define lclv(x) sp++->v = fp[(x)].v
@@ -1185,6 +1191,11 @@ L(SRNGI)    z_range(0, INT64_MAX, intval(&sp[-1].v), sp[-1].v);
 // copy SP[-1] to *SP[-2] and leave value on stack.
 L(SET)      sp[-2].v = *sp[-2].a = sp[-1].v;
             --sp;
+            ++ip;
+            BREAK;
+
+L(SETP)     *sp[-2].a = sp[-1].v;
+            sp -= 2;
             ++ip;
             BREAK;
 

@@ -40,7 +40,7 @@ void c_free(rf_code *);
 void c_fn_constant(rf_code *, rf_fn *);
 void c_constant(rf_code *, rf_token *);
 void c_global(rf_code *, rf_token *, int);
-void c_local(rf_code *, int, int);
+void c_local(rf_code *, int, int, int);
 void c_table(rf_code *, int);
 void c_index(rf_code *, int, int);
 void c_str_index(rf_code *, rf_str *, int);
@@ -54,6 +54,7 @@ void c_patch(rf_code *, int);
 int  c_prep_jump(rf_code *, int);
 int  c_prep_loop(rf_code *, int);
 void c_pop(rf_code *, int);
+void c_pop_expr_stmt(rf_code *, int);
 void c_return(rf_code *, int);
 
 #endif

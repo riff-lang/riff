@@ -163,7 +163,7 @@ static void identifier(rf_parser *y, uint32_t flags) {
     // to push the address of the symbol
     if (flags & EXPR_REF) {
         if (scope >= 0)
-            c_local(y->c, scope, 1);
+            c_local(y->c, scope, 1, !y->lhs && y->lx);
         else
             c_global(y->c, &y->x->tk, 1);
         adv_mode(LEX_LED);
@@ -179,12 +179,12 @@ static void identifier(rf_parser *y, uint32_t flags) {
              is_asgmt(y->x->la.kind)  ||
              LA_KIND('.') || LA_KIND('['))) {
         if (scope >= 0)
-            c_local(y->c, scope, 1);
+            c_local(y->c, scope, 1, !y->lhs && y->lx);
         else
             c_global(y->c, &y->x->tk, 1);
     } else {
         if (scope >= 0)
-            c_local(y->c, scope, 0);
+            c_local(y->c, scope, 0, !y->lhs && y->lx);
         else
             c_global(y->c, &y->x->tk, 0);
     }
@@ -524,7 +524,7 @@ static int expr(rf_parser *y, uint32_t flags, int rbp) {
 // Standalone expressions
 static void expr_stmt(rf_parser *y) {
     int n = expr_list(y, 0);
-    c_pop(y->c, n);
+    c_pop_expr_stmt(y->c, n);
 }
 
 // After exiting scope, "pop" local variables no longer in scope by
@@ -675,7 +675,6 @@ static void local_fn(rf_parser *y) {
     // current scope, add a new local
     if (idx < 0 || y->lcl[idx].d != y->ld) {
         add_local(y, id);
-        push(OP_NUL); // Reserve stack slot
         switch (y->nlcl - 1) {
         case 0: push(OP_LCLA0); break;
         case 1: push(OP_LCLA1); break;
@@ -896,11 +895,9 @@ static void local_stmt(rf_parser *y) {
         if (idx < 0 || y->lcl[idx].d != y->ld) {
             set(lx);    // Only set for newly-declared locals
             add_local(y, id);
-            push(OP_NUL); // Reserve stack slot
         }
         expr(y, 0, 0);
-        c_pop(y->c, 1);
-
+        c_pop_expr_stmt(y->c, 1);
         unset(lx);
         if (TK_KIND(','))
             adv();
