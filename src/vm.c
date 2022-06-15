@@ -584,23 +584,25 @@ L(POPL)     destroy_iter();
 // Create iterator and jump to the corresponding OP_LOOP instruction for
 // initialization
 L(ITERV)
-L(ITERKV) {
-    int k = *ip == OP_ITERKV;
+    new_iter(&sp[-1].v); 
+    --sp;
+    set_null(&sp++->v);
+    iter->k = NULL;
+    iter->v = &sp[-1].v;
+    j16();
+    BREAK;
+
+L(ITERKV)
     new_iter(&sp[-1].v); 
     --sp;
     set_null(&sp++->v);
 
     // Reserve extra stack slot for k,v iterators
-    if (k) {
-        set_null(&sp++->v);
-        iter->k = &sp[-2].v;
-    } else {
-        iter->k = NULL;
-    }
+    set_null(&sp++->v);
+    iter->k = &sp[-2].v;
     iter->v = &sp[-1].v;
     j16();
     BREAK;
-}
 
 // Unary operations
 // sp[-1].v is assumed to be safe to overwrite
