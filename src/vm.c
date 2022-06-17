@@ -1082,7 +1082,7 @@ L(SIDXA)
 
     switch (tp->type) {
 
-    // Create table if sp[-2].a is an uninitialized variable
+    // Create table if sp[-1].a is an uninitialized variable
     case TYPE_NULL:
         *tp = *v_newtab(0);
         // Fall-through
@@ -1090,7 +1090,7 @@ L(SIDXA)
         sp[-1].a = ht_lookup_val(tp->t->h, &k[ip[1]]);
         break;
     default:
-        err("invalid assignment");
+        err("invalid member access (non-table value)");
     }
     ip += 2;
     BREAK;
@@ -1103,17 +1103,17 @@ L(SIDXV)
 
     switch (sp[-1].a->type) {
 
-    // Create table if sp[-2].a is an uninitialized variable
+    // Create table if sp[-1].a is an uninitialized variable
     case TYPE_NULL:
         *sp[-1].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
         sp[-1].v = *ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
-        ip += 2;
         break;
     default:
         err("invalid member access (non-table value)");
     }
+    ip += 2;
     BREAK;
 
 L(FLDA)     sp[-1].a = t_lookup(&fldv, &sp[-1].v, 1);
