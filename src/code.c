@@ -46,11 +46,6 @@ static void push_u16(rf_code *c, uint16_t i) {
 #endif
 }
 
-void c_free(rf_code *c) {
-    free(c);
-    c_init(c);
-}
-
 // Push a jump instruction and return the location of the byte to be
 // patched
 int c_prep_jump(rf_code *c, int type) {

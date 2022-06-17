@@ -36,7 +36,6 @@ typedef struct {
 
 void c_init(rf_code *);
 void c_push(rf_code *, uint8_t);
-void c_free(rf_code *);
 void c_fn_constant(rf_code *, rf_fn *);
 void c_constant(rf_code *, rf_token *);
 void c_global(rf_code *, rf_token *, int);
