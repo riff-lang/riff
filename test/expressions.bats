@@ -152,6 +152,11 @@
     [ "$output" = "cba" ]
 }
 
+@test "Multi-dimensional subscript expressions" {
+    run bin/riff -e 't=1 print(t[0])'
+    [ "$output" = "1" ]
+}
+
 @test "Misc. edge case expressions" {
     run bin/riff -e 'print(a=b=7)'
     [ "$output" -eq 7 ]

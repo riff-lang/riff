@@ -23,37 +23,36 @@ enum jumps {
 typedef struct {
     uint8_t *code;  // Bytecode array
     rf_val  *k;     // Constants pool
+// } rf_code;
 
-    // TODO array sizes/capacities can be discarded after
-    // compilation. If a global constants pool is used at some point
-    // in the future, the rf_code array in the rf_env struct can be
-    // flattened to an array of bytecode chunks.
+// typedef struct {
     int      n;     // Number of bytes in bytecode array
     int      cap;   // Bytecode array capacity
     int      nk;    // Number of constants in pool
     int      kcap;  // Constants pool capacity
+// } rf_code_md;
 } rf_code;
 
-void c_init(rf_code *);
-void c_push(rf_code *, uint8_t);
-void c_fn_constant(rf_code *, rf_fn *);
-void c_constant(rf_code *, rf_token *);
-void c_global(rf_code *, rf_token *, int);
-void c_local(rf_code *, int, int, int);
-void c_table(rf_code *, int);
-void c_index(rf_code *, int, int);
-void c_str_index(rf_code *, rf_str *, int);
-void c_prefix(rf_code *, int);
-void c_infix(rf_code *, int);
-void c_postfix(rf_code *, int);
-void c_jump(rf_code *, int, int);
-void c_loop(rf_code *, int);
-void c_range(rf_code *, int, int, int);
-void c_patch(rf_code *, int);
-int  c_prep_jump(rf_code *, int);
-int  c_prep_loop(rf_code *, int);
-void c_pop(rf_code *, int);
-void c_pop_expr_stmt(rf_code *, int);
-void c_return(rf_code *, int);
+void     c_init(rf_code *);
+void     c_push(rf_code *, uint8_t);
+uint8_t *c_fn_constant(rf_code *, rf_fn *);
+uint8_t *c_constant(rf_code *, rf_token *);
+uint8_t *c_global(rf_code *, rf_token *, int);
+uint8_t *c_local(rf_code *, int, int, int);
+uint8_t *c_table(rf_code *, int);
+uint8_t *c_index(rf_code *, uint8_t *, int, int);
+uint8_t *c_str_index(rf_code *, uint8_t *, rf_str *, int);
+uint8_t *c_prefix(rf_code *, int);
+uint8_t *c_infix(rf_code *, int);
+uint8_t *c_postfix(rf_code *, int);
+uint8_t *c_jump(rf_code *, int, int);
+uint8_t *c_loop(rf_code *, int);
+uint8_t *c_range(rf_code *, int, int, int);
+void     c_patch(rf_code *, int);
+int      c_prep_jump(rf_code *, int);
+int      c_prep_loop(rf_code *, int);
+uint8_t *c_pop(rf_code *, int);
+uint8_t *c_pop_expr_stmt(rf_code *, int);
+uint8_t *c_return(rf_code *, uint8_t *, int);
 
 #endif

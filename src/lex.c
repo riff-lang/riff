@@ -13,7 +13,7 @@
 
 #define adv() (++x->p)
 
-static void err(rf_lexer *x, const char *msg) {
+static void err(lexer *x, const char *msg) {
     fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
     exit(1);
 }
@@ -38,14 +38,14 @@ static int valid_re_flag(char c) {
            c == 'u' || c == 'x';
 }
 
-static int read_flt(rf_lexer *x, rf_token *tk, const char *start, int base) {
+static int read_flt(lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     tk->lexeme.f = u_str2d(start, &end, base);
     x->p = end;
     return TK_FLT;
 }
 
-static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
+static int read_int(lexer *x, rf_token *tk, const char *start, int base) {
     char *end;
     errno = 0;
     int64_t i = u_str2i64(start, &end, base);
@@ -68,7 +68,7 @@ static int read_int(rf_lexer *x, rf_token *tk, const char *start, int base) {
     return TK_INT;
 }
 
-static int read_num(rf_lexer *x, rf_token *tk) {
+static int read_num(lexer *x, rf_token *tk) {
     const char *start = x->p - 1;
 
     // Quickly evaluate floating-point numbers with no integer part
@@ -98,7 +98,7 @@ static int read_num(rf_lexer *x, rf_token *tk) {
 // TODO?
 // Currently reads a maximum of two hex digits (like Lua). C reads hex
 // digits until it reaches a non-hex digit.
-static int hex_esc(rf_lexer *x) {
+static int hex_esc(lexer *x) {
     if (!isxdigit(*x->p))
         err(x, "expected hexadecimal digit");
     int e = u_hexval(*x->p++);
@@ -111,7 +111,7 @@ static int hex_esc(rf_lexer *x) {
 
 // Reads a maximum of three octal digits. Throws an error if
 // resulting number > 255.
-static int oct_esc(rf_lexer *x) {
+static int oct_esc(lexer *x) {
     if (!isoctal(*x->p))
         err(x, "expected octal digit");
     int e = u_decval(*x->p++);
@@ -126,7 +126,7 @@ static int oct_esc(rf_lexer *x) {
     return e;
 }
 
-static uint32_t unicode_int(rf_lexer *x, int len) {
+static uint32_t unicode_int(lexer *x, int len) {
     uint32_t c = 0;
     for (int i = 0; i < len && isxdigit(*x->p); ++i) {
         c <<= 4;
@@ -135,7 +135,7 @@ static uint32_t unicode_int(rf_lexer *x, int len) {
     return c;
 }
 
-static void unicode_esc(rf_lexer *x, int len) {
+static void unicode_esc(lexer *x, int len) {
     uint32_t c = unicode_int(x, len);
     char buf[8];
     int n = 8 - u_unicode2utf8(buf, c);
@@ -145,7 +145,7 @@ static void unicode_esc(rf_lexer *x, int len) {
     }
 }
 
-static int read_charint(rf_lexer *x, rf_token *tk, int d) {
+static int read_charint(lexer *x, rf_token *tk, int d) {
     int c;
     rf_int v = 0;
     while ((c = *x->p) != d) {
@@ -218,7 +218,7 @@ static int read_charint(rf_lexer *x, rf_token *tk, int d) {
 }
 
 // TODO handling of multi-line string literals
-static int read_str(rf_lexer *x, rf_token *tk, int d) {
+static int read_str(lexer *x, rf_token *tk, int d) {
     x->buf.n = 0;
     int c;
 str_start:
@@ -276,7 +276,7 @@ str_start:
     return TK_STR;
 }
 
-static int read_re(rf_lexer *x, rf_token *tk, int d) {
+static int read_re(lexer *x, rf_token *tk, int d) {
     x->buf.n = 0;
     int c;
 re_start:
@@ -361,7 +361,7 @@ re_start:
     return TK_RE;
 }
 
-static int check_kw(rf_lexer *x, const char *s, int size) {
+static int check_kw(lexer *x, const char *s, int size) {
     int f = size;     // Character immediately following
     int i = 0;
     for (; i < size; ++i)
@@ -371,7 +371,7 @@ static int check_kw(rf_lexer *x, const char *s, int size) {
     return !size && !valid_alphanum(x->p[f]);
 }
 
-static int read_id(rf_lexer *x, rf_token *tk) {
+static int read_id(lexer *x, rf_token *tk) {
     const char *start = x->p - 1;
     // Check for reserved keywords
     switch (*start) {
@@ -456,7 +456,7 @@ static int read_id(rf_lexer *x, rf_token *tk) {
     return TK_ID;
 }
 
-static int test2(rf_lexer *x, int c, int t1, int t2) {
+static int test2(lexer *x, int c, int t1, int t2) {
     if (*x->p == c) {
         adv();
         return t1;
@@ -464,7 +464,7 @@ static int test2(rf_lexer *x, int c, int t1, int t2) {
         return t2;
 }
 
-static int test3(rf_lexer *x, int c1, int t1, int c2, int t2, int t3) {
+static int test3(lexer *x, int c1, int t1, int c2, int t2, int t3) {
     if (*x->p == c1) {
         adv();
         return t1;
@@ -476,7 +476,7 @@ static int test3(rf_lexer *x, int c1, int t1, int c2, int t2, int t3) {
 }
 
 static int
-test4(rf_lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
+test4(lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
     if (*x->p == c1) {
         adv();
         return t1;
@@ -491,7 +491,7 @@ test4(rf_lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
-static void line_comment(rf_lexer *x) {
+static void line_comment(lexer *x) {
     while (1) {
         if (*x->p == '\n' || *x->p == '\0')
             break;
@@ -500,7 +500,7 @@ static void line_comment(rf_lexer *x) {
     }
 }
 
-static void block_comment(rf_lexer *x) {
+static void block_comment(lexer *x) {
     while (1) {
         if (*x->p == '\n')
             x->ln++;
@@ -517,7 +517,7 @@ static void block_comment(rf_lexer *x) {
     }
 }
 
-static int tokenize(rf_lexer *x, int mode, rf_token *tk) {
+static int tokenize(lexer *x, int mode, rf_token *tk) {
     int c;
     while (1) {
         switch (c = *x->p++) {
@@ -597,7 +597,7 @@ static int tokenize(rf_lexer *x, int mode, rf_token *tk) {
     }
 }
 
-int x_init(rf_lexer *x, const char *src) {
+int x_init(lexer *x, const char *src) {
     x->tk.kind = 0;
     x->la.kind = 0;
     x->ln      = 1;
@@ -611,12 +611,12 @@ int x_init(rf_lexer *x, const char *src) {
 
 // Lexer itself should be stack-allocated, but the string buffer is
 // heap-allocated
-void x_free(rf_lexer *x) {
+void x_free(lexer *x) {
     if (x->buf.c != NULL)
         free(x->buf.c);
 }
 
-int x_adv(rf_lexer *x, int mode) {
+int x_adv(lexer *x, int mode) {
     if (x->tk.kind == TK_EOI)
         return 1;
 
@@ -635,7 +635,7 @@ int x_adv(rf_lexer *x, int mode) {
 
 // Populate the lookahead rf_token, leaving the current rf_token
 // unchanged
-int x_peek(rf_lexer *x, int mode) {
+int x_peek(lexer *x, int mode) {
     if ((x->la.kind = tokenize(x, mode, &x->la)) == 1) {
         x->la.kind = TK_EOI;
         return 1;

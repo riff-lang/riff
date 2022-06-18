@@ -638,6 +638,7 @@ L(LE)       binop(le);     BREAK;
 L(CAT)      binop(cat);    BREAK;
 L(MATCH)    binop(match);  BREAK;
 L(NMATCH)   binop(nmatch); BREAK;
+L(VIDXV)    binop(idx);    BREAK;
 
 // Pre-increment/decrement
 // sp[-1].a is address of some variable's rf_val.
@@ -936,6 +937,7 @@ L(TAB0)     new_tab(0);          ++ip;    BREAK;
 L(TAB)      new_tab(ip[1]);      ip += 2; BREAK;
 L(TABK)     new_tab(k[ip[1]].i); ip += 2; BREAK;
 
+
 L(IDXV)
     for (int i = -ip[1] - 1; i < -1; ++i) {
         if (sp[i].t <= TYPE_CFN) {
@@ -952,12 +954,11 @@ L(IDXV)
         case TYPE_TAB:
             sp[i+1].v = *t_lookup(sp[i].a->t, &sp[i+1].v, 0);
             break;
-
         // Dereference and call z_idx().
         case TYPE_INT:
         case TYPE_FLT:
         case TYPE_STR:
-            sp[i].v = *sp[-i].a;
+            sp[i].v = *sp[i].a;
             z_idx(&sp[i].v, &sp[i+1].v);
             sp[i+1].v = sp[i].v;
             break;
@@ -1004,23 +1005,14 @@ L(IDXA)
 // Perform the lookup and leave the corresponding element's rf_val address on
 // the stack.
 L(IDXA1)
-
-    // Accomodate OP_IDXA calls when SP-2 is a raw value
-    if (sp[-2].t <= TYPE_CFN)
-        tp = &sp[-2].v;
-    else
-        tp = sp[-2].a;
-
-    switch (tp->type) {
-
+    switch (sp[-2].a->type) {
     // Create table if sp[-2].a is an uninitialized variable
     case TYPE_NULL:
-        *tp = *v_newtab(0);
+        *sp[-2].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-2].a = t_lookup(tp->t, &sp[-1].v, 1);
+        sp[-2].a = t_lookup(sp[-2].a->t, &sp[-1].v, 1);
         break;
-
     // IDXA is invalid for all other types
     default:
         err("invalid assignment");
@@ -1033,21 +1025,7 @@ L(IDXA1)
 // Perform the lookup and leave a copy of the corresponding element's value on
 // the stack.
 L(IDXV1)
-
-    // All expressions e.g. x[y] are compiled to push the address of the
-    // identifier being subscripted. However OP_IDXV is emitted for all
-    // expressions not requiring the address of the set element to be left on
-    // the stack. In the event the instruction is OP_IDXV and SP-2 contains a
-    // raw value (not a pointer), the high order 64 bits will be the type tag of
-    // the rf_val instead of a memory address. When that happens, defer to
-    // z_idx().
-    if (sp[-2].t <= TYPE_CFN) {
-        binop(idx);
-        BREAK;
-    }
-
     switch (sp[-2].a->type) {
-
     // Create table if sp[-2].a is an uninitialized variable
     case TYPE_NULL:
         *sp[-2].a = *v_newtab(0);
@@ -1057,7 +1035,6 @@ L(IDXV1)
         --sp;
         ++ip;
         break;
-
     // Dereference and call z_idx().
     case TYPE_INT:
     case TYPE_FLT:
@@ -1067,7 +1044,7 @@ L(IDXV1)
         break;
     case TYPE_RFN:
     case TYPE_CFN:
-        err("attempt to subscript a function");
+        err("invalid function subscript");
     default:
         break;
     }
@@ -1075,19 +1052,13 @@ L(IDXV1)
 
 // Fast paths for table lookups with string literal keys
 L(SIDXA)
-    if (sp[-1].t <= TYPE_CFN)
-        tp = &sp[-1].v;
-    else
-        tp = sp[-1].a;
-
-    switch (tp->type) {
-
+    switch (sp[-1].a->type) {
     // Create table if sp[-1].a is an uninitialized variable
     case TYPE_NULL:
-        *tp = *v_newtab(0);
+        *sp[-1].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-1].a = ht_lookup_val(tp->t->h, &k[ip[1]]);
+        sp[-1].a = ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
         break;
     default:
         err("invalid member access (non-table value)");
@@ -1096,13 +1067,7 @@ L(SIDXA)
     BREAK;
 
 L(SIDXV)
-    if (sp[-1].t <= TYPE_CFN) {
-        binop(idx);
-        BREAK;
-    }
-
     switch (sp[-1].a->type) {
-
     // Create table if sp[-1].a is an uninitialized variable
     case TYPE_NULL:
         *sp[-1].a = *v_newtab(0);

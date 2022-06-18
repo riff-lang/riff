@@ -75,6 +75,8 @@ OP_STR(CAT,     0),
 OP_STR(MATCH,   0),
 OP_STR(NMATCH,  0),
 
+OP_STR(VIDXV,   0),
+
 // Prefix/postfix increment/decrement
 OP_STR(PREINC,  0),
 OP_STR(PREDEC,  0),

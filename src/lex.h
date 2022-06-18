@@ -18,6 +18,11 @@ typedef struct {
     } lexeme;
 } rf_token;
 
+enum lexer_modes {
+    LEX_NUD,
+    LEX_LED
+};
+
 enum tokens {
     // NOTE: Single character tokens are implicitly enumerated
 
@@ -86,11 +91,11 @@ typedef struct {
         int   cap;
         char *c;
     } buf;              // String buffer
-} rf_lexer;
+} lexer;
 
-int  x_init(rf_lexer *, const char *);
-void x_free(rf_lexer *);
-int  x_adv(rf_lexer *, int);
-int  x_peek(rf_lexer *, int);
+int  x_init(lexer *, const char *);
+void x_free(lexer *);
+int  x_adv(lexer *, int);
+int  x_peek(lexer *, int);
 
 #endif
