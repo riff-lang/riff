@@ -439,13 +439,20 @@ static void patch_val_to_addr(uint8_t *opcode) {
 
 uint8_t *c_index(rf_code *c, uint8_t *prev_ins, int n, int addr) {
     patch_val_to_addr(prev_ins);
-    if (!is_addr(*prev_ins) && n == 1) {
-        push(OP_VIDXV);
-        return LAST_INS_ADDR(0);
-    } else if (n == 1) {
-        push(addr ? OP_IDXA1 : OP_IDXV1);
+    if (n == 1) {
+        if (!is_addr(*prev_ins)) {
+            if (addr) {
+                err(c, "syntax error");
+            }
+            push(OP_VIDXV);
+        } else {
+            push(addr ? OP_IDXA1 : OP_IDXV1);
+        }
         return LAST_INS_ADDR(0);
     } else {
+        if (addr && !is_addr(*prev_ins)) {
+            err(c, "syntax error");
+        }
         push(addr ? OP_IDXA : OP_IDXV);
         push((uint8_t) n);
         return LAST_INS_ADDR(1);

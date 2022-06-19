@@ -155,6 +155,15 @@
 @test "Multi-dimensional subscript expressions" {
     run bin/riff -e 't=1 print(t[0])'
     [ "$output" = "1" ]
+
+    run bin/riff -e 'a[1,2]=3 a[1,2]++ print(a[1,2])'
+    [ "$output" = "4" ]
+
+    run bin/riff -e 'local a[1,2]=3 a[1,2]++ print(a[1,2])'
+    [ "$output" = "4" ]
+
+    run bin/riff -e 'a[1]=4 a[1,2]=3 a[1,2]++ print(a[1,2])'
+    [ "$status" -eq 1 ]
 }
 
 @test "Misc. edge case expressions" {

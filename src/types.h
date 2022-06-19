@@ -95,11 +95,7 @@ typedef struct rf_fn   rf_fn;
 typedef struct c_fn    c_fn;
 
 typedef struct {
-    // Type tag is aligned to the word-sized boundary to accommodate an implicit
-    // type tag in the VM stack object. This is necessary for distinguishing
-    // values from addresses on the VM stack for instructions which operate on
-    // both. E.g. array subscripting.
-    uintptr_t type;
+    uint8_t type;
     union {
         rf_int  i;
         rf_flt  f;

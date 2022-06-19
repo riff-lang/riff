@@ -336,6 +336,9 @@ Z_BINOP(idx) {
         }
         break;
     }
+    case TYPE_NULL:
+        *l = *v_newtab(0);
+        // Fall-through
     case TYPE_TAB:
         *l = *t_lookup(l->t, r, 0);
         break;
@@ -938,68 +941,42 @@ L(TAB)      new_tab(ip[1]);      ip += 2; BREAK;
 L(TABK)     new_tab(k[ip[1]].i); ip += 2; BREAK;
 
 
-L(IDXV)
+L(IDXA) {
     for (int i = -ip[1] - 1; i < -1; ++i) {
-        if (sp[i].t <= TYPE_CFN) {
-            z_idx(&sp[i].v, &sp[i+1].v);
-            sp[i+1].v = sp[i].v;
-            continue;
-        }
         switch (sp[i].a->type) {
-
-        // Create table if sp[-2].a is an uninitialized variable
-        case TYPE_NULL:
-            *sp[i+1].a = *v_newtab(0);
-            // Fall-through
-        case TYPE_TAB:
-            sp[i+1].v = *t_lookup(sp[i].a->t, &sp[i+1].v, 0);
-            break;
-        // Dereference and call z_idx().
-        case TYPE_INT:
-        case TYPE_FLT:
-        case TYPE_STR:
-            sp[i].v = *sp[i].a;
-            z_idx(&sp[i].v, &sp[i+1].v);
-            sp[i+1].v = sp[i].v;
-            break;
-        case TYPE_RFN:
-        case TYPE_CFN:
-            err("attempt to subscript a function");
-        default:
-            break;
-        }
-    }
-    sp -= ip[1];
-    sp[-1].v = sp[ip[1] - 1].v;
-    ip += 2;
-    BREAK;
-
-L(IDXA)
-    for (int i = -ip[1] - 1; i < -1; ++i) {
-        if (sp[i].t <= TYPE_CFN)
-            tp = &sp[i].v;
-        else
-            tp = sp[i].a;
-
-        switch (tp->type) {
-
         // Create table if sp[i].a is an uninitialized variable
         case TYPE_NULL:
-            *tp = *v_newtab(0);
+            *sp[i].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[i+1].a = t_lookup(tp->t, &sp[i+1].v, 1);
+            sp[i+1].a = t_lookup(sp[i].a->t, &sp[i+1].v, 1);
             break;
-
         // IDXA is invalid for all other types
         default:
             err("invalid assignment");
         }
     }
     sp -= ip[1];
-    sp[-1].a = sp[ip[1] - 1].a;
+    sp[-1].a = sp[ip[1]-1].a;
     ip += 2;
     BREAK;
+}
+
+L(IDXV) {
+    int i = -ip[1] - 1;
+    if (is_null(sp[i].a)) {
+        *sp[i].a = *v_newtab(0);
+    }
+    sp[i].v = *sp[i].a;
+    for (; i < -1; ++i) {
+        z_idx(&sp[i].v, &sp[i+1].v);
+        sp[i+1].v = sp[i].v;
+    }
+    sp -= ip[1];
+    sp[-1].v = sp[ip[1]-1].v;
+    ip += 2;
+    BREAK;
+}
 
 // IDXA
 // Perform the lookup and leave the corresponding element's rf_val address on

@@ -158,8 +158,8 @@ OP_STR(TAB,     1), // IP+1 stack elements
 OP_STR(TABK,    1), // K[IP+1] stack elements
 
 // Index into multidimensional table e.g. t[x,y]
-OP_STR(IDXV,    1),
 OP_STR(IDXA,    1),
+OP_STR(IDXV,    1),
 
 // Index into value
 OPCODE(IDXA1,   0, "IDXA"),
