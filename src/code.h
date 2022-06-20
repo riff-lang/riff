@@ -23,14 +23,10 @@ enum jumps {
 typedef struct {
     uint8_t *code;  // Bytecode array
     rf_val  *k;     // Constants pool
-// } rf_code;
-
-// typedef struct {
     int      n;     // Number of bytes in bytecode array
     int      cap;   // Bytecode array capacity
     int      nk;    // Number of constants in pool
     int      kcap;  // Constants pool capacity
-// } rf_code_md;
 } rf_code;
 
 void     c_init(rf_code *);
@@ -51,6 +47,7 @@ uint8_t *c_range(rf_code *, int, int, int);
 void     c_patch(rf_code *, int);
 int      c_prep_jump(rf_code *, int);
 int      c_prep_loop(rf_code *, int);
+uint8_t *c_end_loop(rf_code *);
 uint8_t *c_pop(rf_code *, int);
 uint8_t *c_pop_expr_stmt(rf_code *, int);
 uint8_t *c_return(rf_code *, uint8_t *, int);

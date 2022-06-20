@@ -76,6 +76,11 @@ int c_prep_loop(rf_code *c, int type) {
     return c->n - 2;
 }
 
+uint8_t *c_end_loop(rf_code *c) {
+    push(OP_POPL);
+    return LAST_INS_ADDR(0);
+}
+
 // Simple backward jumps. Encode a 2-byte offset if necessary.
 uint8_t *c_jump(rf_code *c, int type, int l) {
     int d = l - c->n;

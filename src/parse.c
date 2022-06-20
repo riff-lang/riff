@@ -715,15 +715,7 @@ static void local_fn(parser *y) {
     // current scope, add a new local
     if (idx < 0 || y->lcl[idx].d != y->ld) {
         add_local(y, id);
-        switch (y->nlcl - 1) {
-        case 0: push(OP_LCLA0); break;
-        case 1: push(OP_LCLA1); break;
-        case 2: push(OP_LCLA2); break;
-        default:
-            push(OP_LCLA);
-            push((uint8_t) y->nlcl - 1);
-            break;
-        }
+        y->ins = c_local(y->c, y->nlcl-1, 1, 1);
     }
     rf_fn *f = malloc(sizeof(rf_fn));
     f_init(f, fn_name);
@@ -744,7 +736,7 @@ static void local_fn(parser *y) {
 
     // Add function to the outer scope
     y->ins = c_fn_constant(y->c, f);
-    push(OP_SET);
+    y->ins = c_infix(y->c, '=');
 }
 
 // User-defined functions
@@ -849,19 +841,18 @@ static void for_stmt(parser *y) {
     }
 
     // OP_POPL cleans up iterator state in the VM. Needs to be its own
-    // instruction since break statements need to jump past the
-    // OP_LOOP instructions to prevent further iteration
-    push(OP_POPL);
+    // instruction since break statements need to jump past the OP_LOOP
+    // instructions to prevent further iteration
+    y->ins = c_end_loop(y->c);
 
     y->ld -= 1;
     y->id -= 1;
     y->loop = old_loop;
 
-    // Pop locals with lexical depth as the argument instead of
-    // y->loop. The workaround of incrementing lexical depth twice
-    // prevents break/continue statements from otherwise popping the
-    // 'for' loop's own locals. All other loop constructs use y->loop
-    // as the argument.
+    // Pop locals with lexical depth as the argument instead of y->loop. The
+    // workaround of incrementing lexical depth twice prevents break/continue
+    // statements from otherwise popping the 'for' loop's own locals. All other
+    // loop constructs use y->loop as the argument.
     y->nlcl -= pop_locals(y, y->ld, 1);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
@@ -983,7 +974,7 @@ static void ret_stmt(parser *y) {
     // iterators before parsing any return expression allows for codegen to
     // still check for tailcalls.
     for (int i = y->id; i > 0; --i) {
-        push(OP_POPL);
+        y->ins = c_end_loop(y->c);
     }
     if (y->ld == y->fd) {
         set(retx);
