@@ -701,16 +701,16 @@ LIB_FN(type) {
     char *str;
     size_t len = 0;
     switch (fp->type) {
-    case TYPE_NULL: str = "null";     len = 4; break;
-    case TYPE_INT:  str = "int";      len = 3; break;
-    case TYPE_FLT:  str = "float";    len = 5; break;
-    case TYPE_STR:  str = "string";   len = 6; break;
-    case TYPE_REGEX:   str = "regex";    len = 5; break;
-    case TYPE_FILE:   str = "file";     len = 4; break;
-    case TYPE_RANGE:  str = "range";    len = 5; break;
-    case TYPE_TAB:  str = "table";    len = 5; break;
+    case TYPE_NULL:  str = "null";     len = 4; break;
+    case TYPE_INT:   str = "int";      len = 3; break;
+    case TYPE_FLT:   str = "float";    len = 5; break;
+    case TYPE_STR:   str = "string";   len = 6; break;
+    case TYPE_REGEX: str = "regex";    len = 5; break;
+    case TYPE_FILE:  str = "file";     len = 4; break;
+    case TYPE_RANGE: str = "range";    len = 5; break;
+    case TYPE_TAB:   str = "table";    len = 5; break;
     case TYPE_RFN:
-    case TYPE_CFN:  str = "function"; len = 8; break;
+    case TYPE_CFN:   str = "function"; len = 8; break;
     default: break;
     }
     set_str(fp-1, s_new(str, len));
@@ -735,7 +735,7 @@ LIB_FN(exit) {
 
 static struct {
     const char *name;
-    riff_cfn        fn;
+    riff_cfn    fn;
 } lib_fn[] = {
     // Arithmetic
     LIB_FN_REG(abs,    1),
@@ -779,13 +779,12 @@ static struct {
     // System
     LIB_FN_REG(clock,  0),
     LIB_FN_REG(exit,   0),
-    { NULL, { 0, NULL } }
 };
 
 static void register_funcs(riff_htab *g) {
     // Initialize the PRNG with the current time
     riff_prng_seed(&prngs, time(0));
-    for (int i = 0; lib_fn[i].name; ++i) {
+    for (int i = 0; i < (sizeof lib_fn) / (sizeof lib_fn[0]); ++i) {
         riff_htab_insert_cstr(g, lib_fn[i].name, &(riff_val) {TYPE_CFN, .cfn = &lib_fn[i].fn});
     }
 }
