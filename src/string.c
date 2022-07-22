@@ -11,40 +11,35 @@
 #define ST_MAX_LOAD_FACTOR 1.0
 
 typedef struct {
-    rf_str   **nodes;
+    riff_str **nodes;
     uint32_t   size;
     uint32_t   mask;
     uint32_t   cap;
-    rf_str    *empty;
-} rf_stab;
+    riff_str  *empty;
+} riff_stab;
 
-static rf_stab *st = NULL;
+static riff_stab *st = NULL;
 
-void st_init(void) {
-    st = malloc(sizeof(rf_stab));
-    st->nodes = calloc(ST_MIN_CAP, sizeof(rf_str *));
+void riff_stab_init(void) {
+    st = malloc(sizeof(riff_stab));
+    st->nodes = calloc(ST_MIN_CAP, sizeof(riff_str *));
     st->size  = 0;
     st->mask  = ST_MIN_CAP - 1;
     st->cap   = ST_MIN_CAP;
-    rf_str *e = malloc(sizeof(rf_str));
-    *e = (rf_str) {0, 0, "", NULL};
+    riff_str *e = malloc(sizeof(riff_str));
+    *e = (riff_str) {0, 0, "", NULL};
     st->empty = e;
 }
 
-typedef union {
-    rf_hash u;
-    uint8_t b[sizeof(rf_hash)];
-} str_chunk;
-
-static inline rf_hash chunk(const void *p) {
-    return ((const str_chunk *)p)->u;
+static inline strhash chunk(const void *p) {
+    return *(strhash *) p;
 }
 
 #define coercible_mask(s) (memchr("+-.0123456789", *s, 13) ? 0x80000000u : 0)
 
-static inline rf_hash str_hash(const char *str, size_t len) {
-    rf_hash a, b, h = len;
-    if (len >= 4) {
+static inline strhash str_hash(const char *str, size_t len) {
+    strhash a, b, h = len;
+    if (len >= sizeof(strhash)) {
         a  = chunk(str);
         h ^= chunk(str+len-4);
         b  = chunk(str+(len>>1)-2);
@@ -66,19 +61,19 @@ static inline rf_hash str_hash(const char *str, size_t len) {
     return h | coercible_mask(str);
 }
 
-static inline rf_str *next(rf_str *s) {
+static inline riff_str *next(riff_str *s) {
     return s->next;
 }
 
-static inline double potential_lf(rf_stab *t) {
+static inline double potential_lf(riff_stab *t) {
     double n1 = (double) t->size + 1.0;
     double n2 = (double) t->cap;
     return n1 / n2;
 }
 
-static inline void insert_str(rf_str **nodes, rf_str *new, uint32_t i) {
-    rf_str *n = nodes[i];
-    if (!n) {
+static inline void insert_str(riff_str **nodes, riff_str *new, uint32_t i) {
+    riff_str *n = nodes[i];
+    if (UNLIKELY(!n)) {
         nodes[i] = new;
         return;
     }
@@ -87,23 +82,23 @@ static inline void insert_str(rf_str **nodes, rf_str *new, uint32_t i) {
     n->next = new;
 }
 
-static inline rf_str *new_str(rf_str *s) {
+static inline riff_str *new_str(riff_str *s) {
     size_t len = s_len(s);
-    rf_str *new = malloc(sizeof(rf_str));
+    riff_str *new = malloc(sizeof(riff_str));
     char *str = malloc(len * sizeof(char) + 1);
     memcpy(str, s->str, len);
     str[len] = '\0';
-    *new = (rf_str) {s->hash, len, str, NULL};
+    *new = (riff_str) {s->hash, len, str, NULL};
     return new;
 }
 
-static inline void st_resize(rf_stab *t, size_t new_cap) {
-    rf_str **new_nodes = calloc(new_cap, sizeof(rf_str *));
+static inline void st_resize(riff_stab *t, size_t new_cap) {
+    riff_str **new_nodes = calloc(new_cap, sizeof(riff_str *));
     for (uint32_t i = 0; i < t->cap; ++i) {
-        rf_str *s = t->nodes[i];
+        riff_str *s = t->nodes[i];
         while (s) {
             insert_str(new_nodes, s, s->hash & (new_cap-1));
-            rf_str *p = s;
+            riff_str *p = s;
             s = next(s);
             p->next = NULL;
         }
@@ -114,28 +109,28 @@ static inline void st_resize(rf_stab *t, size_t new_cap) {
     t->cap = new_cap;
 }
 
-static inline rf_str *st_lookup(rf_stab *t, rf_str *s) {
-    rf_str *n = t->nodes[s->hash & t->mask];
+static inline riff_str *st_lookup(riff_stab *t, riff_str *s) {
+    riff_str *n = t->nodes[s->hash & t->mask];
     while (n) {
-        if (s_eq_raw(n,s))
+        if (LIKELY(s_eq_raw(n,s)))
             return n;
         n = next(n);
     }
-    if (potential_lf(t) > ST_MAX_LOAD_FACTOR)
+    if (UNLIKELY(potential_lf(t) > ST_MAX_LOAD_FACTOR))
         st_resize(t, t->cap << 1);
-    rf_str *new = new_str(s);
+    riff_str *new = new_str(s);
     insert_str(t->nodes, new, s->hash & t->mask);
     t->size++;
     return new;
 }
 
 // Create string (does not assume null-terminated input)
-rf_str *s_new(const char *start, size_t len) {
-    return len ? st_lookup(st, &(rf_str){str_hash(start,len),len,(char *)start,NULL}) : st->empty;
+riff_str *s_new(const char *start, size_t len) {
+    return LIKELY(len) ? st_lookup(st, &(riff_str){str_hash(start,len),len,(char *)start,NULL}) : st->empty;
 }
 
 // Assumes null-terminated strings
-rf_str *s_new_concat(char *l, char *r) {
+riff_str *s_new_concat(char *l, char *r) {
     size_t l_len = strlen(l);
     size_t r_len = strlen(r);
     size_t new_len = l_len + r_len;
@@ -145,7 +140,7 @@ rf_str *s_new_concat(char *l, char *r) {
     return s_new(new, new_len);
 }
 
-rf_str *s_substr(char *s, rf_int from, rf_int to, rf_int itvl) {
+riff_str *s_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
     // Correct out-of-bounds ranges
     size_t sl = strlen(s) - 1;
     from = from > sl ? sl : from < 0 ? 0 : from;

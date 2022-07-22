@@ -1,8 +1,8 @@
 #ifndef PARSE_H
 #define PARSE_H
 
-#include "env.h"
+#include "state.h"
 
-int y_compile(rf_env *);
+int riff_compile(riff_state *);
 
 #endif

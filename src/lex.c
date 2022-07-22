@@ -147,7 +147,7 @@ static void unicode_esc(lexer *x, int len) {
 
 static int read_charint(lexer *x, rf_token *tk, int d) {
     int c;
-    rf_int v = 0;
+    riff_int v = 0;
     while ((c = *x->p) != d) {
 
         // NOTE: check for (v & (0xFFull << 55) to assert a
@@ -197,7 +197,7 @@ static int read_charint(lexer *x, rf_token *tk, int d) {
         default:
             if (c & 0x80) {
                 char *end;
-                rf_int u = u_utf82unicode(x->p, &end);
+                riff_int u = u_utf82unicode(x->p, &end);
                 v <<= u & 0xff000000 ? 24 :
                       u & 0x00ff0000 ? 16 :
                       u & 0x0000ff00 ?  8 : 0;
@@ -270,7 +270,7 @@ str_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-    rf_str *s = s_new(x->buf.c, x->buf.n);
+    riff_str *s = s_new(x->buf.c, x->buf.n);
     adv();
     tk->lexeme.s = s;
     return TK_STR;
@@ -349,7 +349,7 @@ re_start:
         adv();
     }
     int errcode;
-    rf_re *r = re_compile(x->buf.c, x->buf.n, flags, &errcode);
+    riff_regex *r = re_compile(x->buf.c, x->buf.n, flags, &errcode);
 
     // Regex compilation error handling
     if (errcode != 100) {

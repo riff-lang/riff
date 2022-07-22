@@ -2,16 +2,15 @@
 #define VM_H
 
 #include "code.h"
-#include "env.h"
+#include "state.h"
 #include "table.h"
 #include "types.h"
 
 // VM stack element
 typedef union {
-    uintptr_t  t; // Implicit type tag
-    rf_val    *a;
-    rf_val     v;
-} rf_stack;
+    riff_val  *a;
+    riff_val   v;
+} vm_stack;
 
 enum loops {
     LOOP_RNG,
@@ -20,27 +19,27 @@ enum loops {
     LOOP_NULL
 };
 
-typedef struct rf_iter rf_iter;
+typedef struct vm_iter vm_iter;
 
 // Loop iterator
-struct rf_iter {
+struct vm_iter {
     union {
-        rf_int      itvl;
+        riff_int    itvl;
         const char *str;
         uint8_t    *code;
-        rf_tab     *tab;
+        riff_tab   *tab;
     } set;
-    rf_iter *p;    // Previous loop iterator
-    int      t;    // Loop type
-    rf_uint  n;    // Control var
-    rf_int   on;   // Saved control var for freeing keys allocation
-    rf_int   st;   // Start (for ranges)
-    rf_val  *k;    // Stack slot for `k` in `[k,]v`
-    rf_val  *v;    // Stack slot for `v` in `[k,]v`
-    rf_val  *keys; // Keys to look up tables with (fixed at loop start)
+    vm_iter   *p;    // Previous loop iterator
+    int        t;    // Loop type
+    riff_uint  n;    // Control var
+    riff_int   on;   // Saved control var for freeing keys allocation
+    riff_int   st;   // Start (for ranges)
+    riff_val  *k;    // Stack slot for `k` in `[k,]v`
+    riff_val  *v;    // Stack slot for `v` in `[k,]v`
+    riff_val  *keys; // Keys to look up tables with (fixed at loop start)
 };
 
-int z_exec(rf_env *);
-int z_exec_reenter(rf_env *, rf_stack *);
+int vm_exec(riff_state *);
+int vm_exec_reenter(riff_state *, vm_stack *);
 
 #endif

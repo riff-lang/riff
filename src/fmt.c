@@ -73,7 +73,7 @@ static void err(const char *msg) {
     }
 
 // %b
-static int fmt_bin_itoa(char *buf, rf_int num, uint32_t flags, int width, int prec) {
+static int fmt_bin_itoa(char *buf, riff_int num, uint32_t flags, int width, int prec) {
     if (!num && !prec)
         return 0;
 
@@ -127,7 +127,7 @@ static int fmt_bin_itoa(char *buf, rf_int num, uint32_t flags, int width, int pr
 //   o              | Octal integer
 //   s              | String
 //   x / X          | Hex integer (lowercase/uppercase)
-int fmt_snprintf(char *buf, size_t bufsz, const char *fstr, rf_val *argv, int argc) {
+int fmt_snprintf(char *buf, size_t bufsz, const char *fstr, riff_val *argv, int argc) {
     int arg = 0;
     int n   = 0;
 
@@ -193,8 +193,8 @@ capture_flags:
             }
         }
 
-        rf_int i;
-        rf_flt f;
+        riff_int i;
+        riff_float f;
 
         // Evaluate format specifier
         switch (*fstr++) {
@@ -220,7 +220,7 @@ capture_flags:
         }
         case 'm': {
             if (argc--) {
-                rf_uint m = (rf_uint) intval(argv+arg);
+                riff_uint m = (riff_uint) intval(argv+arg);
                 if (!m) {
                     ++arg;
                     break;

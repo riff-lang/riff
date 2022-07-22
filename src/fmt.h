@@ -3,6 +3,6 @@
 
 #include "types.h"
 
-int fmt_snprintf(char *, size_t, const char *, rf_val *, int);
+int fmt_snprintf(char *, size_t, const char *, riff_val *, int);
 
 #endif

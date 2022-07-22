@@ -21,35 +21,35 @@ enum jumps {
 };
 
 typedef struct {
-    uint8_t *code;  // Bytecode array
-    rf_val  *k;     // Constants pool
-    int      n;     // Number of bytes in bytecode array
-    int      cap;   // Bytecode array capacity
-    int      nk;    // Number of constants in pool
-    int      kcap;  // Constants pool capacity
-} rf_code;
+    uint8_t  *code;  // Bytecode array
+    riff_val *k;     // Constants pool
+    int       n;     // Number of bytes in bytecode array
+    int       cap;   // Bytecode array capacity
+    int       nk;    // Number of constants in pool
+    int       kcap;  // Constants pool capacity
+} riff_code;
 
-void     c_init(rf_code *);
-void     c_push(rf_code *, uint8_t);
-uint8_t *c_fn_constant(rf_code *, rf_fn *);
-uint8_t *c_constant(rf_code *, rf_token *);
-uint8_t *c_global(rf_code *, rf_token *, int);
-uint8_t *c_local(rf_code *, int, int, int);
-uint8_t *c_table(rf_code *, int);
-uint8_t *c_index(rf_code *, uint8_t *, int, int);
-uint8_t *c_str_index(rf_code *, uint8_t *, rf_str *, int);
-uint8_t *c_prefix(rf_code *, int);
-uint8_t *c_infix(rf_code *, int);
-uint8_t *c_postfix(rf_code *, int);
-uint8_t *c_jump(rf_code *, int, int);
-uint8_t *c_loop(rf_code *, int);
-uint8_t *c_range(rf_code *, int, int, int);
-void     c_patch(rf_code *, int);
-int      c_prep_jump(rf_code *, int);
-int      c_prep_loop(rf_code *, int);
-uint8_t *c_end_loop(rf_code *);
-uint8_t *c_pop(rf_code *, int);
-uint8_t *c_pop_expr_stmt(rf_code *, int);
-uint8_t *c_return(rf_code *, uint8_t *, int);
+void c_init(riff_code *);
+void c_push(riff_code *, uint8_t);
+void c_fn_constant(riff_code *, riff_fn *, uint8_t **);
+void c_constant(riff_code *, rf_token *, uint8_t **);
+void c_global(riff_code *, rf_token *, int, uint8_t **);
+void c_local(riff_code *, int, int, int, uint8_t **);
+void c_table(riff_code *, int, uint8_t **);
+void c_index(riff_code *, uint8_t *, int, int, uint8_t **);
+void c_str_index(riff_code *, uint8_t *, riff_str *, int, uint8_t **);
+void c_prefix(riff_code *, int, uint8_t **);
+void c_infix(riff_code *, int, uint8_t **);
+void c_postfix(riff_code *, int, uint8_t **);
+void c_jump(riff_code *, int, int, uint8_t **);
+void c_loop(riff_code *, int, uint8_t **);
+void c_range(riff_code *, int, int, int, uint8_t **);
+void c_patch(riff_code *, int);
+int  c_prep_jump(riff_code *, int);
+int  c_prep_loop(riff_code *, int);
+void c_end_loop(riff_code *, uint8_t **);
+void c_pop(riff_code *, int, uint8_t **);
+void c_pop_expr_stmt(riff_code *, int, uint8_t **);
+void c_return(riff_code *, uint8_t *, int, uint8_t **);
 
 #endif

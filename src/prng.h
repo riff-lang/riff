@@ -4,10 +4,10 @@
 #include "types.h"
 
 typedef struct {
-    rf_uint u[4];
-} prng_state;
+    riff_uint u[4];
+} riff_prng_state;
 
-rf_uint prng_next(prng_state *);
-void prng_seed(prng_state *, rf_uint);
+riff_uint riff_prng_next(riff_prng_state *);
+void      riff_prng_seed(riff_prng_state *, riff_uint);
 
 #endif

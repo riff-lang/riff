@@ -10,9 +10,9 @@
 // The FP will always point to the first argument. FP+1 will hold the
 // second argument, etc. The VM expects the return value (if
 // applicable) at FP-1.
-typedef int (* rf_lib_fn) (rf_val *, int);
+typedef int (* rf_lib_fn) (riff_val *, int);
 
-struct c_fn {
+struct riff_cfn {
     // Minimum arity for the function. The VM currently compensates
     // for an insufficient amount of arguments by nullifying stack
     // elements before passing the FP to the function.
@@ -20,6 +20,6 @@ struct c_fn {
     rf_lib_fn fn;
 };
 
-void l_register_builtins(rf_htab *);
+void l_register_builtins(riff_htab *);
 
 #endif

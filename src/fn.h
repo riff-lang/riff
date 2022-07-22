@@ -4,12 +4,12 @@
 #include "code.h"
 #include "types.h"
 
-struct rf_fn {
-    rf_code *code;
-    rf_str  *name;
+struct riff_fn {
+    riff_code *code;
+    riff_str  *name;
     uint8_t  arity;
 };
 
-void f_init(rf_fn *, rf_str *);
+void f_init(riff_fn *, riff_str *);
 
 #endif

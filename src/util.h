@@ -5,6 +5,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef __GNUC__
+#define LIKELY(x)   (__builtin_expect(x, 1))
+#define UNLIKELY(x) (__builtin_expect(x, 0))
+#else
+#define LIKELY(x)   (x)
+#define UNLIKELY(x) (x)
+#endif
+
 #define rol(x,n) (((x)<<(n)) | ((x)>>(-(int)(n)&(8*sizeof(x)-1))))
 
 #define u_int2str(i,b) snprintf(b, sizeof b, "%"PRId64, i)

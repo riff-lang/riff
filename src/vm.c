@@ -17,11 +17,11 @@ static inline void err(const char *msg) {
     exit(1);
 }
 
-static rf_htab   globals;
-static rf_tab    argv;
-static rf_tab    fldv;
-static rf_iter  *iter;
-static rf_stack  stack[VM_STACK_SIZE];
+static riff_htab  globals;
+static riff_tab   argv;
+static riff_tab   fldv;
+static vm_iter   *iter;
+static vm_stack   stack[VM_STACK_SIZE];
 
 // Integer arithmetic (Bitwise ops)
 #define int_arith(l,r,op) set_int(l, (intval(l) op intval(r)))
@@ -38,17 +38,16 @@ static rf_stack  stack[VM_STACK_SIZE];
     }
 
 // Return boolean result of value (0/1)
-static inline int test(rf_val *v) {
+static inline int test(riff_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->i);
     case TYPE_FLT: return !!(v->f);
 
-    // If entire string is a numeric value, return logical result of
-    // the number. Otherwise, return whether the string is longer than
-    // 0.
+    // If entire string is a numeric value, return logical result of the number.
+    // Otherwise, return whether the string is longer than 0.
     case TYPE_STR: {
         char *end;
-        rf_flt f = u_str2d(v->s->str, &end, 0);
+        riff_float f = u_str2d(v->s->str, &end, 0);
         if (!*end) {
             // Check for literal '0' character in string
             if (f == 0.0 && s_haszero(v->s))
@@ -58,9 +57,9 @@ static inline int test(rf_val *v) {
         }
         return !!s_len(v->s);
     }
-    case TYPE_TAB: return !!t_logical_size(v->t);
-    case TYPE_RE:
-    case TYPE_RNG:
+    case TYPE_TAB: return !!riff_tab_logical_size(v->t);
+    case TYPE_REGEX:
+    case TYPE_RANGE:
     case TYPE_RFN:
     case TYPE_CFN:
         return 1;
@@ -68,35 +67,35 @@ static inline int test(rf_val *v) {
     }
 }
 
-#define Z_UOP(op)   static inline void z_##op(rf_val *v)
-#define Z_BINOP(op) static inline void z_##op(rf_val *l, rf_val *r)
+#define VM_UOP(op)   static inline void vm_##op(riff_val *v)
+#define VM_BINOP(op) static inline void vm_##op(riff_val *l, riff_val *r)
 
-Z_BINOP(add) { num_arith(l,r,+); }
-Z_BINOP(sub) { num_arith(l,r,-); }
-Z_BINOP(mul) { num_arith(l,r,*); }
+VM_BINOP(add) { num_arith(l,r,+); }
+VM_BINOP(sub) { num_arith(l,r,-); }
+VM_BINOP(mul) { num_arith(l,r,*); }
 
 // Language comparison for division by zero:
 // 0/0 = nan; 1/0 = inf : lua, mawk
 // error: pretty much all others
-Z_BINOP(div) { flt_arith(l,r,/); }
+VM_BINOP(div) { flt_arith(l,r,/); }
 
 // Language comparison for modulus by zero:
 // `nan`: mawk
 // error: pretty much all others
-Z_BINOP(mod) {
-    rf_flt res = fmod(numval(l), numval(r));
+VM_BINOP(mod) {
+    riff_float res = fmod(numval(l), numval(r));
     set_flt(l, res < 0 ? res + numval(r) : res);
 }
 
-Z_BINOP(pow) { set_flt(l, pow(fltval(l), fltval(r))); }
+VM_BINOP(pow) { set_flt(l, pow(fltval(l), fltval(r))); }
 
-Z_BINOP(and) { int_arith(l,r,&);  }
-Z_BINOP(or)  { int_arith(l,r,|);  }
-Z_BINOP(xor) { int_arith(l,r,^);  }
-Z_BINOP(shl) { int_arith(l,r,<<); }
-Z_BINOP(shr) { int_arith(l,r,>>); }
+VM_BINOP(and) { int_arith(l,r,&);  }
+VM_BINOP(or)  { int_arith(l,r,|);  }
+VM_BINOP(xor) { int_arith(l,r,^);  }
+VM_BINOP(shl) { int_arith(l,r,<<); }
+VM_BINOP(shr) { int_arith(l,r,>>); }
 
-Z_UOP(num) {
+VM_UOP(num) {
     switch (v->type) {
     case TYPE_INT:
     case TYPE_FLT:
@@ -110,7 +109,7 @@ Z_UOP(num) {
     }
 }
 
-Z_UOP(neg) {
+VM_UOP(neg) {
     switch (v->type) {
     case TYPE_INT: v->i = -v->i;               break;
     case TYPE_FLT: v->f = -v->f;               break;
@@ -119,7 +118,7 @@ Z_UOP(neg) {
     }
 }
 
-Z_UOP(not) { set_int(v, ~intval(v)); }
+VM_UOP(not) { set_int(v, ~intval(v)); }
 
 // == and != operators
 #define cmp_eq(l,r,op) \
@@ -135,7 +134,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
             return; \
         } \
         char *end; \
-        rf_flt f = u_str2d(l->s->str, &end, 0); \
+        riff_float f = u_str2d(l->s->str, &end, 0); \
         if (*end) { \
             set_int(l, 0); \
         } else { \
@@ -147,7 +146,7 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
             return; \
         } \
         char *end; \
-        rf_flt f = u_str2d(r->s->str, &end, 0); \
+        riff_float f = u_str2d(r->s->str, &end, 0); \
         if (*end) { \
             set_int(l, 0); \
         } else { \
@@ -165,17 +164,17 @@ Z_UOP(not) { set_int(v, ~intval(v)); }
         set_int(l, (numval(l) op numval(r))); \
     }
 
-Z_BINOP(eq) { cmp_eq(l,r,==);  }
-Z_BINOP(ne) { cmp_eq(l,r,!=);  }
-Z_BINOP(gt) { cmp_rel(l,r,>);  }
-Z_BINOP(ge) { cmp_rel(l,r,>=); }
-Z_BINOP(lt) { cmp_rel(l,r,<);  }
-Z_BINOP(le) { cmp_rel(l,r,<=); }
+VM_BINOP(eq) { cmp_eq(l,r,==);  }
+VM_BINOP(ne) { cmp_eq(l,r,!=);  }
+VM_BINOP(gt) { cmp_rel(l,r,>);  }
+VM_BINOP(ge) { cmp_rel(l,r,>=); }
+VM_BINOP(lt) { cmp_rel(l,r,<);  }
+VM_BINOP(le) { cmp_rel(l,r,<=); }
 
-Z_UOP(lnot) { set_int(v, !test(v)); }
+VM_UOP(lnot) { set_int(v, !test(v)); }
 
-Z_UOP(len) {
-    rf_int l = 0;
+VM_UOP(len) {
+    riff_int l = 0;
     switch (v->type) {
 
     // For integers:
@@ -185,18 +184,18 @@ Z_UOP(len) {
         if (v->i == INT64_MIN) {
             l = 20;
         } else {
-            l = v->i > 0 ? (rf_int) log10(v->i)  + 1 :
-                v->i < 0 ? (rf_int) log10(-v->i) + 2 : 1;
+            l = v->i > 0 ? (riff_int) log10(v->i)  + 1 :
+                v->i < 0 ? (riff_int) log10(-v->i) + 2 : 1;
         }
         v->i = l;
         return;
     case TYPE_FLT:
-        l = (rf_int) snprintf(NULL, 0, "%g", v->f);
+        l = (riff_int) snprintf(NULL, 0, "%g", v->f);
         break;
     case TYPE_STR: l = s_len(v->s); break;
-    case TYPE_TAB: l = t_logical_size(v->t); break;
-    case TYPE_RE:   // TODO - extract something from PCRE pattern?
-    case TYPE_RNG:  // TODO
+    case TYPE_TAB: l = riff_tab_logical_size(v->t); break;
+    case TYPE_REGEX:   // TODO - extract something from PCRE pattern?
+    case TYPE_RANGE:  // TODO
     case TYPE_RFN:
     case TYPE_CFN:
         l = 1;
@@ -206,7 +205,7 @@ Z_UOP(len) {
     set_int(v, l);
 }
 
-Z_BINOP(cat) {
+VM_BINOP(cat) {
     char *lhs, *rhs;
     char temp_lhs[32];
     char temp_rhs[32];
@@ -233,9 +232,9 @@ Z_BINOP(cat) {
     set_str(l, s_new_concat(lhs, rhs));
 }
 
-static inline rf_int match(rf_val *l, rf_val *r) {
+static inline riff_int match(riff_val *l, riff_val *r) {
     // Common case: LHS string, RHS regex
-    if (is_str(l) && is_re(r))
+    if (LIKELY(is_str(l) && is_re(r)))
         return re_match(l->s->str, s_len(l->s), r->r, 1);
     char *lhs;
     size_t len = 0;
@@ -253,8 +252,8 @@ static inline rf_int match(rf_val *l, rf_val *r) {
         len = s_len(l->s);
     }
     if (!is_re(r)) {
-        rf_re *temp_re;
-        rf_int res;
+        riff_regex *temp_re;
+        riff_int res;
         int errcode;
         int capture = 0;
         switch (r->type) {
@@ -270,7 +269,7 @@ static inline rf_int match(rf_val *l, rf_val *r) {
 do_match:
         // Check for invalid regex in RHS
         // TODO treat as literal string in this case? (PCRE2_LITERAL)
-        if (errcode != 100) {
+        if (UNLIKELY(errcode != 100)) {
             PCRE2_UCHAR errstr[0x200];
             pcre2_get_error_message(errcode, errstr, 0x200);
             err((const char *) errstr);
@@ -283,10 +282,10 @@ do_match:
     }
 }
 
-Z_BINOP(match)  { set_int(l,  match(l, r)); }
-Z_BINOP(nmatch) { set_int(l, !match(l, r)); }
+VM_BINOP(match)  { set_int(l,  match(l, r)); }
+VM_BINOP(nmatch) { set_int(l, !match(l, r)); }
 
-Z_BINOP(idx) {
+VM_BINOP(idx) {
     char temp[32];
     switch (l->type) {
     case TYPE_INT: {
@@ -294,8 +293,8 @@ Z_BINOP(idx) {
         if (is_rng(r)) {
             set_str(l, s_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
-            rf_int r1  = intval(r);
-            rf_int len = (rf_int) strlen(temp);
+            riff_int r1  = intval(r);
+            riff_int len = (riff_int) strlen(temp);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
@@ -310,8 +309,8 @@ Z_BINOP(idx) {
         if (is_rng(r)) {
             set_str(l, s_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
-            rf_int r1  = intval(r);
-            rf_int len = (rf_int) strlen(temp);
+            riff_int r1  = intval(r);
+            riff_int len = (riff_int) strlen(temp);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
@@ -325,8 +324,8 @@ Z_BINOP(idx) {
         if (is_rng(r)) {
             l->s = s_substr(l->s->str, r->q->from, r->q->to, r->q->itvl);
         } else {
-            rf_int r1  = intval(r);
-            rf_int len = (rf_int) s_len(l->s);
+            riff_int r1  = intval(r);
+            riff_int len = (riff_int) s_len(l->s);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
@@ -340,7 +339,7 @@ Z_BINOP(idx) {
         *l = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        *l = *t_lookup(l->t, r, 0);
+        *l = *riff_tab_lookup(l->t, r, 0);
         break;
     default:
         set_null(l);
@@ -348,8 +347,8 @@ Z_BINOP(idx) {
     }
 }
 
-static inline void new_iter(rf_val *set) {
-    rf_iter *new = malloc(sizeof(rf_iter));
+static inline void new_iter(riff_val *set) {
+    vm_iter *new = malloc(sizeof(vm_iter));
     new->p = iter;
     iter = new;
     switch (set->type) {
@@ -359,7 +358,7 @@ static inline void new_iter(rf_val *set) {
         iter->n = 1;
         break;
     case TYPE_FLT:
-        set->i = (rf_int) set->f;
+        set->i = (riff_int) set->f;
         // Fall-through
     case TYPE_INT:
         iter->keys = NULL;
@@ -379,9 +378,9 @@ static inline void new_iter(rf_val *set) {
         iter->keys = NULL;
         iter->set.str = set->s->str;
         break;
-    case TYPE_RE:
+    case TYPE_REGEX:
         err("cannot iterate over regular expression");
-    case TYPE_RNG:
+    case TYPE_RANGE:
         iter->keys = NULL;
         iter->t = LOOP_RNG;
         iter->set.itvl = set->q->itvl;
@@ -392,13 +391,13 @@ static inline void new_iter(rf_val *set) {
         if (iter->on <= 0)
             iter->n = UINT64_MAX; // TODO "Infinite" loop
         else
-            iter->n = (rf_uint) ceil(fabs(iter->on / (double) iter->set.itvl));
+            iter->n = (riff_uint) ceil(fabs(iter->on / (double) iter->set.itvl));
         iter->st = set->q->from;
         break;
     case TYPE_TAB:
         iter->t = LOOP_TAB;
-        iter->on = iter->n = t_logical_size(set->t);
-        iter->keys = t_collect_keys(set->t);
+        iter->on = iter->n = riff_tab_logical_size(set->t);
+        iter->keys = riff_tab_collect_keys(set->t);
         iter->set.tab = set->t;
         break;
     case TYPE_RFN:
@@ -409,7 +408,7 @@ static inline void new_iter(rf_val *set) {
 }
 
 static inline void destroy_iter(void) {
-    rf_iter *old = iter;
+    vm_iter *old = iter;
     iter = iter->p;
     if (old->t == LOOP_TAB) {
         if (!(old->n + 1)) // Loop completed?
@@ -420,38 +419,38 @@ static inline void destroy_iter(void) {
     free(old);
 }
 
-static inline void init_argv(rf_tab *t, rf_int arg0, int rf_argc, char **rf_argv) {
-    t_init(t);
-    for (rf_int i = 0; i < rf_argc; ++i) {
-        rf_val v = (rf_val) {
+static inline void init_argv(riff_tab *t, riff_int arg0, int rf_argc, char **rf_argv) {
+    riff_tab_init(t);
+    for (riff_int i = 0; i < rf_argc; ++i) {
+        riff_val v = (riff_val) {
             TYPE_STR,
             .s = s_new(rf_argv[i], strlen(rf_argv[i]))
         };
-        rf_int idx = i - arg0;
+        riff_int idx = i - arg0;
         if (idx < 0)
-            ht_insert_val(t->h, &(rf_val){TYPE_INT, .i = idx}, &v);
+            riff_htab_insert_val(t->h, &(riff_val){TYPE_INT, .i = idx}, &v);
         else
-            t_insert_int(t, idx, &v);
+            riff_tab_insert_int(t, idx, &v);
     }
 }
 
-static inline int exec(uint8_t *, rf_val *, rf_stack *, rf_stack *);
+static inline int exec(uint8_t *, riff_val *, vm_stack *, vm_stack *);
 
 #define add_user_funcs() \
     for (int i = 0; i < e->nf; ++i) { \
         if (e->fn[i]->name->hash) { \
-            ht_insert_str(&globals, e->fn[i]->name, &(rf_val){TYPE_RFN, .fn = e->fn[i]}); \
+            riff_htab_insert_str(&globals, e->fn[i]->name, &(riff_val){TYPE_RFN, .fn = e->fn[i]}); \
         } \
     }
 
 // VM entry point/initialization
-int z_exec(rf_env *e) {
-    ht_init(&globals);
+int vm_exec(riff_state *e) {
+    riff_htab_init(&globals);
     iter = NULL;
-    t_init(&fldv);
+    riff_tab_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, e->arg0, e->argc, e->argv);
-    ht_insert_cstr(&globals, "arg", &(rf_val){TYPE_TAB, .t = &argv});
+    riff_htab_insert_cstr(&globals, "arg", &(riff_val){TYPE_TAB, .t = &argv});
     l_register_builtins(&globals);
     // Add user-defined functions to the global hash table
     add_user_funcs();
@@ -459,7 +458,7 @@ int z_exec(rf_env *e) {
 }
 
 // Reentry point for eval()
-int z_exec_reenter(rf_env *e, rf_stack *fp) {
+int vm_exec_reenter(riff_state *e, vm_stack *fp) {
     // Add user-defined functions to the global hash table
     add_user_funcs();
     return exec(e->main.code->code, e->main.code->k, fp, fp);
@@ -472,22 +471,22 @@ int z_exec_reenter(rf_env *e, rf_stack *fp) {
 #endif
 
 // VM interpreter loop
-static inline int exec(uint8_t *ep, rf_val *k, rf_stack *sp, rf_stack *fp) {
-    if (sp - stack >= VM_STACK_SIZE)
+static inline int exec(uint8_t *ep, riff_val *k, vm_stack *sp, vm_stack *fp) {
+    if (UNLIKELY(sp - stack >= VM_STACK_SIZE))
         err("stack overflow");
-    rf_stack *retp = sp; // Save original SP
-    rf_val   *tp;        // Temp pointer
+    vm_stack *retp = sp; // Save original SP
+    riff_val   *tp;      // Temp pointer
     register uint8_t *ip = ep;
 
 #ifndef COMPUTED_GOTO
 // Use standard while loop with switch/case if computed goto is
 // disabled or unavailable
-#define L(l) case OP_##l:
-#define BREAK   break
+#define L(l)  case OP_##l:
+#define BREAK break
     while (1) { switch (*ip) {
 #else
-#define L(l)  L_##l:
-#define BREAK    DISPATCH()
+#define L(l)       L_##l:
+#define BREAK      DISPATCH()
 #define DISPATCH() goto *dispatch_labels[*ip]
     static void *dispatch_labels[] = {
 #define OPCODE(x,y,z) &&L_##x
@@ -526,7 +525,7 @@ L(XJZ16)    xjc16(!test(&sp[-1].v)); BREAK;
 L(LOOP8)
 L(LOOP16) {
     int jmp16 = *ip == OP_LOOP16;
-    if (!iter->n--) {
+    if (UNLIKELY(!iter->n--)) {
         if (jmp16)
             ip += 3;
         else
@@ -535,8 +534,8 @@ L(LOOP16) {
     }
     switch (iter->t) {
     case LOOP_RNG:
-        if (is_null(iter->v))
-            *iter->v = (rf_val) {TYPE_INT, .i = iter->st};
+        if (UNLIKELY(is_null(iter->v)))
+            *iter->v = (riff_val) {TYPE_INT, .i = iter->st};
         else
             iter->v->i += iter->set.itvl;
         break;
@@ -551,14 +550,14 @@ L(LOOP16) {
         if (!is_null(iter->v)) {
             iter->v->s = s_new(iter->set.str++, 1);
         } else {
-            *iter->v = (rf_val) {TYPE_STR, .s = s_new(iter->set.str++, 1)};
+            *iter->v = (riff_val) {TYPE_STR, .s = s_new(iter->set.str++, 1)};
         }
         break;
     case LOOP_TAB:
         if (iter->k != NULL) {
             *iter->k = *iter->keys;
         }
-        *iter->v = *t_lookup(iter->set.tab, iter->keys, 0);
+        *iter->v = *riff_tab_lookup(iter->set.tab, iter->keys, 0);
         iter->keys++;
         break;
     case LOOP_NULL:
@@ -609,7 +608,7 @@ L(ITERKV)
 
 // Unary operations
 // sp[-1].v is assumed to be safe to overwrite
-#define unop(x) z_##x(&sp[-1].v); ++ip
+#define unop(x) vm_##x(&sp[-1].v); ++ip
 
 L(LEN)      unop(len);  BREAK;
 L(LNOT)     unop(lnot); BREAK;
@@ -619,7 +618,7 @@ L(NUM)      unop(num);  BREAK;
 
 // Standard binary operations
 // sp[-2].v and sp[-1].v are assumed to be safe to overwrite
-#define binop(x) z_##x(&sp[-2].v, &sp[-1].v); --sp; ++ip
+#define binop(x) vm_##x(&sp[-2].v, &sp[-1].v); --sp; ++ip
 
 L(ADD)      binop(add);    BREAK;
 L(SUB)      binop(sub);    BREAK;
@@ -644,7 +643,7 @@ L(NMATCH)   binop(nmatch); BREAK;
 L(VIDXV)    binop(idx);    BREAK;
 
 // Pre-increment/decrement
-// sp[-1].a is address of some variable's rf_val.
+// sp[-1].a is address of some variable's riff_val.
 // Increment/decrement this value directly and replace the stack element with a
 // copy of the value.
 #define pre(x) \
@@ -665,8 +664,8 @@ L(PREINC)   pre(1);  BREAK;
 L(PREDEC)   pre(-1); BREAK;
 
 // Post-increment/decrement
-// sp[-1].a is address of some variable's rf_val. Create a copy of the raw
-// value, then increment/decrement the rf_val at the given address. Replace the
+// sp[-1].a is address of some variable's riff_val. Create a copy of the raw
+// value, then increment/decrement the riff_val at the given address. Replace the
 // stack element with the previously made copy and coerce to a numeric value if
 // needed.
 #define post(x) \
@@ -688,7 +687,7 @@ L(POSTINC)  post(1);  BREAK;
 L(POSTDEC)  post(-1); BREAK;
 
 // Compound assignment operations
-// sp[-2].a is address of some variable's rf_val. Save the address and place a
+// sp[-2].a is address of some variable's riff_val. Save the address and place a
 // copy of the value in sp[-2].v. Perform the binary operation x and assign the
 // result to the saved address.
 #define cbinop(x) \
@@ -739,11 +738,11 @@ L(CONST1)   pushk(1);     ++ip;    BREAK;
 L(CONST2)   pushk(2);     ++ip;    BREAK;
 
 // Push global address
-// Assign the address of global variable x's rf_val in the globals table.
+// Assign the address of global variable x's riff_val in the globals table.
 // The lookup will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode for assignment or pre/post ++/--.
-#define gbla(x) sp++->a = ht_lookup_str(&globals, k[(x)].s)
+#define gbla(x) sp++->a = riff_htab_lookup_str(&globals, k[(x)].s)
 
 L(GBLA)     gbla(ip[1]); ip += 2; BREAK;
 L(GBLA0)    gbla(0);     ++ip;    BREAK;
@@ -756,7 +755,7 @@ L(GBLA2)    gbla(2);     ++ip;    BREAK;
 // undeclared/uninitialized variable usage.
 // Parser signals for this opcode to be used when only needing the value, e.g.
 // arithmetic.
-#define gblv(x) sp++->v = *ht_lookup_str(&globals, k[(x)].s)
+#define gblv(x) sp++->v = *riff_htab_lookup_str(&globals, k[(x)].s)
 
 L(GBLV)     gblv(ip[1]); ip += 2; BREAK;
 L(GBLV0)    gblv(0);     ++ip;    BREAK;
@@ -791,11 +790,11 @@ L(LCLV2)    lclv(2);     ++ip;    BREAK;
 // Recycle current call frame
 L(TCALL) {
     int nargs = ip[1] + 1;
-    if (!is_fn(&sp[-nargs].v))
+    if (UNLIKELY(!is_fn(&sp[-nargs].v)))
         err("attempt to call non-function value");
     if (is_rfn(&sp[-nargs].v)) {
         sp -= nargs;
-        rf_fn *fn = sp->v.fn;
+        riff_fn *fn = sp->v.fn;
         int ar1 = sp - fp - 1;  // Current frame's "arity"
         int ar2 = fn->arity;    // Callee's arity
 
@@ -846,13 +845,13 @@ L(TCALL) {
 }
 
 // Calling convention
-// Arguments are pushed in-order following the rf_val containing a pointer to
+// Arguments are pushed in-order following the riff_val containing a pointer to
 // the function to be called.  Caller sets SP and FP to appropriate positions
 // and cleans up stack afterward. Callee returns from exec() the number of
 // values to be returned to the caller.
 L(CALL) {
     int nargs = ip[1];
-    if (!is_fn(&sp[-nargs-1].v))
+    if (UNLIKELY(!is_fn(&sp[-nargs-1].v)))
         err("attempt to call non-function value");
 
     int arity, nret;
@@ -860,7 +859,7 @@ L(CALL) {
     // User-defined functions
     if (is_rfn(&sp[-nargs-1].v)) {
 
-        rf_fn *fn = sp[-nargs-1].v.fn;
+        riff_fn *fn = sp[-nargs-1].v.fn;
         arity = fn->arity;
 
         // If user called function with too few arguments, nullify stack slots and
@@ -893,7 +892,7 @@ L(CALL) {
             
     // Built-in/C functions
     else {
-        c_fn *fn = sp[-nargs-1].v.cfn;
+        riff_cfn *fn = sp[-nargs-1].v.cfn;
         arity = fn->arity;
 
         // Most library functions are somewhat variadic; their arity refers to
@@ -927,12 +926,12 @@ L(RET1)     retp->v = sp[-1].v;
             return 1;
 
 // Create a sequential table of x elements from the top of the stack. Leave the
-// table rf_val on the stack. Tables index at 0 by default.
+// table riff_val on the stack. Tables index at 0 by default.
 #define new_tab(x) \
     tp = v_newtab(x); \
     for (int i = (x) - 1; i >= 0; --i) { \
         --sp; \
-        t_insert_int(tp->t, i, &sp->v); \
+        riff_tab_insert_int(tp->t, i, &sp->v); \
     } \
     sp++->v = *tp
 
@@ -949,7 +948,7 @@ L(IDXA) {
             *sp[i].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[i+1].a = t_lookup(sp[i].a->t, &sp[i+1].v, 1);
+            sp[i+1].a = riff_tab_lookup(sp[i].a->t, &sp[i+1].v, 1);
             break;
         // IDXA is invalid for all other types
         default:
@@ -969,7 +968,7 @@ L(IDXV) {
     }
     sp[i].v = *sp[i].a;
     for (; i < -1; ++i) {
-        z_idx(&sp[i].v, &sp[i+1].v);
+        vm_idx(&sp[i].v, &sp[i+1].v);
         sp[i+1].v = sp[i].v;
     }
     sp -= ip[1];
@@ -979,7 +978,7 @@ L(IDXV) {
 }
 
 // IDXA
-// Perform the lookup and leave the corresponding element's rf_val address on
+// Perform the lookup and leave the corresponding element's riff_val address on
 // the stack.
 L(IDXA1)
     switch (sp[-2].a->type) {
@@ -988,7 +987,7 @@ L(IDXA1)
         *sp[-2].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-2].a = t_lookup(sp[-2].a->t, &sp[-1].v, 1);
+        sp[-2].a = riff_tab_lookup(sp[-2].a->t, &sp[-1].v, 1);
         break;
     // IDXA is invalid for all other types
     default:
@@ -1008,11 +1007,11 @@ L(IDXV1)
         *sp[-2].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-2].v = *t_lookup(sp[-2].a->t, &sp[-1].v, 0);
+        sp[-2].v = *riff_tab_lookup(sp[-2].a->t, &sp[-1].v, 0);
         --sp;
         ++ip;
         break;
-    // Dereference and call z_idx().
+    // Dereference and call vm_idx().
     case TYPE_INT:
     case TYPE_FLT:
     case TYPE_STR:
@@ -1035,7 +1034,7 @@ L(SIDXA)
         *sp[-1].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-1].a = ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
+        sp[-1].a = riff_htab_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
         break;
     default:
         err("invalid member access (non-table value)");
@@ -1050,7 +1049,7 @@ L(SIDXV)
         *sp[-1].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-1].v = *ht_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
+        sp[-1].v = *riff_htab_lookup_val(sp[-1].a->t->h, &k[ip[1]]);
         break;
     default:
         err("invalid member access (non-table value)");
@@ -1058,11 +1057,11 @@ L(SIDXV)
     ip += 2;
     BREAK;
 
-L(FLDA)     sp[-1].a = t_lookup(&fldv, &sp[-1].v, 1);
+L(FLDA)     sp[-1].a = riff_tab_lookup(&fldv, &sp[-1].v, 1);
             ++ip;
             BREAK;
 
-L(FLDV)     sp[-1].v = *t_lookup(&fldv, &sp[-1].v, 0);
+L(FLDV)     sp[-1].v = *riff_tab_lookup(&fldv, &sp[-1].v, 0);
             ++ip;
             BREAK;
 
@@ -1078,56 +1077,56 @@ L(FLDV)     sp[-1].v = *t_lookup(&fldv, &sp[-1].v, 0);
 //   srnge: ..:z        0..INT_MAX:SP[-1]
 // If `z` is not provided, the interval is set to -1 if x > y (downward ranges).
 // Otherwise, the interval is set to 1 (upward ranges).
-#define z_range(f,t,i,s) { \
-    rf_rng *rng = malloc(sizeof(rf_rng)); \
-    rf_int from = rng->from = (f); \
-    rf_int to   = rng->to = (t); \
-    rf_int itvl = (i); \
-    rng->itvl   = itvl ? itvl : from > to ? -1 : 1; \
-    s = (rf_val) {TYPE_RNG, .q = rng}; \
+#define vm_range(f,t,i,s) { \
+    riff_range *r = malloc(sizeof(riff_range)); \
+    riff_int from = r->from = (f); \
+    riff_int to   = r->to = (t); \
+    riff_int itvl = (i); \
+    r->itvl       = itvl ? itvl : from > to ? -1 : 1; \
+    s = (riff_val) {TYPE_RANGE, .q = r}; \
 }
 // x..y
-L(RNG)      z_range(intval(&sp[-2].v), intval(&sp[-1].v), 0, sp[-2].v);
+L(RNG)      vm_range(intval(&sp[-2].v), intval(&sp[-1].v), 0, sp[-2].v);
             --sp;
             ++ip;
             BREAK;
 
 // x..
-L(RNGF)     z_range(intval(&sp[-1].v), INT64_MAX, 0, sp[-1].v);
+L(RNGF)     vm_range(intval(&sp[-1].v), INT64_MAX, 0, sp[-1].v);
             ++ip;
             BREAK;
 
 // ..y
-L(RNGT)     z_range(0, intval(&sp[-1].v), 0, sp[-1].v);
+L(RNGT)     vm_range(0, intval(&sp[-1].v), 0, sp[-1].v);
             ++ip;
             BREAK;
 
 // ..
 L(RNGI)     ++sp;
-            z_range(0, INT64_MAX, 0, sp[-1].v);
+            vm_range(0, INT64_MAX, 0, sp[-1].v);
             ++ip;
             BREAK;
 
 // x..y:z
-L(SRNG)     z_range(intval(&sp[-3].v), intval(&sp[-2].v), intval(&sp[-1].v), sp[-3].v);
+L(SRNG)     vm_range(intval(&sp[-3].v), intval(&sp[-2].v), intval(&sp[-1].v), sp[-3].v);
             sp -= 2;
             ++ip;
             BREAK;
 
 // x..:z
-L(SRNGF)    z_range(intval(&sp[-2].v), INT64_MAX, intval(&sp[-1].v), sp[-2].v);
+L(SRNGF)    vm_range(intval(&sp[-2].v), INT64_MAX, intval(&sp[-1].v), sp[-2].v);
             --sp;
             ++ip;
             BREAK;
 
 // ..y:z
-L(SRNGT)    z_range(0, intval(&sp[-2].v), intval(&sp[-1].v), sp[-2].v);
+L(SRNGT)    vm_range(0, intval(&sp[-2].v), intval(&sp[-1].v), sp[-2].v);
             --sp;
             ++ip;
             BREAK;
 
 // ..:z
-L(SRNGI)    z_range(0, INT64_MAX, intval(&sp[-1].v), sp[-1].v);
+L(SRNGI)    vm_range(0, INT64_MAX, intval(&sp[-1].v), sp[-1].v);
             ++ip;
             BREAK;
 
@@ -1138,6 +1137,7 @@ L(SET)      sp[-2].v = *sp[-2].a = sp[-1].v;
             ++ip;
             BREAK;
 
+// Set and pop
 L(SETP)     *sp[-2].a = sp[-1].v;
             sp -= 2;
             ++ip;

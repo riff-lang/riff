@@ -7,23 +7,23 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-static rf_tab *fldv;
+static riff_tab *fldv;
 static pcre2_compile_context *context = NULL;
 
 // Register the VM's global fields table
-void re_register_fldv(rf_tab *t) {
+void re_register_fldv(riff_tab *t) {
     fldv = t;
     return;
 }
 
-rf_re *re_compile(char *pattern, size_t len, uint32_t flags, int *errcode) {
+riff_regex *re_compile(char *pattern, size_t len, uint32_t flags, int *errcode) {
     if (context == NULL) {
         context = pcre2_compile_context_create(NULL);
         pcre2_set_compile_extra_options(context, RE_CFLAGS_EXTRA);
     }
 
     PCRE2_SIZE erroffset;
-    rf_re *r = pcre2_compile(
+    riff_regex *r = pcre2_compile(
             (PCRE2_SPTR) pattern,   // Raw pattern string
             len,                    // Length (or specify zero terminated)
             flags | RE_CFLAGS,      // Options/flags
@@ -33,7 +33,7 @@ rf_re *re_compile(char *pattern, size_t len, uint32_t flags, int *errcode) {
     return r;
 }
 
-void re_free(rf_re *re) {
+void re_free(riff_regex *re) {
     pcre2_code_free(re);
     return;
 }
@@ -44,8 +44,8 @@ int re_store_numbered_captures(pcre2_match_data *md) {
     while (1) {
         PCRE2_SIZE l = STR_BUF_SZ;
         if (!pcre2_substring_copy_bynumber(md, i, buf, &l)) {
-            rf_val v = (rf_val) {TYPE_STR, .s = s_new((const char *) buf, l)};
-            t_insert_int(fldv, (rf_int) i, &v);
+            riff_val v = (riff_val) {TYPE_STR, .s = s_new((const char *) buf, l)};
+            riff_tab_insert_int(fldv, (riff_int) i, &v);
         } else {
             break;
         }
@@ -54,7 +54,7 @@ int re_store_numbered_captures(pcre2_match_data *md) {
     return 0;
 }
 
-rf_int re_match(char *s, size_t len, rf_re *re, int capture) {
+riff_int re_match(char *s, size_t len, riff_regex *re, int capture) {
 
     // Create PCRE2 match data block
     pcre2_match_data *md = pcre2_match_data_create_from_pattern(re, NULL);
@@ -75,5 +75,5 @@ rf_int re_match(char *s, size_t len, rf_re *re, int capture) {
 
     // Free the PCRE2 match data
     pcre2_match_data_free(md);
-    return (rf_int) (rc > 0);
+    return (riff_int) (rc > 0);
 }

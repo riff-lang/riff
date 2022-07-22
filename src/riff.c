@@ -1,8 +1,8 @@
 #include "code.h"
 #include "disas.h"
-#include "env.h"
 #include "mem.h"
 #include "parse.h"
+#include "state.h"
 #include "string.h"
 #include "types.h"
 #include "vm.h"
@@ -16,23 +16,23 @@
 // Entry point for the Emscripten-compiled WASM/JS module
 #ifdef __EMSCRIPTEN__
 int wasm_main(int flag, char *str) {
-    st_init();
-    rf_env e;
-    e_init(&e);
-    rf_fn main;
-    rf_code c;
+    riff_stab_init();
+    riff_state global_state;
+    riff_state_init(&global_state);
+    riff_fn main;
+    riff_code c;
     c_init(&c);
     main.code = &c;
     main.arity = 0;
-    e.main = main;
-    e.pname = "<playground>";
-    e.src = str;
-    main.name = s_new(e.pname, strlen(e.pname));
-    y_compile(&e);
+    global_state.main = main;
+    global_state.pname = "<playground>";
+    global_state.src = str;
+    main.name = s_new(global_state.pname, strlen(global_state.pname));
+    riff_compile(&global_state);
     if (flag)
-        z_exec(&e);
+        vm_exec(&global_state);
     else
-        d_prog(&e);
+        d_prog(&global_state);
     return 0;
 }
 #else
@@ -105,17 +105,17 @@ static char *file2str(const char *path) {
 }
 
 int main(int argc, char **argv) {
-    st_init();
-    rf_env e;
-    e_init(&e);
-    rf_fn main;
-    rf_code c;
+    riff_stab_init();
+    riff_state global_state;
+    riff_state_init(&global_state);
+    riff_fn main;
+    riff_code c;
     c_init(&c);
     main.code = &c;
     main.arity = 0;
-    e.main = main;
-    e.argc = argc;
-    e.argv = argv;
+    global_state.main = main;
+    global_state.argc = argc;
+    global_state.argv = argv;
     bool disas = false;
     bool opt_e = false;
     opterr = 0;
@@ -124,8 +124,8 @@ int main(int argc, char **argv) {
         switch (o) {
         case 'e':
             opt_e = true;
-            e.src = optarg;
-            y_compile(&e);
+            global_state.src = optarg;
+            riff_compile(&global_state);
             break;
         case 'h':
             usage();
@@ -154,31 +154,31 @@ int main(int argc, char **argv) {
             fprintf(stderr, "riff: No program given\n");
             return 1;
         }
-        e.src = stdin2str();
-        e.pname = "<stdin>";
-        y_compile(&e);
+        global_state.src = stdin2str();
+        global_state.pname = "<stdin>";
+        riff_compile(&global_state);
     } else if (optind < argc) {
         // Option '-': Stop processing options and execute stdin
         if (argv[optind][0] == '-' && argv[optind][1] != '-') {
-            e.src = stdin2str();
-            e.pname = "<stdin>";
+            global_state.src = stdin2str();
+            global_state.pname = "<stdin>";
         } else {
-            e.src = file2str(argv[optind]);
-            e.pname = argv[optind];
+            global_state.src = file2str(argv[optind]);
+            global_state.pname = argv[optind];
         }
-        e.arg0 = optind;
-        y_compile(&e);
+        global_state.arg0 = optind;
+        riff_compile(&global_state);
     } else {
-        e.pname = "<command-line>";
+        global_state.pname = "<command-line>";
     }
 
     // -l: List riff's arbitrary disassembly for the given program
     if (disas) {
-        main.name = s_new(e.pname, strlen(e.pname));
-        d_prog(&e);
+        main.name = s_new(global_state.pname, strlen(global_state.pname));
+        d_prog(&global_state);
     } else {
         main.name = NULL;
-        z_exec(&e);
+        vm_exec(&global_state);
     }
     return 0;
 }

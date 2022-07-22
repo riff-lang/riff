@@ -1,8 +1,8 @@
 #include "fn.h"
 
-void f_init(rf_fn *f, rf_str *name) {
+void f_init(riff_fn *f, riff_str *name) {
     f->name  = name;
     f->arity = 0;
-    f->code  = malloc(sizeof(rf_code));
+    f->code  = malloc(sizeof(riff_code));
     c_init(f->code);
 }

@@ -53,15 +53,15 @@ static uint16_t tou16(uint8_t b1, uint8_t b2) {
 // Wrap string in quotes
 // TODO deconstruct bytes that correspond to escape sequences into their literal
 //      forms
-static void disas_tostring(char *buf, rf_val *v) {
+static void disas_tostr(riff_val *v, char *buf) {
     if (is_str(v)) {
         sprintf(buf, "\"%s\"", v->s->str);
     } else {
-        v_tostring(buf, v);
+        riff_tostr(v, buf);
     }
 }
 
-static void d_code_obj(rf_code *c, int ipw) {
+static void d_code_obj(riff_code *c, int ipw) {
     int ip = 0;
     char s[STR_BUF_SZ];
     while (ip < c->n) {
@@ -73,7 +73,7 @@ static void d_code_obj(rf_code *c, int ipw) {
         if (OP_ARITY) {
             switch (b0) {
             case OP_CONST:
-                disas_tostring(s, &c->k[b1]);
+                disas_tostr(&c->k[b1], s);
                 printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
             case OP_TABK:
@@ -81,7 +81,7 @@ static void d_code_obj(rf_code *c, int ipw) {
             case OP_GBLV:
             case OP_SIDXA:
             case OP_SIDXV:
-                v_tostring(s, &c->k[b1]);
+                riff_tostr(&c->k[b1], s);
                 printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
                 break;
             case OP_JMP8:
@@ -115,15 +115,15 @@ static void d_code_obj(rf_code *c, int ipw) {
             }
         } else if (b0 >= OP_CONST0 && b0 <= OP_GBLV2) {
             switch (b0) {
-            case OP_CONST0: disas_tostring(s, &c->k[0]); break;
-            case OP_CONST1: disas_tostring(s, &c->k[1]); break;
-            case OP_CONST2: disas_tostring(s, &c->k[2]); break;
+            case OP_CONST0: disas_tostr(&c->k[0], s); break;
+            case OP_CONST1: disas_tostr(&c->k[1], s); break;
+            case OP_CONST2: disas_tostr(&c->k[2], s); break;
             case OP_GBLA0:
-            case OP_GBLV0:  v_tostring(s, &c->k[0]);     break;
+            case OP_GBLV0:  riff_tostr(&c->k[0], s);     break;
             case OP_GBLA1:
-            case OP_GBLV1:  v_tostring(s, &c->k[1]);     break;
+            case OP_GBLV1:  riff_tostr(&c->k[1], s);     break;
             case OP_GBLA2:
-            case OP_GBLV2:  v_tostring(s, &c->k[2]);     break;
+            case OP_GBLV2:  riff_tostr(&c->k[2], s);     break;
             default: break;
             }
             printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
@@ -134,7 +134,7 @@ static void d_code_obj(rf_code *c, int ipw) {
     }
 }
 
-void d_prog(rf_env *e) {
+void d_prog(riff_state *e) {
     // Calculate width for the IP in the disassembly
     int w = (int) log10(e->main.code->n) + 1;
     for (int i = 0; i < e->nf; ++i) {
@@ -149,7 +149,7 @@ void d_prog(rf_env *e) {
            e->main.code->n == 1 ? "byte" : "bytes");
     d_code_obj(e->main.code, w);
     for (int i = 0; i < e->nf; ++i) {
-        rf_fn *f = e->fn[i];
+        riff_fn *f = e->fn[i];
         printf("\nfn %s @ %p -> %d %s\n",
                f->name->hash ? f->name->str : "<anonymous>",
                f,

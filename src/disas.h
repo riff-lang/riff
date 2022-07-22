@@ -2,9 +2,9 @@
 #define DISAS_H
 
 #include "code.h"
-#include "env.h"
+#include "state.h"
 #include "lex.h"
 
-void d_prog(rf_env *);
+void d_prog(riff_state *);
 
 #endif

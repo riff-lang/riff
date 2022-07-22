@@ -9,12 +9,12 @@
 
 #define LAST_INS_ADDR(arity) (&c->code[c->n-(arity)-1])
 
-static void err(rf_code *c, const char *msg) {
+static void err(riff_code *c, const char *msg) {
     fprintf(stderr, "riff: [compile] %s\n", msg);
     exit(1);
 }
 
-void c_init(rf_code *c) {
+void c_init(riff_code *c) {
     c->code = NULL;
     c->k    = NULL;
     c->n    = 0;
@@ -23,12 +23,12 @@ void c_init(rf_code *c) {
     c->kcap = 0;
 }
 
-void c_push(rf_code *c, uint8_t b) {
+void c_push(riff_code *c, uint8_t b) {
     m_growarray(c->code, c->n, c->cap, uint8_t);
     c->code[c->n++] = b;
 }
 
-static void push_i16(rf_code *c, int16_t i) {
+static void push_i16(riff_code *c, int16_t i) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     push((int8_t) (i & 0xff));
     push((int8_t) ((i >> 8) & 0xff));
@@ -38,7 +38,7 @@ static void push_i16(rf_code *c, int16_t i) {
 #endif
 }
 
-static void push_u16(rf_code *c, uint16_t i) {
+static void push_u16(riff_code *c, uint16_t i) {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     push((uint8_t) (i & 0xff));
     push((uint8_t) ((i >> 8) & 0xff));
@@ -50,7 +50,7 @@ static void push_u16(rf_code *c, uint16_t i) {
 
 // Push a jump instruction and return the location of the byte to be
 // patched
-int c_prep_jump(rf_code *c, int type) {
+int c_prep_jump(riff_code *c, int type) {
     switch (type) {
     case JMP:  push(OP_JMP16);  break;
     case JZ:   push(OP_JZ16);   break; 
@@ -65,7 +65,7 @@ int c_prep_jump(rf_code *c, int type) {
     return c->n - 2;
 }
 
-int c_prep_loop(rf_code *c, int type) {
+int c_prep_loop(riff_code *c, int type) {
     if (type)
         push(OP_ITERKV);
     else
@@ -76,13 +76,13 @@ int c_prep_loop(rf_code *c, int type) {
     return c->n - 2;
 }
 
-uint8_t *c_end_loop(rf_code *c) {
+void c_end_loop(riff_code *c, uint8_t **ret) {
     push(OP_POPL);
-    return LAST_INS_ADDR(0);
+    *ret = LAST_INS_ADDR(0);
 }
 
 // Simple backward jumps. Encode a 2-byte offset if necessary.
-uint8_t *c_jump(rf_code *c, int type, int l) {
+void c_jump(riff_code *c, int type, int l, uint8_t **ret) {
     int d = l - c->n;
     if (d <= INT8_MAX && d >= INT8_MIN) {
         switch (type) {
@@ -94,7 +94,7 @@ uint8_t *c_jump(rf_code *c, int type, int l) {
         default: break;
         }
         push((int8_t) d);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     } else if (d <= INT16_MAX && d >= INT16_MIN) {
         switch (type) {
         case JMP:  push(OP_JMP16);  break;
@@ -105,30 +105,28 @@ uint8_t *c_jump(rf_code *c, int type, int l) {
         default: break;
         }
         push_i16(c, (int16_t) d);
-        return LAST_INS_ADDR(2);
+        *ret = LAST_INS_ADDR(2);
     } else {
         err(c, "backward jump larger than INT16_MAX");
     }
-    return NULL;
 }
 
-uint8_t *c_loop(rf_code *c, int l) {
+void c_loop(riff_code *c, int l, uint8_t **ret) {
     int d = c->n - l;
     if (d <= UINT8_MAX) {
         push(OP_LOOP8);
         push((uint8_t) d);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     } else if (d <= UINT16_MAX) {
         push(OP_LOOP16);
         push_u16(c, (uint16_t) d);
-        return LAST_INS_ADDR(2);
+        *ret = LAST_INS_ADDR(2);
     } else {
         err(c, "backward loop too large");
     }
-    return NULL;
 }
 
-uint8_t *c_range(rf_code *c, int from, int to, int step) {
+void c_range(riff_code *c, int from, int to, int step, uint8_t **ret) {
     if (step) {
         if (from) {
             push(to ? OP_SRNG : OP_SRNGF);
@@ -142,12 +140,12 @@ uint8_t *c_range(rf_code *c, int from, int to, int step) {
             push(to ? OP_RNGT : OP_RNGI);
         }
     }
-    return LAST_INS_ADDR(0);
+    *ret = LAST_INS_ADDR(0);
 }
 
 // Overwrite the bytes at location l and l+1 with the distance between the code
 // object's "current" instruction and `l`. Useful for patching forward jumps.
-void c_patch(rf_code *c, int l) {
+void c_patch(riff_code *c, int l) {
     int jmp = c->n - l + 1;
     if (jmp > INT16_MAX) {
         err(c, "forward jump too large to patch");
@@ -161,30 +159,30 @@ void c_patch(rf_code *c, int l) {
 #endif
 }
 
-static uint8_t *c_pushk(rf_code *c, int i) {
+static void push_constant(riff_code *c, int i, uint8_t **ret) {
     switch (i) {
     case 0:
     case 1:
     case 2:
         push(OP_CONST0 + i);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        break;
     default:
         push(OP_CONST);
         push((uint8_t) i);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-uint8_t *c_fn_constant(rf_code *c, rf_fn *fn) {
-    m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk++] = (rf_val) {TYPE_RFN, .fn = fn};
+void c_fn_constant(riff_code *c, riff_fn *fn, uint8_t **ret) {
+    m_growarray(c->k, c->nk, c->kcap, riff_val);
+    c->k[c->nk++] = (riff_val) {TYPE_RFN, .fn = fn};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
-    return c_pushk(c, c->nk - 1);
+    push_constant(c, c->nk - 1, ret);
 }
 
-static int find_constant(rf_code *c, rf_token *tk) {
+static int find_constant(riff_code *c, rf_token *tk) {
     for (int i = 0; i < c->nk; ++i) {
         switch (tk->kind) {
         case TK_INT:
@@ -205,58 +203,64 @@ static int find_constant(rf_code *c, rf_token *tk) {
     return -1;
 }
 
-// Add a rf_val literal to a code object's constant table, if necessary
-uint8_t *c_constant(rf_code *c, rf_token *tk) {
+// Add a riff_val literal to a code object's constant table, if necessary
+void c_constant(riff_code *c, rf_token *tk, uint8_t **ret) {
     if (tk->kind == TK_NULL) {
         push(OP_NUL);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        return;
     } else if (tk->kind == TK_RE) {
-        m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_RE, .r = tk->lexeme.r};
+        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        c->k[c->nk++] = (riff_val) {TYPE_REGEX, .r = tk->lexeme.r};
         if (c->nk > (UINT8_MAX + 1))
             err(c, "Exceeded max number of unique literals");
-        return c_pushk(c, c->nk - 1);
+        push_constant(c, c->nk - 1, ret);
+        return;
     }
 
     int index = find_constant(c, tk);
     if (index >= 0) {
-        return c_pushk(c, index);
+        push_constant(c, index, ret);
+        return;
     }
 
     // Provided literal does not already exist in constant table
     switch (tk->kind) {
     case TK_FLT:
-        m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_FLT, .f = tk->lexeme.f};
+        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        c->k[c->nk++] = (riff_val) {TYPE_FLT, .f = tk->lexeme.f};
         break;
     case TK_INT: {
-        rf_int i = tk->lexeme.i;
+        riff_int i = tk->lexeme.i;
         switch (i) {
         case 0:
         case 1:
         case 2:
             push(OP_IMM0 + i);
-            return LAST_INS_ADDR(0);
+            *ret = LAST_INS_ADDR(0);
+            return;
         default:
             if (i >= 3 && i <= UINT8_MAX) {
                 push(OP_IMM8);
                 push((uint8_t) i);
-                return LAST_INS_ADDR(1);
+                *ret = LAST_INS_ADDR(1);
+                return;
             } else if (i >= 256 && i <= UINT16_MAX) {
                 push(OP_IMM16);
                 push_u16(c, (uint16_t) i);
-                return LAST_INS_ADDR(2);
+                *ret = LAST_INS_ADDR(2);
+                return;
             } else {
-                m_growarray(c->k, c->nk, c->kcap, rf_val);
-                c->k[c->nk++] = (rf_val) {TYPE_INT, .i = i};
+                m_growarray(c->k, c->nk, c->kcap, riff_val);
+                c->k[c->nk++] = (riff_val) {TYPE_INT, .i = i};
             }
             break;
         }
         break;
     }
     case TK_STR: case TK_ID: {
-        m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_STR, .s = tk->lexeme.s};
+        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->lexeme.s};
         break;
     }
     default: break;
@@ -264,113 +268,115 @@ uint8_t *c_constant(rf_code *c, rf_token *tk) {
 
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
-    return c_pushk(c, c->nk - 1);
+    push_constant(c, c->nk - 1, ret);
 }
 
-static uint8_t *push_global_addr(rf_code *c, int i) {
+static void push_global_addr(riff_code *c, int i, uint8_t **ret) {
     switch (i) {
     case 0:
     case 1:
     case 2:
         push(OP_GBLA0 + i);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        break;
     default:
         push(OP_GBLA);
         push((uint8_t) i);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-static uint8_t *push_global_val(rf_code *c, int i) {
+static void push_global_val(riff_code *c, int i, uint8_t **ret) {
     switch (i) {
     case 0:
     case 1:
     case 2:
         push(OP_GBLV0 + i);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        break;
     default:
         push(OP_GBLV);
         push((uint8_t) i);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-// mode = 1 => VM will push the pointer to the rf_val in the global
+// mode = 1 => VM will push the pointer to the riff_val in the global
 //             hash table onto the stack
-// mode = 0 => VM will make a copy of the global's rf_val and push it
+// mode = 0 => VM will make a copy of the global's riff_val and push it
 //             onto the stack
-uint8_t *c_global(rf_code *c, rf_token *tk, int mode) {
+void c_global(riff_code *c, rf_token *tk, int mode, uint8_t **ret) {
 
     // Search for existing symbol
     for (int i = 0; i < c->nk; ++i) {
         if (is_str(&c->k[i]) && s_eq(tk->lexeme.s, c->k[i].s)) {
-            return mode ? push_global_addr(c, i) : push_global_val(c, i);
+            mode ? push_global_addr(c, i, ret) : push_global_val(c, i, ret);
+            return;
         }
     }
-    m_growarray(c->k, c->nk, c->kcap, rf_val);
-    c->k[c->nk++] = (rf_val) {TYPE_STR, .s = tk->lexeme.s};
+    m_growarray(c->k, c->nk, c->kcap, riff_val);
+    c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->lexeme.s};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
-    return mode ? push_global_addr(c, c->nk - 1) : push_global_val(c, c->nk - 1);
+    mode ? push_global_addr(c, c->nk - 1, ret) : push_global_val(c, c->nk - 1, ret);
 }
 
-static uint8_t *push_local_addr(rf_code *c, int i) {
+static void push_local_addr(riff_code *c, int i, uint8_t **ret) {
     switch (i) {
     case 0:
     case 1:
     case 2:
         push(OP_LCLA0 + i);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        break;
     default:
         push(OP_LCLA);
         push((uint8_t) i);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-static uint8_t *push_local_val(rf_code *c, int i) {
+static void push_local_val(riff_code *c, int i, uint8_t **ret) {
     switch (i) {
     case 0:
     case 1:
     case 2:
         push(OP_LCLV0 + i);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        break;
     default:
         push(OP_LCLV);
         push((uint8_t) i);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-// mode = 1 => VM will push the pointer to the rf_val at stack[i]
-// mode = 0 => VM will make a copy of the rf_val at stack[i] and
+// mode = 1 => VM will push the pointer to the riff_val at stack[i]
+// mode = 0 => VM will make a copy of the riff_val at stack[i] and
 //             push onto the stack
-uint8_t *c_local(rf_code *c, int i, int mode, int reserve) {
+void c_local(riff_code *c, int i, int mode, int reserve, uint8_t **ret) {
     if (mode) {
         if (reserve) {
             push(OP_DUPA);
-            return LAST_INS_ADDR(0);
+            *ret = LAST_INS_ADDR(0);
         } else {
-            return push_local_addr(c, i);
+            push_local_addr(c, i, ret);
         }
     } else {
-        return push_local_val(c, i);
+        push_local_val(c, i, ret);
     }
-    return NULL;
 }
 
-uint8_t *c_table(rf_code *c, int n) {
+void c_table(riff_code *c, int n, uint8_t **ret) {
     if (!n) {
         push(OP_TAB0);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
+        return;
     } else if (n <= 0xff) {
         push(OP_TAB);
         push((uint8_t) n);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
+        return;
     } else {
         push(OP_TABK);
 
@@ -378,19 +384,20 @@ uint8_t *c_table(rf_code *c, int n) {
         for (int i = 0; i < c->nk; ++i) {
             if (is_int(&c->k[i]) && c->k[i].i == n) {
                 push((uint8_t) i);
-                return LAST_INS_ADDR(1);
+                *ret = LAST_INS_ADDR(1);
+                return;
             }
         }
 
         // Otherwise, add `n` to constants pool
-        m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_INT, .i = (rf_int) n};
+        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        c->k[c->nk++] = (riff_val) {TYPE_INT, .i = (riff_int) n};
         if (c->nk > (UINT8_MAX + 1)) {
             err(c, "Exceeded max number of unique literals");
         }
         push((uint8_t) c->nk - 1);
     }
-    return LAST_INS_ADDR(1);
+    *ret = LAST_INS_ADDR(1);
 }
 
 static int is_addr(uint8_t opcode) {
@@ -442,7 +449,7 @@ static void patch_val_to_addr(uint8_t *opcode) {
     }
 }
 
-uint8_t *c_index(rf_code *c, uint8_t *prev_ins, int n, int addr) {
+void c_index(riff_code *c, uint8_t *prev_ins, int n, int addr, uint8_t **ret) {
     patch_val_to_addr(prev_ins);
     if (n == 1) {
         if (!is_addr(*prev_ins)) {
@@ -453,27 +460,26 @@ uint8_t *c_index(rf_code *c, uint8_t *prev_ins, int n, int addr) {
         } else {
             push(addr ? OP_IDXA1 : OP_IDXV1);
         }
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
     } else {
         if (addr && !is_addr(*prev_ins)) {
             err(c, "syntax error");
         }
         push(addr ? OP_IDXA : OP_IDXV);
         push((uint8_t) n);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-uint8_t *c_str_index(rf_code *c, uint8_t *prev_ins, rf_str *k, int addr) {
+void c_str_index(riff_code *c, uint8_t *prev_ins, riff_str *k, int addr, uint8_t **ret) {
     patch_val_to_addr(prev_ins);
     if (!is_addr(*prev_ins)) {
         err(c, "invalid member access");
     }
     int index = find_constant(c, &(rf_token) {TK_STR, .lexeme.s = k});
     if (index < 0) {
-        m_growarray(c->k, c->nk, c->kcap, rf_val);
-        c->k[c->nk++] = (rf_val) {TYPE_STR, .s = k};
+        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        c->k[c->nk++] = (riff_val) {TYPE_STR, .s = k};
         if (c->nk > (UINT8_MAX + 1)) {
             err(c, "Exceeded max number of unique literals");
         }
@@ -481,12 +487,12 @@ uint8_t *c_str_index(rf_code *c, uint8_t *prev_ins, rf_str *k, int addr) {
     }
     push(addr ? OP_SIDXA : OP_SIDXV);
     push((uint8_t) index);
-    return LAST_INS_ADDR(1);
+    *ret = LAST_INS_ADDR(1);
 }
 
 // TODO this function will be used to evaluate infix expression "nodes" and fold
 // constants if possible.
-uint8_t *c_infix(rf_code *c, int op) {
+void c_infix(riff_code *c, int op, uint8_t **ret) {
     switch (op) {
     case '+':       push(OP_ADD);    break;
     case '-':       push(OP_SUB);    break;
@@ -523,10 +529,10 @@ uint8_t *c_infix(rf_code *c, int op) {
     case TK_SHRX:   push(OP_SHRX);   break;
     default: break;
     }
-    return LAST_INS_ADDR(0);
+    *ret = LAST_INS_ADDR(0);
 }
 
-uint8_t *c_prefix(rf_code *c, int op) {
+void c_prefix(riff_code *c, int op, uint8_t **ret) {
     switch (op) {
     case '!':    push(OP_LNOT);   break;
     case '#':    push(OP_LEN);    break;
@@ -537,43 +543,41 @@ uint8_t *c_prefix(rf_code *c, int op) {
     case TK_DEC: push(OP_PREDEC); break;
     default: break;
     }
-    return LAST_INS_ADDR(0);
+    *ret = LAST_INS_ADDR(0);
 }
 
-uint8_t *c_postfix(rf_code *c, int op) {
+void c_postfix(riff_code *c, int op, uint8_t **ret) {
     switch (op) {
     case TK_INC: push(OP_POSTINC); break;
     case TK_DEC: push(OP_POSTDEC); break;
     default: break;
     }
-    return LAST_INS_ADDR(0);
+    *ret = LAST_INS_ADDR(0);
 }
 
-uint8_t *c_pop(rf_code *c, int n) {
+void c_pop(riff_code *c, int n, uint8_t **ret) {
     if (n == 1) {
         push(OP_POP);
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
     } else {
         push(OP_POPI);
         push((uint8_t) n);
-        return LAST_INS_ADDR(1);
+        *ret = LAST_INS_ADDR(1);
     }
-    return NULL;
 }
 
-uint8_t *c_pop_expr_stmt(rf_code *c, int n) {
+void c_pop_expr_stmt(riff_code *c, int n, uint8_t **ret) {
     if (n == 1 && c->code[c->n-1] == OP_SET) {
         c->code[c->n-1] = OP_SETP;
-        return LAST_INS_ADDR(0);
+        *ret = LAST_INS_ADDR(0);
     } else {
-        return c_pop(c, n);
+        c_pop(c, n, ret);
     }
-    return NULL;
 }
 
 // t = 0 => void return
 // t = 1 => return one value
-uint8_t *c_return(rf_code *c, uint8_t *prev_ins, int t) {
+void c_return(riff_code *c, uint8_t *prev_ins, int t, uint8_t **ret) {
     // TODO patch TCALL?
     if (!t) {
         push(OP_RET);
@@ -585,5 +589,5 @@ uint8_t *c_return(rf_code *c, uint8_t *prev_ins, int t) {
         }
         push(OP_RET1);
     }
-    return LAST_INS_ADDR(0);
+    *ret = LAST_INS_ADDR(0);
 }

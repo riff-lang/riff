@@ -1,7 +1,7 @@
 #include "lib.h"
 
 #include "conf.h"
-#include "env.h"
+#include "state.h"
 #include "fmt.h"
 #include "fn.h"
 #include "mem.h"
@@ -20,7 +20,7 @@
 #include <time.h>
 
 // Dedicated user PRNG state
-static prng_state prngs;
+static riff_prng_state prngs;
 
 static void err(const char *msg) {
     fprintf(stderr, "riff: %s\n", msg);
@@ -28,11 +28,11 @@ static void err(const char *msg) {
 }
 
 // Common type signature for library functions
-#define LIB_FN(name) static int l_##name(rf_val *fp, int argc)
+#define LIB_FN(name) static int l_##name(riff_val *fp, int argc)
 
 // Basic arithmetic functions
 // Strict arity of 1 where argument is uncondtionally coerced.
-LIB_FN(ceil) { set_int(fp-1, (rf_int) ceil(fltval(fp))); return 1; }
+LIB_FN(ceil) { set_int(fp-1, (riff_int) ceil(fltval(fp))); return 1; }
 LIB_FN(cos)  { set_flt(fp-1, cos(fltval(fp)));           return 1; }
 LIB_FN(exp)  { set_flt(fp-1, exp(fltval(fp)));           return 1; }
 LIB_FN(int)  { set_int(fp-1, intval(fp));                return 1; }
@@ -94,18 +94,19 @@ LIB_FN(eof) {
 LIB_FN(eval) {
     if (!is_str(fp))
         return 0;
-    rf_env e;
-    rf_fn main;
-    rf_code c;
-    e_init(&e);
+    riff_state s;
+    riff_fn main;
+    riff_code c;
+
+    riff_state_init(&s);
     c_init(&c);
     main.code = &c;
     main.arity = 0;
-    e.main = main;
-    e.src = fp->s->str;
+    s.main = main;
+    s.src = fp->s->str;
     main.name = NULL;
-    y_compile(&e);
-    z_exec_reenter(&e, (rf_stack *) fp);
+    riff_compile(&s);
+    vm_exec_reenter(&s, (vm_stack *) fp);
     return 0;
 }
 
@@ -135,7 +136,7 @@ LIB_FN(get) {
 
 // getc([f])
 LIB_FN(getc) {
-    rf_int c;
+    riff_int c;
     FILE *f = argc && is_fh(fp) ? fp->fh->p : stdin;
     if ((c = fgetc(f)) != EOF) {
         set_int(fp-1, c);
@@ -172,16 +173,16 @@ LIB_FN(open) {
                 fp[0].s->str, strerror(errno));
         exit(1);
     }
-    rf_fh *fh = malloc(sizeof(rf_fh));
+    riff_file *fh = malloc(sizeof(riff_file));
     fh->p = p;
     fh->flags = 0;
-    fp[-1] = (rf_val) {TYPE_FH, .fh = fh};
+    fp[-1] = (riff_val) {TYPE_FILE, .fh = fh};
     return 1;
 }
 
-static inline void fputs_val(FILE *f, rf_val *v) {
+static inline void fputs_val(FILE *f, riff_val *v) {
     char buf[STR_BUF_SZ];
-    v_tostring(buf, v);
+    riff_tostr(v, buf);
     fputs(buf, f);
 }
 
@@ -196,10 +197,13 @@ LIB_FN(print) {
     return 1;
 }
 
+LIB_FN(write);
+
 // printf(s, ...)
 LIB_FN(printf) {
-    if (!is_str(fp))
-        return 0;
+    if (!is_str(fp)) {
+        return l_write(fp, argc);
+    }
     --argc;
     char buf[STR_BUF_SZ];
     int n = fmt_snprintf(buf, sizeof buf, fp->s->str, fp + 1, argc);
@@ -208,13 +212,13 @@ LIB_FN(printf) {
     return 0;
 }
 
-static int build_char_str(rf_val *fp, int argc, char *buf) {
+static int build_char_str(riff_val *fp, int argc, char *buf) {
     int n = 0;
     for (int i = 0; i < argc; ++i) {
         uint32_t c = (uint32_t) intval(fp+i);
-        if (c <= 0x7f)
+        if (c <= 0x7f) {
             buf[n++] = (char) c;
-        else {
+        } else {
             char ubuf[8];
             int j = 8 - u_unicode2utf8(ubuf, c);
             for (; j < 8; ++j) {
@@ -231,7 +235,7 @@ static int build_char_str(rf_val *fp, int argc, char *buf) {
 // Ex:
 //   putc(114, 105, 102, 102) -> "riff"
 LIB_FN(putc) {
-    if (!argc)
+    if (UNLIKELY(!argc))
         return 0;
     char buf[STR_BUF_SZ];
     int n = build_char_str(fp, argc, buf);
@@ -260,8 +264,9 @@ LIB_FN(read) {
 
 // write(s[,f])
 LIB_FN(write) {
-    if (!argc)
+    if (UNLIKELY(!argc)) {
         return 0;
+    }
     FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].fh->p : stdout;
     fputs_val(f, fp);
     return 0;
@@ -276,18 +281,18 @@ LIB_FN(write) {
 //   rand(m,n)    | random int ∈ [m..n]
 //   rand(range)  | random int ∈ range
 LIB_FN(rand) {
-    rf_uint rand = prng_next(&prngs);
+    riff_uint rand = riff_prng_next(&prngs);
     if (!argc) {
-        rf_flt f = (rf_flt) ((rand >> 11) * (0.5 / ((rf_uint)1 << 52)));
+        riff_float f = (riff_float) ((rand >> 11) * (0.5 / ((riff_uint)1 << 52)));
         set_flt(fp-1, f);
     }
 
     // If first argument is a range, ignore any succeeding args
     else if (is_rng(fp)) {
-        rf_int from = fp->q->from;
-        rf_int to   = fp->q->to;
-        rf_int itvl = fp->q->itvl;
-        rf_uint range, offset;
+        riff_int from = fp->q->from;
+        riff_int to   = fp->q->to;
+        riff_int itvl = fp->q->itvl;
+        riff_uint range, offset;
         if (from < to) {
             //           <<<
             // [i64min..from] ∪ [to..i64max]
@@ -326,7 +331,7 @@ LIB_FN(rand) {
 
     // 1 argument (0..n)
     else if (argc == 1) {
-        rf_int n1 = intval(fp);
+        riff_int n1 = intval(fp);
         if (n1 == 0) {
             set_int(fp-1, rand);
         } else {
@@ -340,9 +345,9 @@ LIB_FN(rand) {
 
     // 2 arguments (m..n)
     else {
-        rf_int n1 = intval(fp);
-        rf_int n2 = intval(fp+1);
-        rf_uint range, offset;
+        riff_int n1 = intval(fp);
+        riff_int n2 = intval(fp+1);
+        riff_uint range, offset;
         if (n1 < n2) {
             range  = n2 - n1;
             offset = n1;
@@ -364,13 +369,13 @@ LIB_FN(rand) {
 // rand() will produce the same sequence when srand is initialized
 // with a given seed every time.
 LIB_FN(srand) {
-    rf_int seed = 0;
+    riff_int seed = 0;
     if (!argc)
         seed = time(0);
     else if (!is_null(fp))
-        // Seed the PRNG with whatever 64 bits are in the rf_val union
+        // Seed the PRNG with whatever 64 bits are in the riff_val union
         seed = fp->i;
-    prng_seed(&prngs, seed);
+    riff_prng_seed(&prngs, seed);
     set_int(fp-1, seed);
     return 1;
 }
@@ -418,9 +423,9 @@ LIB_FN(fmt) {
     return 1;
 }
 
-static int xsub(rf_val *fp, int argc, int flags) {
+static int xsub(riff_val *fp, int argc, int flags) {
     char  *s;
-    rf_re *p;
+    riff_regex *p;
     char  *r;
     size_t len = 0;
 
@@ -528,14 +533,14 @@ LIB_FN(sub)  { return xsub(fp, argc, 0);                       }
 // Ex:
 //   hex(255) -> "0xff"
 LIB_FN(hex) {
-    rf_int i = intval(fp);
+    riff_int i = intval(fp);
     char buf[20];
     size_t len = sprintf(buf, "0x%"PRIx64, i);
     set_str(fp-1, s_new(buf, len));
     return 1;
 }
 
-static int allxcase(rf_val *fp, int c) {
+static int allxcase(riff_val *fp, int c) {
     if (!is_str(fp))
         return 0;
     size_t len = s_len(fp->s);
@@ -574,7 +579,7 @@ LIB_FN(num) {
         base = intval(fp+1);
     char *end;
     errno = 0;
-    rf_int i = u_str2i64(fp->s->str, &end, base);
+    riff_int i = u_str2i64(fp->s->str, &end, base);
     if (errno == ERANGE || isdigit(*end))
         goto ret_flt;
     if (*end == '.') {
@@ -615,10 +620,10 @@ LIB_FN(split) {
         str = fp->s->str;
         len = s_len(fp->s);
     }
-    rf_str *s;
-    rf_tab *t = malloc(sizeof(rf_tab));
-    t_init(t);
-    rf_re *delim;
+    riff_str *s;
+    riff_tab *t = malloc(sizeof(riff_tab));
+    riff_tab_init(t);
+    riff_regex *delim;
     int errcode = 0;
     if (argc < 2) {
         delim = re_compile("\\s+", PCRE2_ZERO_TERMINATED, 0, &errcode);
@@ -662,7 +667,7 @@ do_split: {
     // Extra null terminator, since the '\0' at buf[n] is a sentinel
     // value
     buf[n] = '\0';
-    for (rf_int i = 0; n > 0;) {
+    for (riff_int i = 0; n > 0;) {
         if (!*p) {
             ++p;
             --n;
@@ -671,7 +676,7 @@ do_split: {
             s = s_new(p, l);
             p += l + 1;
             n -= l + 1;
-            t_insert_int(t, i++, &(rf_val) {TYPE_STR, .s = s});
+            riff_tab_insert_int(t, i++, &(riff_val) {TYPE_STR, .s = s});
         }
     }
     set_tab(fp-1, t);
@@ -680,9 +685,9 @@ do_split: {
 
     // Split into single-byte strings
 split_chars: {
-    for (rf_int i = 0; i < len; ++i) {
+    for (riff_int i = 0; i < len; ++i) {
         s = s_new(str + i, 1);
-        t_insert_int(t, i, &(rf_val) {TYPE_STR, .s = s});
+        riff_tab_insert_int(t, i, &(riff_val) {TYPE_STR, .s = s});
     }
     set_tab(fp-1, t);
     return 1;
@@ -700,9 +705,9 @@ LIB_FN(type) {
     case TYPE_INT:  str = "int";      len = 3; break;
     case TYPE_FLT:  str = "float";    len = 5; break;
     case TYPE_STR:  str = "string";   len = 6; break;
-    case TYPE_RE:   str = "regex";    len = 5; break;
-    case TYPE_FH:   str = "file";     len = 4; break;
-    case TYPE_RNG:  str = "range";    len = 5; break;
+    case TYPE_REGEX:   str = "regex";    len = 5; break;
+    case TYPE_FILE:   str = "file";     len = 4; break;
+    case TYPE_RANGE:  str = "range";    len = 5; break;
     case TYPE_TAB:  str = "table";    len = 5; break;
     case TYPE_RFN:
     case TYPE_CFN:  str = "function"; len = 8; break;
@@ -716,7 +721,7 @@ LIB_FN(type) {
 
 // clock()
 LIB_FN(clock) {
-    set_flt(fp-1, ((rf_flt) clock() / (rf_flt) CLOCKS_PER_SEC));
+    set_flt(fp-1, ((riff_float) clock() / (riff_float) CLOCKS_PER_SEC));
     return 1;
 }
 
@@ -730,7 +735,7 @@ LIB_FN(exit) {
 
 static struct {
     const char *name;
-    c_fn        fn;
+    riff_cfn        fn;
 } lib_fn[] = {
     // Arithmetic
     LIB_FN_REG(abs,    1),
@@ -777,28 +782,28 @@ static struct {
     { NULL, { 0, NULL } }
 };
 
-static void register_funcs(rf_htab *g) {
+static void register_funcs(riff_htab *g) {
     // Initialize the PRNG with the current time
-    prng_seed(&prngs, time(0));
+    riff_prng_seed(&prngs, time(0));
     for (int i = 0; lib_fn[i].name; ++i) {
-        ht_insert_cstr(g, lib_fn[i].name, &(rf_val) {TYPE_CFN, .cfn = &lib_fn[i].fn});
+        riff_htab_insert_cstr(g, lib_fn[i].name, &(riff_val) {TYPE_CFN, .cfn = &lib_fn[i].fn});
     }
 }
 
 // NOTE: Standard streams can't be cleanly declared in a static struct like the
 // lib functions since the names (e.g. stdin) aren't compile-time constants
 #define REGISTER_LIB_STREAM(name) \
-    rf_fh *name##_fh = malloc(sizeof(rf_fh)); \
-    *name##_fh = (rf_fh) {name, FH_STD}; \
-    ht_insert_cstr(g, #name, &(rf_val){TYPE_FH, .fh = name##_fh});
+    riff_file *name##_fh = malloc(sizeof(riff_file)); \
+    *name##_fh = (riff_file) {name, FH_STD}; \
+    riff_htab_insert_cstr(g, #name, &(riff_val){TYPE_FILE, .fh = name##_fh});
 
-static void register_streams(rf_htab *g) {
+static void register_streams(riff_htab *g) {
     REGISTER_LIB_STREAM(stdin);
     REGISTER_LIB_STREAM(stdout);
     REGISTER_LIB_STREAM(stderr);
 }
 
-void l_register_builtins(rf_htab *g) {
+void l_register_builtins(riff_htab *g) {
     register_funcs(g);
     register_streams(g);
 }

@@ -17,9 +17,9 @@ enum types {
     TYPE_INT,
     TYPE_FLT,
     TYPE_STR,
-    TYPE_RE,
-    TYPE_FH,
-    TYPE_RNG,
+    TYPE_REGEX,
+    TYPE_FILE,
+    TYPE_RANGE,
     TYPE_TAB,
     TYPE_RFN,
     TYPE_CFN
@@ -29,29 +29,30 @@ enum types {
 #define is_int(x)  ((x)->type == TYPE_INT)
 #define is_flt(x)  ((x)->type == TYPE_FLT)
 #define is_str(x)  ((x)->type == TYPE_STR)
-#define is_re(x)   ((x)->type == TYPE_RE)
-#define is_fh(x)   ((x)->type == TYPE_FH)
-#define is_rng(x)  ((x)->type == TYPE_RNG)
+#define is_re(x)   ((x)->type == TYPE_REGEX)
+#define is_fh(x)   ((x)->type == TYPE_FILE)
+#define is_rng(x)  ((x)->type == TYPE_RANGE)
 #define is_tab(x)  ((x)->type == TYPE_TAB)
 #define is_rfn(x)  ((x)->type == TYPE_RFN)
 #define is_cfn(x)  ((x)->type == TYPE_CFN)
+
 #define is_num(x)  ((x)->type == TYPE_INT || (x)->type == TYPE_FLT)
 #define is_fn(x)   ((x)->type == TYPE_RFN || (x)->type == TYPE_CFN)
 
-typedef int64_t  rf_int;
-typedef uint64_t rf_uint;
-typedef double   rf_flt;
-typedef uint32_t rf_hash;
-typedef struct rf_str rf_str;
+typedef int64_t         riff_int;
+typedef uint64_t        riff_uint;
+typedef double          riff_float;
+typedef uint32_t        strhash;
+typedef struct riff_str riff_str;
 
-struct rf_str {
-    rf_hash  hash;
-    size_t   len;
-    char    *str;
-    rf_str  *next;
+struct riff_str {
+    strhash   hash;
+    size_t    len;
+    char     *str;
+    riff_str *next;
 };
 
-typedef pcre2_code rf_re;
+typedef pcre2_code riff_regex;
 
 // Standard PCRE2 compile options
 #define RE_ANCHORED        PCRE2_ANCHORED
@@ -68,8 +69,8 @@ typedef pcre2_code rf_re;
 #define RE_UNICODE         PCRE2_UCP
 
 // Extra PCRE2 compile options
-// Can only be set via pcre2_set_compile_extra_options() before
-// calling pcre2_compile()
+// Can only be set via pcre2_set_compile_extra_options() before calling
+// pcre2_compile()
 #define RE_IGNORE_BAD_ESC  PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL
 
 // Default compile options for regular expressions
@@ -81,69 +82,69 @@ typedef pcre2_code rf_re;
 typedef struct {
     FILE     *p;
     uint32_t  flags;
-} rf_fh;
+} riff_file;
 
 typedef struct {
-    rf_int from;
-    rf_int to;
-    rf_int itvl;
-} rf_rng;
+    riff_int from;
+    riff_int to;
+    riff_int itvl;
+} riff_range;
 
-typedef struct rf_tab  rf_tab;
-typedef struct rf_htab rf_htab;
-typedef struct rf_fn   rf_fn;
-typedef struct c_fn    c_fn;
+typedef struct riff_tab  riff_tab;
+typedef struct riff_htab riff_htab;
+typedef struct riff_fn   riff_fn;
+typedef struct riff_cfn  riff_cfn;
 
 typedef struct {
     uint8_t type;
     union {
-        rf_int  i;
-        rf_flt  f;
-        rf_str *s;
-        rf_re  *r;
-        rf_fh  *fh;
-        rf_rng *q;
-        rf_tab *t;
-        rf_fn  *fn;
-        c_fn   *cfn;
+        riff_int    i;
+        riff_float  f;
+        riff_str   *s;
+        riff_regex *r;
+        riff_file  *fh;
+        riff_range *q;
+        riff_tab   *t;
+        riff_fn    *fn;
+        riff_cfn   *cfn;
     };
-} rf_val;
+} riff_val;
 
-// Assign value x to rf_val *p
+// Assign value x to riff_val *p
 #define set_null(p)   (p)->type = TYPE_NULL
-#define set_int(p, x) *(p) = (rf_val) {TYPE_INT, .i = (x)}
-#define set_flt(p, x) *(p) = (rf_val) {TYPE_FLT, .f = (x)}
-#define set_str(p, x) *(p) = (rf_val) {TYPE_STR, .s = (x)}
-#define set_tab(p, x) *(p) = (rf_val) {TYPE_TAB, .t = (x)}
+#define set_int(p, x) *(p) = (riff_val) {TYPE_INT, .i = (x)}
+#define set_flt(p, x) *(p) = (riff_val) {TYPE_FLT, .f = (x)}
+#define set_str(p, x) *(p) = (riff_val) {TYPE_STR, .s = (x)}
+#define set_tab(p, x) *(p) = (riff_val) {TYPE_TAB, .t = (x)}
 
 #define numval(x) (is_int(x) ? (x)->i : \
                    is_flt(x) ? (x)->f : \
                    is_str(x) ? str2flt((x)->s) : 0)
 #define intval(x) (is_int(x) ? (x)->i : \
-                   is_flt(x) ? (rf_int) (x)->f : \
+                   is_flt(x) ? (riff_int) (x)->f : \
                    is_str(x) ? str2int((x)->s) : 0)
 #define fltval(x) (is_flt(x) ? (x)->f : \
-                   is_int(x) ? (rf_flt) (x)->i : \
+                   is_int(x) ? (riff_float) (x)->i : \
                    is_str(x) ? str2flt((x)->s) : 0)
 
-static inline rf_int str2int(rf_str *s) {
+static inline riff_int str2int(riff_str *s) {
     char *end;
     return u_str2i64(s->str, &end, 0);
 }
 
-static inline rf_flt str2flt(rf_str *s) {
+static inline riff_float str2flt(riff_str *s) {
     char *end;
     return u_str2d(s->str, &end, 0);
 }
 
-void    re_register_fldv(rf_tab *);
-rf_re  *re_compile(char *, size_t, uint32_t, int *);
-void    re_free(rf_re *);
-int     re_store_numbered_captures(pcre2_match_data *);
-rf_int  re_match(char *, size_t, rf_re *, int);
-rf_val *v_newnull(void);
-rf_val *v_newtab(uint32_t);
-rf_val *v_copy(rf_val *);
-void    v_tostring(char *, rf_val *);
+void        re_register_fldv(riff_tab *);
+riff_regex *re_compile(char *, size_t, uint32_t, int *);
+void        re_free(riff_regex *);
+int         re_store_numbered_captures(pcre2_match_data *);
+riff_int    re_match(char *, size_t, riff_regex *, int);
+riff_val   *v_newnull(void);
+riff_val   *v_newtab(uint32_t);
+riff_val   *v_copy(riff_val *);
+void        riff_tostr(riff_val *, char *);
 
 #endif

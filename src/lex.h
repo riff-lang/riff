@@ -11,10 +11,10 @@
 typedef struct {
     int kind;
     union {
-        rf_int  i;
-        rf_flt  f;
-        rf_str *s;
-        rf_re  *r;
+        riff_int    i;
+        riff_float  f;
+        riff_str   *s;
+        riff_regex *r;
     } lexeme;
 } rf_token;
 
