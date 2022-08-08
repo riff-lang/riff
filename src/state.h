@@ -2,7 +2,7 @@
 #define STATE_H
 
 #include "fn.h"
-#include "types.h"
+#include "value.h"
 
 typedef struct {
     const char  *pname; // Name of program file

@@ -4,7 +4,7 @@
 #include "code.h"
 #include "state.h"
 #include "table.h"
-#include "types.h"
+#include "value.h"
 
 // VM stack element
 typedef union {

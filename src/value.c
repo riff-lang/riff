@@ -1,6 +1,6 @@
 #include "conf.h"
 #include "table.h"
-#include "types.h"
+#include "value.h"
 
 riff_val *v_newnull(void) {
     riff_val *v = malloc(sizeof(riff_val));
@@ -31,7 +31,7 @@ void riff_tostr(riff_val *v, char *buf) {
     switch (v->type) {
     case TYPE_NULL: sprintf(buf, "null");               break;
     case TYPE_INT:  sprintf(buf, "%"PRId64, v->i);      break;
-    case TYPE_FLT:  sprintf(buf, FLT_PRINT_FMT, v->f);  break;
+    case TYPE_FLOAT:  sprintf(buf, FLT_PRINT_FMT, v->f);  break;
     case TYPE_STR:  sprintf(buf, "%s", v->s->str);      break;
     case TYPE_REGEX:   sprintf(buf, "regex: %p", v->r);    break;
     case TYPE_FILE:   sprintf(buf, "file: %p", v->fh->p); break;

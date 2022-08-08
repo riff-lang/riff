@@ -11,9 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define adv() (++x->p)
+#define advance() (++x->p)
 
-static void err(lexer *x, const char *msg) {
+static void err(riff_lexer *x, const char *msg) {
     fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
     exit(1);
 }
@@ -33,48 +33,53 @@ static int valid_alphanum(char c) {
 }
 
 static int valid_re_flag(char c) {
-    return c == 'A' || c == 'D' || c == 'J' || c == 'U' ||
-           c == 'i' || c == 'm' || c == 'n' || c == 's' ||
-           c == 'u' || c == 'x';
+    return !!memchr("ADJUimnsux", c, 10);
 }
 
-static int read_flt(lexer *x, rf_token *tk, const char *start, int base) {
+static int read_float(riff_lexer *x, riff_token *tk, const char *start, int base) {
     char *end;
-    tk->lexeme.f = u_str2d(start, &end, base);
+    tk->f = u_str2d(start, &end, base);
     x->p = end;
-    return TK_FLT;
+    return TK_FLOAT;
 }
 
-static int read_int(lexer *x, rf_token *tk, const char *start, int base) {
+static int read_int(riff_lexer *x, riff_token *tk, const char *start, int base) {
     char *end;
     errno = 0;
     int64_t i = u_str2i64(start, &end, base);
+
     // Interpret as float in the event of overflow
-    if (errno == ERANGE || isdigit(*end))
-        return read_flt(x, tk, start, base);
+    if (errno == ERANGE || isdigit(*end)) {
+        return read_float(x, tk, start, base);
+    }
+
     if (*end == '.') {
         if ((base == 10 && isdigit(end[1])) ||
-            (base == 16 && isxdigit(end[1])))
-            return read_flt(x, tk, start, base);
+            (base == 16 && isxdigit(end[1]))) {
+            return read_float(x, tk, start, base);
+        }
     } else if (base == 10 && (*end == 'e' || *end == 'E')) {
-        if (end[1] == '+' || end[1] == '-' || isdigit(end[1]))
-            return read_flt(x, tk, start, base);
+        if (end[1] == '+' || end[1] == '-' || isdigit(end[1])) {
+            return read_float(x, tk, start, base);
+        }
     } else if (base == 16 && (*end == 'p' || *end == 'P')) {
-        if (end[1] == '+' || end[1] == '-' || isxdigit(end[1]))
-            return read_flt(x, tk, start, base);
+        if (end[1] == '+' || end[1] == '-' || isxdigit(end[1])) {
+            return read_float(x, tk, start, base);
+        }
     }
     x->p = end;
-    tk->lexeme.i = i;
+    tk->i = i;
     return TK_INT;
 }
 
-static int read_num(lexer *x, rf_token *tk) {
+static int read_num(riff_lexer *x, riff_token *tk) {
     const char *start = x->p - 1;
 
-    // Quickly evaluate floating-point numbers with no integer part
-    // before the decimal mark, e.g. `.12`
-    if (*start == '.')
-        return read_flt(x, tk, start, 0);
+    // Quickly evaluate floating-point numbers with no integer part before the
+    // decimal mark, e.g. `.12`
+    if (*start == '.') {
+        return read_float(x, tk, start, 0);
+    }
 
     int base = 10;
     if (*start == '0') {
@@ -96,11 +101,12 @@ static int read_num(lexer *x, rf_token *tk) {
 }
 
 // TODO?
-// Currently reads a maximum of two hex digits (like Lua). C reads hex
-// digits until it reaches a non-hex digit.
-static int hex_esc(lexer *x) {
-    if (!isxdigit(*x->p))
+// Currently reads a maximum of two hex digits (like Lua). C reads hex digits
+// until it reaches a non-hex digit.
+static int hex_esc(riff_lexer *x) {
+    if (!isxdigit(*x->p)) {
         err(x, "expected hexadecimal digit");
+    }
     int e = u_hexval(*x->p++);
     if (isxdigit(*x->p)) {
         e <<= 4;
@@ -109,24 +115,27 @@ static int hex_esc(lexer *x) {
     return e;
 }
 
-// Reads a maximum of three octal digits. Throws an error if
-// resulting number > 255.
-static int oct_esc(lexer *x) {
-    if (!isoctal(*x->p))
+// Reads a maximum of three octal digits. Throws an error if resulting number >
+// 255.
+static int oct_esc(riff_lexer *x) {
+    if (!isoctal(*x->p)) {
         err(x, "expected octal digit");
+    }
     int e = u_decval(*x->p++);
     for (int i = 0; i < 2; ++i) {
-        if (!isoctal(*x->p))
+        if (!isoctal(*x->p)) {
             break;
+        }
         e *= 8;
         e += u_decval(*x->p++);
     }
-    if (e > UCHAR_MAX)
+    if (e > UCHAR_MAX) {
         err(x, "invalid octal escape");
+    }
     return e;
 }
 
-static uint32_t unicode_int(lexer *x, int len) {
+static uint32_t unicode_int(riff_lexer *x, int len) {
     uint32_t c = 0;
     for (int i = 0; i < len && isxdigit(*x->p); ++i) {
         c <<= 4;
@@ -135,7 +144,7 @@ static uint32_t unicode_int(lexer *x, int len) {
     return c;
 }
 
-static void unicode_esc(lexer *x, int len) {
+static void unicode_esc(riff_lexer *x, int len) {
     uint32_t c = unicode_int(x, len);
     char buf[8];
     int n = 8 - u_unicode2utf8(buf, c);
@@ -145,41 +154,40 @@ static void unicode_esc(lexer *x, int len) {
     }
 }
 
-static int read_charint(lexer *x, rf_token *tk, int d) {
+static int read_charint(riff_lexer *x, riff_token *tk, int d) {
     int c;
     riff_int v = 0;
     while ((c = *x->p) != d) {
 
-        // NOTE: check for (v & (0xFFull << 55) to assert a
-        // multicharacter sequence contains only 64 bits worth of
-        // characters. Otherwise, the resulting value will simply be
-        // the lowest 64 bits of the sequence.
+        // NOTE: check for (v & (0xFFull << 55) to assert a multicharacter
+        // sequence contains only 64 bits worth of characters. Otherwise, the
+        // resulting value will simply be the lowest 64 bits of the sequence.
 
         v <<= 8;
         switch (c) {
         case '\\':
-            adv();
+            advance();
             switch (*x->p) {
-            case 'a':  adv(); v += '\a';       break;
-            case 'b':  adv(); v += '\b';       break;
-            case 'e':  adv(); v += 0x1b;       break; // Escape char
-            case 'f':  adv(); v += '\f';       break;
-            case 'n':  adv(); v += '\n';       break;
-            case 'r':  adv(); v += '\r';       break;
-            case 't':  adv(); v += '\t';       break;
-            case 'v':  adv(); v += '\v';       break;
-            case 'x':  adv(); v += hex_esc(x); break;
-            case '\\': adv(); v += '\\';       break; 
-            case '\'': adv(); v += '\'';       break; 
+            case 'a':  advance(); v += '\a';       break;
+            case 'b':  advance(); v += '\b';       break;
+            case 'e':  advance(); v += 0x1b;       break; // Escape char
+            case 'f':  advance(); v += '\f';       break;
+            case 'n':  advance(); v += '\n';       break;
+            case 'r':  advance(); v += '\r';       break;
+            case 't':  advance(); v += '\t';       break;
+            case 'v':  advance(); v += '\v';       break;
+            case 'x':  advance(); v += hex_esc(x); break;
+            case '\\': advance(); v += '\\';       break; 
+            case '\'': advance(); v += '\'';       break; 
             case 'u': {
-                adv();
+                advance();
                 uint32_t u = unicode_int(x, 4);
                 v <<= u & 0xff00 ? 8 : 0;
                 v += u;
                 break;
             }
             case 'U': {
-                adv();
+                advance();
                 uint32_t u = unicode_int(x, 8);
                 v <<= u & 0xff000000 ? 24 :
                       u & 0x00ff0000 ? 16 :
@@ -206,48 +214,51 @@ static int read_charint(lexer *x, rf_token *tk, int d) {
                 if (u < 0)
                     err(x, "invalid unicode character");
             } else {
-                adv();
+                advance();
                 v += c;
             }
             break;
         }
     }
-    adv();
-    tk->lexeme.i = v;
+    advance();
+    tk->i = v;
     return TK_INT;
 }
 
 // TODO handling of multi-line string literals
-static int read_str(lexer *x, rf_token *tk, int d) {
+static int read_str(riff_lexer *x, riff_token *tk, int d) {
     x->buf.n = 0;
     int c;
 str_start:
     while ((c = *x->p) != d) {
         switch(c) {
         case '\\':
-            adv();
+            advance();
             switch (*x->p) {
-            case 'a': adv(); c = '\a';       break;
-            case 'b': adv(); c = '\b';       break;
-            case 'e': adv(); c = 0x1b;       break; // Escape char
-            case 'f': adv(); c = '\f';       break;
-            case 'n': adv(); c = '\n';       break;
-            case 'r': adv(); c = '\r';       break;
-            case 't': adv(); c = '\t';       break;
-            case 'v': adv(); c = '\v';       break;
-            case 'x': adv(); c = hex_esc(x); break;
+            case 'a': advance(); c = '\a';       break;
+            case 'b': advance(); c = '\b';       break;
+            case 'e': advance(); c = 0x1b;       break; // Escape char
+            case 'f': advance(); c = '\f';       break;
+            case 'n': advance(); c = '\n';       break;
+            case 'r': advance(); c = '\r';       break;
+            case 't': advance(); c = '\t';       break;
+            case 'v': advance(); c = '\v';       break;
+            case 'x': advance(); c = hex_esc(x); break;
 
-            case 'u': adv(); unicode_esc(x, 4); goto str_start;
-            case 'U': adv(); unicode_esc(x, 8); goto str_start;
+            case 'u': advance(); unicode_esc(x, 4); goto str_start;
+            case 'U': advance(); unicode_esc(x, 8); goto str_start;
 
             // Ignore newlines following `\`
-            case '\n': case '\r':
+            case '\n':
+            case '\r':
                 ++x->ln;
-                adv();
+                advance();
                 goto str_start;
-            case '\\': case '\'': case '"':
+            case '\\':
+            case '\'':
+            case '"':
                 c = *x->p;
-                adv();
+                advance();
                 break;
             default:
                 c = oct_esc(x);
@@ -256,45 +267,47 @@ str_start:
             break;
 
         // Newlines inside quoted string literal
-        case '\n': case '\r':
+        case '\n':
+        case '\r':
             ++x->ln;
             c = '\n';
-            adv();
+            advance();
             break;
         case '\0':
             err(x, "reached end of input with unterminated string");
         default:
-            adv();
+            advance();
             break;
         }
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
     riff_str *s = s_new(x->buf.c, x->buf.n);
-    adv();
-    tk->lexeme.s = s;
+    advance();
+    tk->s = s;
     return TK_STR;
 }
 
-static int read_re(lexer *x, rf_token *tk, int d) {
+static int read_re(riff_lexer *x, riff_token *tk, int d) {
     x->buf.n = 0;
     int c;
 re_start:
     while ((c = *x->p) != d) {
         switch(c) {
         case '\\':
-            adv();
+            advance();
             switch (*x->p) {
-            case 'u': adv(); unicode_esc(x, 4); goto re_start;
-            case 'U': adv(); unicode_esc(x, 8); goto re_start;
+            case 'u': advance(); unicode_esc(x, 4); goto re_start;
+            case 'U': advance(); unicode_esc(x, 8); goto re_start;
             // Ignore newlines following `\`
-            case '\n': case '\r':
+            case '\n':
+            case '\r':
                 ++x->ln;
-                adv();
+                advance();
                 goto re_start;
             case '/':
                 c = *x->p;
-                adv();
+                advance();
                 break;
             default:
                 // Copy over escape sequence unmodified - let PCRE2
@@ -302,28 +315,29 @@ re_start:
                 m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
                 x->buf.c[x->buf.n++] =  '\\';
                 x->buf.c[x->buf.n++] =  *x->p;
-                adv();
+                advance();
                 goto re_start;
             }
             break;
 
         // Newlines inside regex literal
-        case '\n': case '\r':
+        case '\n':
+        case '\r':
             ++x->ln;
             c = '\n';
-            adv();
+            advance();
             break;
         case '\0':
             err(x, "reached end of input with unterminated regular expression");
         default:
-            adv();
+            advance();
             break;
         }
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
     uint32_t flags = 0;
-    adv();
+    advance();
 
     // Parse regex options ([ADJUimnsux]*)
     while (valid_re_flag(*x->p)) {
@@ -340,13 +354,13 @@ re_start:
         case 'x':
             if (x->p[1] == 'x') {
                 flags |= RE_EXTENDED_MORE;
-                adv();
+                advance();
             } else {
                 flags |= RE_EXTENDED;
             }
             break;
         }
-        adv();
+        advance();
     }
     int errcode;
     riff_regex *r = re_compile(x->buf.c, x->buf.n, flags, &errcode);
@@ -357,21 +371,23 @@ re_start:
         pcre2_get_error_message(errcode, errstr, 0x200);
         err(x, (const char *) errstr);
     }
-    tk->lexeme.r = r;
+    tk->r = r;
     return TK_RE;
 }
 
-static int check_kw(lexer *x, const char *s, int size) {
+static int check_kw(riff_lexer *x, const char *s, int size) {
     int f = size;     // Character immediately following
     int i = 0;
-    for (; i < size; ++i)
-        if (x->p[i] != s[i] || x->p[i] == '\0')
+    for (; i < size; ++i) {
+        if (x->p[i] != s[i] || x->p[i] == '\0') {
             break;
+        }
+    }
     size -= i;
     return !size && !valid_alphanum(x->p[f]);
 }
 
-static int read_id(lexer *x, rf_token *tk) {
+static int read_id(riff_lexer *x, riff_token *tk) {
     const char *start = x->p - 1;
     // Check for reserved keywords
     switch (*start) {
@@ -450,40 +466,40 @@ static int read_id(lexer *x, rf_token *tk) {
     size_t count = 1;
     while (valid_alphanum(*x->p)) {
         ++count;
-        adv();
+        advance();
     }
-    tk->lexeme.s = s_new(start, count);
+    tk->s = s_new(start, count);
     return TK_ID;
 }
 
-static int test2(lexer *x, int c, int t1, int t2) {
+static int test2(riff_lexer *x, int c, int t1, int t2) {
     if (*x->p == c) {
-        adv();
+        advance();
         return t1;
     } else
         return t2;
 }
 
-static int test3(lexer *x, int c1, int t1, int c2, int t2, int t3) {
+static int test3(riff_lexer *x, int c1, int t1, int c2, int t2, int t3) {
     if (*x->p == c1) {
-        adv();
+        advance();
         return t1;
     } else if (*x->p == c2) {
-        adv();
+        advance();
         return t2;
     } else
         return t3;
 }
 
 static int
-test4(lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
+test4(riff_lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
     if (*x->p == c1) {
-        adv();
+        advance();
         return t1;
     } else if (*x->p == c2) {
-        adv();
+        advance();
         if (*x->p == c3) {
-            adv();
+            advance();
             return t2;
         } else
             return t3;
@@ -491,33 +507,36 @@ test4(lexer *x, int c1, int t1, int c2, int c3, int t2, int t3, int t4) {
         return t4;
 }
 
-static void line_comment(lexer *x) {
+static void line_comment(riff_lexer *x) {
     while (1) {
-        if (*x->p == '\n' || *x->p == '\0')
+        if (*x->p == '\n' || *x->p == '\0') {
             break;
-        else
-            adv();
+        } else {
+            advance();
+        }
     }
 }
 
-static void block_comment(lexer *x) {
+static void block_comment(riff_lexer *x) {
     while (1) {
-        if (*x->p == '\n')
+        if (*x->p == '\n') {
             x->ln++;
-        if (*x->p == '\0')
+        }
+        if (*x->p == '\0') {
             err(x, "reached end of input with unterminated block comment");
+        }
         else if (*x->p == '*') {
-            adv();
+            advance();
             if (*x->p == '/') {
-                adv();
+                advance();
                 break;
             }
         }
-        else adv();
+        else advance();
     }
 }
 
-static int tokenize(lexer *x, int mode, rf_token *tk) {
+static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
     int c;
     while (1) {
         switch (c = *x->p++) {
@@ -553,22 +572,24 @@ static int tokenize(lexer *x, int mode, rf_token *tk) {
             break;
         case '-': return test3(x, '=', TK_SUBX, '-', TK_DEC, '-');
         case '.':
-            if (isdigit(*x->p))
+            if (isdigit(*x->p)) {
                 return read_num(x, tk);
-            else if ((*x->p) == '.') {
-                adv();
+            } else if ((*x->p) == '.') {
+                advance();
                 return TK_DOTS;
-            } else
+            } else {
                 return '.';
+            }
         case '/':
             switch (*x->p) {
-            case '/': adv(); line_comment(x);  break;
-            case '*': adv(); block_comment(x); break;
+            case '/': advance(); line_comment(x);  break;
+            case '*': advance(); block_comment(x); break;
             default: 
-                if (mode)
+                if (mode) {
                     return test2(x, '=', TK_DIVX, '/');
-                else
+                } else {
                     return read_re(x, tk, c);
+                }
                 break;
             }
             break;
@@ -597,7 +618,7 @@ static int tokenize(lexer *x, int mode, rf_token *tk) {
     }
 }
 
-int x_init(lexer *x, const char *src) {
+int riff_lex_init(riff_lexer *x, const char *src) {
     x->tk.kind = 0;
     x->la.kind = 0;
     x->ln      = 1;
@@ -605,27 +626,28 @@ int x_init(lexer *x, const char *src) {
     x->buf.n   = 0;
     x->buf.cap = 0;
     x->buf.c   = NULL;
-    x_adv(x, 0);
+    riff_lex_advance(x, 0);
     return 0;
 }
 
 // Lexer itself should be stack-allocated, but the string buffer is
 // heap-allocated
-void x_free(lexer *x) {
-    if (x->buf.c != NULL)
+void riff_lex_free(riff_lexer *x) {
+    if (x->buf.c != NULL) {
         free(x->buf.c);
+    }
 }
 
-int x_adv(lexer *x, int mode) {
+int riff_lex_advance(riff_lexer *x, int mode) {
     if (x->tk.kind == TK_EOI)
         return 1;
 
     // If a lookahead token already exists, assign it to the current
     // token
     if (x->la.kind != 0) {
-        x->tk.kind   = x->la.kind;
-        x->tk.lexeme = x->la.lexeme;
-        x->la.kind   = 0;
+        x->tk.kind = x->la.kind;
+        x->tk.i    = x->la.i;
+        x->la.kind = 0;
     } else if ((x->tk.kind = tokenize(x, mode, &x->tk)) == 1) {
         x->tk.kind = TK_EOI;
         return 1;
@@ -633,9 +655,9 @@ int x_adv(lexer *x, int mode) {
     return 0;
 }
 
-// Populate the lookahead rf_token, leaving the current rf_token
+// Populate the lookahead riff_token, leaving the current riff_token
 // unchanged
-int x_peek(lexer *x, int mode) {
+int riff_lex_peek(riff_lexer *x, int mode) {
     if ((x->la.kind = tokenize(x, mode, &x->la)) == 1) {
         x->la.kind = TK_EOI;
         return 1;

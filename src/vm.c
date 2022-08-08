@@ -41,7 +41,7 @@ static vm_stack   stack[VM_STACK_SIZE];
 static inline int test(riff_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->i);
-    case TYPE_FLT: return !!(v->f);
+    case TYPE_FLOAT: return !!(v->f);
 
     // If entire string is a numeric value, return logical result of the number.
     // Otherwise, return whether the string is longer than 0.
@@ -98,7 +98,7 @@ VM_BINOP(shr) { int_arith(l,r,>>); }
 VM_UOP(num) {
     switch (v->type) {
     case TYPE_INT:
-    case TYPE_FLT:
+    case TYPE_FLOAT:
         break;
     case TYPE_STR:
         set_flt(v, str2flt(v->s));
@@ -112,7 +112,7 @@ VM_UOP(num) {
 VM_UOP(neg) {
     switch (v->type) {
     case TYPE_INT: v->i = -v->i;               break;
-    case TYPE_FLT: v->f = -v->f;               break;
+    case TYPE_FLOAT: v->f = -v->f;               break;
     case TYPE_STR: set_flt(v, -str2flt(v->s)); break;
     default:       set_int(v, 0);              break;
     }
@@ -189,7 +189,7 @@ VM_UOP(len) {
         }
         v->i = l;
         return;
-    case TYPE_FLT:
+    case TYPE_FLOAT:
         l = (riff_int) snprintf(NULL, 0, "%g", v->f);
         break;
     case TYPE_STR: l = s_len(v->s); break;
@@ -212,7 +212,7 @@ VM_BINOP(cat) {
     if (!is_str(l)) {
         switch (l->type) {
         case TYPE_INT: u_int2str(l->i, temp_lhs); break;
-        case TYPE_FLT: u_flt2str(l->f, temp_lhs); break;
+        case TYPE_FLOAT: u_flt2str(l->f, temp_lhs); break;
         default:       temp_lhs[0] = '\0';        break;
         }
         lhs = temp_lhs;
@@ -222,7 +222,7 @@ VM_BINOP(cat) {
     if (!is_str(r)) {
         switch (r->type) {
         case TYPE_INT: u_int2str(r->i, temp_rhs); break;
-        case TYPE_FLT: u_flt2str(r->f, temp_rhs); break;
+        case TYPE_FLOAT: u_flt2str(r->f, temp_rhs); break;
         default:       temp_rhs[0] = '\0';        break;
         }
         rhs = temp_rhs;
@@ -234,7 +234,7 @@ VM_BINOP(cat) {
 
 static inline riff_int match(riff_val *l, riff_val *r) {
     // Common case: LHS string, RHS regex
-    if (LIKELY(is_str(l) && is_re(r)))
+    if (LIKELY(is_str(l) && is_regex(r)))
         return re_match(l->s->str, s_len(l->s), r->r, 1);
     char *lhs;
     size_t len = 0;
@@ -243,7 +243,7 @@ static inline riff_int match(riff_val *l, riff_val *r) {
     if (!is_str(l)) {
         switch (l->type) {
         case TYPE_INT: len = u_int2str(l->i, temp_lhs); break;
-        case TYPE_FLT: len = u_flt2str(l->f, temp_lhs); break;
+        case TYPE_FLOAT: len = u_flt2str(l->f, temp_lhs); break;
         default:       temp_lhs[0] = '\0';              break;
         }
         lhs = temp_lhs;
@@ -251,14 +251,14 @@ static inline riff_int match(riff_val *l, riff_val *r) {
         lhs = l->s->str;
         len = s_len(l->s);
     }
-    if (!is_re(r)) {
+    if (!is_regex(r)) {
         riff_regex *temp_re;
         riff_int res;
         int errcode;
         int capture = 0;
         switch (r->type) {
         case TYPE_INT: u_int2str(r->i, temp_rhs); break;
-        case TYPE_FLT: u_flt2str(r->f, temp_rhs); break;
+        case TYPE_FLOAT: u_flt2str(r->f, temp_rhs); break;
         case TYPE_STR:
             capture = 1;
             temp_re = re_compile(r->s->str, s_len(r->s), 0, &errcode);
@@ -290,7 +290,7 @@ VM_BINOP(idx) {
     switch (l->type) {
     case TYPE_INT: {
         u_int2str(l->i, temp);
-        if (is_rng(r)) {
+        if (is_range(r)) {
             set_str(l, s_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
             riff_int r1  = intval(r);
@@ -304,9 +304,9 @@ VM_BINOP(idx) {
         }
         break;
     }
-    case TYPE_FLT: {
+    case TYPE_FLOAT: {
         u_flt2str(l->f, temp);
-        if (is_rng(r)) {
+        if (is_range(r)) {
             set_str(l, s_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
             riff_int r1  = intval(r);
@@ -321,7 +321,7 @@ VM_BINOP(idx) {
         break;
     }
     case TYPE_STR: {
-        if (is_rng(r)) {
+        if (is_range(r)) {
             l->s = s_substr(l->s->str, r->q->from, r->q->to, r->q->itvl);
         } else {
             riff_int r1  = intval(r);
@@ -357,7 +357,7 @@ static inline void new_iter(riff_val *set) {
         iter->keys = NULL;
         iter->n = 1;
         break;
-    case TYPE_FLT:
+    case TYPE_FLOAT:
         set->i = (riff_int) set->f;
         // Fall-through
     case TYPE_INT:
@@ -649,7 +649,7 @@ L(VIDXV)    binop(idx);    BREAK;
 #define pre(x) \
     switch (sp[-1].a->type) { \
     case TYPE_INT: sp[-1].a->i += x; break; \
-    case TYPE_FLT: sp[-1].a->f += x; break; \
+    case TYPE_FLOAT: sp[-1].a->f += x; break; \
     case TYPE_STR: \
         set_flt(sp[-1].a, str2flt(sp[-1].a->s) + x); \
         break; \
@@ -673,7 +673,7 @@ L(PREDEC)   pre(-1); BREAK;
     sp[-1].v = *tp; \
     switch (tp->type) { \
     case TYPE_INT: tp->i += x; break; \
-    case TYPE_FLT: tp->f += x; break; \
+    case TYPE_FLOAT: tp->f += x; break; \
     case TYPE_STR: \
         set_flt(tp, str2flt(tp->s) + x); \
         break; \
@@ -1013,7 +1013,7 @@ L(IDXV1)
         break;
     // Dereference and call vm_idx().
     case TYPE_INT:
-    case TYPE_FLT:
+    case TYPE_FLOAT:
     case TYPE_STR:
         sp[-2].v = *sp[-2].a;
         binop(idx);

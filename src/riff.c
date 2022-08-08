@@ -4,7 +4,7 @@
 #include "parse.h"
 #include "state.h"
 #include "string.h"
-#include "types.h"
+#include "value.h"
 #include "vm.h"
 
 #include <getopt.h>

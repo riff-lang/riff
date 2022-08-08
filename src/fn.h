@@ -2,7 +2,7 @@
 #define FN_H
 
 #include "code.h"
-#include "types.h"
+#include "value.h"
 
 struct riff_fn {
     riff_code *code;

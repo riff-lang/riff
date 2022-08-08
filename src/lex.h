@@ -1,7 +1,7 @@
 #ifndef LEX_H
 #define LEX_H
 
-#include "types.h"
+#include "value.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,15 +15,15 @@ typedef struct {
         riff_float  f;
         riff_str   *s;
         riff_regex *r;
-    } lexeme;
-} rf_token;
+    };
+} riff_token;
 
-enum lexer_modes {
+enum lexer_mode {
     LEX_NUD,
     LEX_LED
 };
 
-enum tokens {
+enum token_kind {
     // NOTE: Single character tokens are implicitly enumerated
 
     TK_AND = 128, // &&
@@ -69,7 +69,7 @@ enum tokens {
 
     // Literals
     TK_NULL,
-    TK_FLT,
+    TK_FLOAT,
     TK_INT,
     TK_STR,
     TK_RE,
@@ -82,8 +82,8 @@ enum tokens {
 };
 
 typedef struct {
-    rf_token    tk;     // Current token
-    rf_token    la;     // Lookahead token
+    riff_token  tk;     // Current token
+    riff_token  la;     // Lookahead token
     int         ln;     // Current line of the source
     const char *p;      // Pointer to the current position in the source
     struct {
@@ -91,11 +91,11 @@ typedef struct {
         int   cap;
         char *c;
     } buf;              // String buffer
-} lexer;
+} riff_lexer;
 
-int  x_init(lexer *, const char *);
-void x_free(lexer *);
-int  x_adv(lexer *, int);
-int  x_peek(lexer *, int);
+int  riff_lex_init(riff_lexer *, const char *);
+void riff_lex_free(riff_lexer *);
+int  riff_lex_advance(riff_lexer *, int);
+int  riff_lex_peek(riff_lexer *, int);
 
 #endif

@@ -344,7 +344,7 @@ redir_flt:
                     fmt_str(buf, n, argv[arg].s->str);
                 } else if (is_int(argv+arg)) {
                     goto redir_int;
-                } else if (is_flt(argv+arg)) {
+                } else if (is_float(argv+arg)) {
                     goto redir_flt;
                 }
 

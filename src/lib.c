@@ -78,7 +78,7 @@ LIB_FN(log) {
 
 // close(f)
 LIB_FN(close) {
-    if (is_fh(fp))
+    if (is_file(fp))
         if (!(fp->fh->flags & FH_STD))
             fclose(fp->fh->p);
     return 0;
@@ -86,7 +86,7 @@ LIB_FN(close) {
 
 // eof(f)
 LIB_FN(eof) {
-    set_int(fp-1, !is_fh(fp) || feof(fp->fh->p));
+    set_int(fp-1, !is_file(fp) || feof(fp->fh->p));
     return 1;
 }
 
@@ -112,7 +112,7 @@ LIB_FN(eval) {
 
 // flush([f])
 LIB_FN(flush) {
-    FILE *f = argc && is_fh(fp) ? fp->fh->p : stdout;
+    FILE *f = argc && is_file(fp) ? fp->fh->p : stdout;
     if (fflush(f))
         err("error flushing stream");
     return 0;
@@ -137,7 +137,7 @@ LIB_FN(get) {
 // getc([f])
 LIB_FN(getc) {
     riff_int c;
-    FILE *f = argc && is_fh(fp) ? fp->fh->p : stdin;
+    FILE *f = argc && is_file(fp) ? fp->fh->p : stdin;
     if ((c = fgetc(f)) != EOF) {
         set_int(fp-1, c);
         return 1;
@@ -248,7 +248,7 @@ LIB_FN(putc) {
 // read(f[,n])
 LIB_FN(read) {
     char buf[STR_BUF_SZ];
-    FILE *f = argc && is_fh(fp) ? fp->fh->p : stdin;
+    FILE *f = argc && is_file(fp) ? fp->fh->p : stdin;
     if (argc > 1 && is_num(fp+1)) {
         size_t count = (size_t) intval(fp+1);
         size_t nread = fread(buf, sizeof *buf, count, f);
@@ -267,7 +267,7 @@ LIB_FN(write) {
     if (UNLIKELY(!argc)) {
         return 0;
     }
-    FILE *f = argc > 1 && is_fh(fp+1) ? fp[1].fh->p : stdout;
+    FILE *f = argc > 1 && is_file(fp+1) ? fp[1].fh->p : stdout;
     fputs_val(f, fp);
     return 0;
 }
@@ -288,7 +288,7 @@ LIB_FN(rand) {
     }
 
     // If first argument is a range, ignore any succeeding args
-    else if (is_rng(fp)) {
+    else if (is_range(fp)) {
         riff_int from = fp->q->from;
         riff_int to   = fp->q->to;
         riff_int itvl = fp->q->itvl;
@@ -436,7 +436,7 @@ static int xsub(riff_val *fp, int argc, int flags) {
     if (!is_str(fp)) {
         if (is_int(fp))
             len = u_int2str(fp->i, temp_s);
-        else if (is_flt(fp))
+        else if (is_float(fp))
             len = u_flt2str(fp->f, temp_s);
         else
             return 0;
@@ -447,13 +447,13 @@ static int xsub(riff_val *fp, int argc, int flags) {
     }
 
     // Pattern `p`
-    if (!is_re(fp+1)) {
+    if (!is_regex(fp+1)) {
         int errcode;
         if (is_num(fp+1)) {
             char temp_p[32];
             if (is_int(fp+1))
                 u_int2str(fp[1].i, temp_p);
-            else if (is_flt(fp+1))
+            else if (is_float(fp+1))
                 u_flt2str(fp[1].f, temp_p);
             p = re_compile(temp_p, PCRE2_ZERO_TERMINATED, 0, &errcode);
         } else if (is_str(fp+1)) {
@@ -470,7 +470,7 @@ static int xsub(riff_val *fp, int argc, int flags) {
         if (!is_str(fp+2)) {
             if (is_int(fp+2))
                 u_int2str(fp[2].i, temp_r);
-            else if (is_flt(fp+2))
+            else if (is_float(fp+2))
                 u_flt2str(fp[2].f, temp_r);
             else
                 temp_r[0] = '\0';
@@ -567,7 +567,7 @@ LIB_FN(num) {
     if (!is_str(fp)) {
         if (is_int(fp)) {
             set_int(fp-1, fp->i);
-        } else if (is_flt(fp)) {
+        } else if (is_float(fp)) {
             set_flt(fp-1, fp->f);
         } else {
             set_int(fp-1, 0);
@@ -611,7 +611,7 @@ LIB_FN(split) {
     if (!is_str(fp)) {
         if (is_int(fp))
             len = u_int2str(fp->i, temp_s);
-        else if (is_flt(fp))
+        else if (is_float(fp))
             len = u_flt2str(fp->f, temp_s);
         else
             return 0;
@@ -627,11 +627,11 @@ LIB_FN(split) {
     int errcode = 0;
     if (argc < 2) {
         delim = re_compile("\\s+", PCRE2_ZERO_TERMINATED, 0, &errcode);
-    } else if (!is_re(fp+1)) {
+    } else if (!is_regex(fp+1)) {
         char temp[32];
         switch (fp[1].type) {
         case TYPE_INT: u_int2str(fp[1].i, temp); break;
-        case TYPE_FLT: u_flt2str(fp[1].f, temp); break;
+        case TYPE_FLOAT: u_flt2str(fp[1].f, temp); break;
         case TYPE_STR:
             if (!s_len(fp[1].s))
                 goto split_chars;
@@ -703,7 +703,7 @@ LIB_FN(type) {
     switch (fp->type) {
     case TYPE_NULL:  str = "null";     len = 4; break;
     case TYPE_INT:   str = "int";      len = 3; break;
-    case TYPE_FLT:   str = "float";    len = 5; break;
+    case TYPE_FLOAT:   str = "float";    len = 5; break;
     case TYPE_STR:   str = "string";   len = 6; break;
     case TYPE_REGEX: str = "regex";    len = 5; break;
     case TYPE_FILE:  str = "file";     len = 4; break;

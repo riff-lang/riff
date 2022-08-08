@@ -1,7 +1,7 @@
 #ifndef TABLE_H
 #define TABLE_H
 
-#include "types.h"
+#include "value.h"
 
 // NOTE: The "array" part of the table is an array of riff_val pointers, instead
 // of a flattened array of riff_val objects. This facilitates the mobility of

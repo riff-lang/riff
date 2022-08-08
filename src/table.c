@@ -33,7 +33,7 @@ void riff_tab_init(riff_tab *t) {
 
 static riff_val *reduce_key(riff_val *s, riff_val *d) {
     switch (s->type) {
-    case TYPE_FLT:
+    case TYPE_FLOAT:
         if (UNLIKELY(s->f == ceil(s->f))) {
             set_int(d, (riff_int) s->f);
             return d;
@@ -279,7 +279,7 @@ static inline int node_eq_val(riff_val *v1, riff_val *v2) {
     if (UNLIKELY(v1->type != v2->type))
         return 0;
     switch (v1->type) {
-    case TYPE_FLT: return v1->f == v2->f;
+    case TYPE_FLOAT: return v1->f == v2->f;
     case TYPE_STR: return node_eq_str(v1->s, v2->s);
     default: return v1->i == v2->i;
     }

@@ -2,7 +2,7 @@
 #define CODE_H
 
 #include "lex.h"
-#include "types.h"
+#include "value.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -32,8 +32,8 @@ typedef struct {
 void c_init(riff_code *);
 void c_push(riff_code *, uint8_t);
 void c_fn_constant(riff_code *, riff_fn *, uint8_t **);
-void c_constant(riff_code *, rf_token *, uint8_t **);
-void c_global(riff_code *, rf_token *, int, uint8_t **);
+void c_constant(riff_code *, riff_token *, uint8_t **);
+void c_global(riff_code *, riff_token *, int, uint8_t **);
 void c_local(riff_code *, int, int, int, uint8_t **);
 void c_table(riff_code *, int, uint8_t **);
 void c_index(riff_code *, uint8_t *, int, int, uint8_t **);

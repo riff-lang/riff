@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef VALUE_H
+#define VALUE_H
 
 #include "util.h"
 
@@ -15,7 +15,7 @@
 enum types {
     TYPE_NULL,
     TYPE_INT,
-    TYPE_FLT,
+    TYPE_FLOAT,
     TYPE_STR,
     TYPE_REGEX,
     TYPE_FILE,
@@ -25,19 +25,19 @@ enum types {
     TYPE_CFN
 };
 
-#define is_null(x) (!(x)->type)
-#define is_int(x)  ((x)->type == TYPE_INT)
-#define is_flt(x)  ((x)->type == TYPE_FLT)
-#define is_str(x)  ((x)->type == TYPE_STR)
-#define is_re(x)   ((x)->type == TYPE_REGEX)
-#define is_fh(x)   ((x)->type == TYPE_FILE)
-#define is_rng(x)  ((x)->type == TYPE_RANGE)
-#define is_tab(x)  ((x)->type == TYPE_TAB)
-#define is_rfn(x)  ((x)->type == TYPE_RFN)
-#define is_cfn(x)  ((x)->type == TYPE_CFN)
+#define is_null(x)  (!(x)->type)
+#define is_int(x)   ((x)->type == TYPE_INT)
+#define is_float(x) ((x)->type == TYPE_FLOAT)
+#define is_str(x)   ((x)->type == TYPE_STR)
+#define is_regex(x) ((x)->type == TYPE_REGEX)
+#define is_file(x)  ((x)->type == TYPE_FILE)
+#define is_range(x) ((x)->type == TYPE_RANGE)
+#define is_tab(x)   ((x)->type == TYPE_TAB)
+#define is_rfn(x)   ((x)->type == TYPE_RFN)
+#define is_cfn(x)   ((x)->type == TYPE_CFN)
 
-#define is_num(x)  ((x)->type == TYPE_INT || (x)->type == TYPE_FLT)
-#define is_fn(x)   ((x)->type == TYPE_RFN || (x)->type == TYPE_CFN)
+#define is_num(x)   ((x)->type == TYPE_INT || (x)->type == TYPE_FLOAT)
+#define is_fn(x)    ((x)->type == TYPE_RFN || (x)->type == TYPE_CFN)
 
 typedef int64_t         riff_int;
 typedef uint64_t        riff_uint;
@@ -113,19 +113,19 @@ typedef struct {
 // Assign value x to riff_val *p
 #define set_null(p)   (p)->type = TYPE_NULL
 #define set_int(p, x) *(p) = (riff_val) {TYPE_INT, .i = (x)}
-#define set_flt(p, x) *(p) = (riff_val) {TYPE_FLT, .f = (x)}
+#define set_flt(p, x) *(p) = (riff_val) {TYPE_FLOAT, .f = (x)}
 #define set_str(p, x) *(p) = (riff_val) {TYPE_STR, .s = (x)}
 #define set_tab(p, x) *(p) = (riff_val) {TYPE_TAB, .t = (x)}
 
-#define numval(x) (is_int(x) ? (x)->i : \
-                   is_flt(x) ? (x)->f : \
-                   is_str(x) ? str2flt((x)->s) : 0)
-#define intval(x) (is_int(x) ? (x)->i : \
-                   is_flt(x) ? (riff_int) (x)->f : \
-                   is_str(x) ? str2int((x)->s) : 0)
-#define fltval(x) (is_flt(x) ? (x)->f : \
-                   is_int(x) ? (riff_float) (x)->i : \
-                   is_str(x) ? str2flt((x)->s) : 0)
+#define numval(x) (is_int(x)   ? (x)->i : \
+                   is_float(x) ? (x)->f : \
+                   is_str(x)   ? str2flt((x)->s) : 0)
+#define intval(x) (is_int(x)   ? (x)->i : \
+                   is_float(x) ? (riff_int) (x)->f : \
+                   is_str(x)   ? str2int((x)->s) : 0)
+#define fltval(x) (is_float(x) ? (x)->f : \
+                   is_int(x)   ? (riff_float) (x)->i : \
+                   is_str(x)   ? str2flt((x)->s) : 0)
 
 static inline riff_int str2int(riff_str *s) {
     char *end;

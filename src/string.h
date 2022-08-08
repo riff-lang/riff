@@ -1,7 +1,7 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "types.h"
+#include "value.h"
 
 #define s_coercible(s) ((s)->hash & 0x80000000u)
 #define s_eq(s1,s2)    (s1 == s2)

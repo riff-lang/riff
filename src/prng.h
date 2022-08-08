@@ -1,7 +1,7 @@
 #ifndef PRNG_H
 #define PRNG_H
 
-#include "types.h"
+#include "value.h"
 
 typedef struct {
     riff_uint u[4];

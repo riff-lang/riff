@@ -182,20 +182,20 @@ void c_fn_constant(riff_code *c, riff_fn *fn, uint8_t **ret) {
     push_constant(c, c->nk - 1, ret);
 }
 
-static int find_constant(riff_code *c, rf_token *tk) {
+static int find_constant(riff_code *c, riff_token *tk) {
     for (int i = 0; i < c->nk; ++i) {
         switch (tk->kind) {
         case TK_INT:
-            if (is_int(&c->k[i]) && tk->lexeme.i == c->k[i].i)
+            if (is_int(&c->k[i]) && tk->i == c->k[i].i)
                 return i;
             break;
-        case TK_FLT:
-            if (is_flt(&c->k[i]) && tk->lexeme.f == c->k[i].f)
+        case TK_FLOAT:
+            if (is_float(&c->k[i]) && tk->f == c->k[i].f)
                 return i;
             break;
         case TK_STR:
         case TK_ID:
-            if (is_str(&c->k[i]) && s_eq(tk->lexeme.s, c->k[i].s))
+            if (is_str(&c->k[i]) && s_eq(tk->s, c->k[i].s))
                 return i;
             break;
         }
@@ -204,14 +204,14 @@ static int find_constant(riff_code *c, rf_token *tk) {
 }
 
 // Add a riff_val literal to a code object's constant table, if necessary
-void c_constant(riff_code *c, rf_token *tk, uint8_t **ret) {
+void c_constant(riff_code *c, riff_token *tk, uint8_t **ret) {
     if (tk->kind == TK_NULL) {
         push(OP_NUL);
         *ret = LAST_INS_ADDR(0);
         return;
     } else if (tk->kind == TK_RE) {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
-        c->k[c->nk++] = (riff_val) {TYPE_REGEX, .r = tk->lexeme.r};
+        c->k[c->nk++] = (riff_val) {TYPE_REGEX, .r = tk->r};
         if (c->nk > (UINT8_MAX + 1))
             err(c, "Exceeded max number of unique literals");
         push_constant(c, c->nk - 1, ret);
@@ -226,12 +226,12 @@ void c_constant(riff_code *c, rf_token *tk, uint8_t **ret) {
 
     // Provided literal does not already exist in constant table
     switch (tk->kind) {
-    case TK_FLT:
+    case TK_FLOAT:
         m_growarray(c->k, c->nk, c->kcap, riff_val);
-        c->k[c->nk++] = (riff_val) {TYPE_FLT, .f = tk->lexeme.f};
+        c->k[c->nk++] = (riff_val) {TYPE_FLOAT, .f = tk->f};
         break;
     case TK_INT: {
-        riff_int i = tk->lexeme.i;
+        riff_int i = tk->i;
         switch (i) {
         case 0:
         case 1:
@@ -260,7 +260,7 @@ void c_constant(riff_code *c, rf_token *tk, uint8_t **ret) {
     }
     case TK_STR: case TK_ID: {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
-        c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->lexeme.s};
+        c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->s};
         break;
     }
     default: break;
@@ -305,17 +305,17 @@ static void push_global_val(riff_code *c, int i, uint8_t **ret) {
 //             hash table onto the stack
 // mode = 0 => VM will make a copy of the global's riff_val and push it
 //             onto the stack
-void c_global(riff_code *c, rf_token *tk, int mode, uint8_t **ret) {
+void c_global(riff_code *c, riff_token *tk, int mode, uint8_t **ret) {
 
     // Search for existing symbol
     for (int i = 0; i < c->nk; ++i) {
-        if (is_str(&c->k[i]) && s_eq(tk->lexeme.s, c->k[i].s)) {
+        if (is_str(&c->k[i]) && s_eq(tk->s, c->k[i].s)) {
             mode ? push_global_addr(c, i, ret) : push_global_val(c, i, ret);
             return;
         }
     }
     m_growarray(c->k, c->nk, c->kcap, riff_val);
-    c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->lexeme.s};
+    c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->s};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
     mode ? push_global_addr(c, c->nk - 1, ret) : push_global_val(c, c->nk - 1, ret);
@@ -476,7 +476,7 @@ void c_str_index(riff_code *c, uint8_t *prev_ins, riff_str *k, int addr, uint8_t
     if (!is_addr(*prev_ins)) {
         err(c, "invalid member access");
     }
-    int index = find_constant(c, &(rf_token) {TK_STR, .lexeme.s = k});
+    int index = find_constant(c, &(riff_token) {TK_STR, .s = k});
     if (index < 0) {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_STR, .s = k};
