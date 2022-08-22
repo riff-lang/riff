@@ -47,6 +47,8 @@ typedef struct riff_str riff_str;
 
 struct riff_str {
     strhash   hash;
+    uint8_t   hints;
+    uint8_t   extra;
     size_t    len;
     char     *str;
     riff_str *next;
@@ -112,10 +114,10 @@ typedef struct {
 
 // Assign value x to riff_val *p
 #define set_null(p)   (p)->type = TYPE_NULL
-#define set_int(p, x) *(p) = (riff_val) {TYPE_INT, .i = (x)}
+#define set_int(p, x) *(p) = (riff_val) {TYPE_INT,   .i = (x)}
 #define set_flt(p, x) *(p) = (riff_val) {TYPE_FLOAT, .f = (x)}
-#define set_str(p, x) *(p) = (riff_val) {TYPE_STR, .s = (x)}
-#define set_tab(p, x) *(p) = (riff_val) {TYPE_TAB, .t = (x)}
+#define set_str(p, x) *(p) = (riff_val) {TYPE_STR,   .s = (x)}
+#define set_tab(p, x) *(p) = (riff_val) {TYPE_TAB,   .t = (x)}
 
 #define numval(x) (is_int(x)   ? (x)->i : \
                    is_float(x) ? (x)->f : \

@@ -40,21 +40,23 @@ static riff_val *reduce_key(riff_val *s, riff_val *d) {
         }
         break;
     case TYPE_STR: {
-        if (LIKELY(!s_coercible(s->s)))
+        if (LIKELY(!riff_str_coercible(s->s))) {
             return s;
+        }
         char *end;
         riff_int i = u_str2i64(s->s->str, &end, 0);
         if (!*end) {
             set_int(d, i);
-            if (!i)
-                return s_haszero(s->s) ? d : s;
+            if (!i) {
+                return riff_str_haszero(s->s) ? d : s;
+            }
             return d;
         }
         riff_float f = u_str2d(s->s->str, &end, 0);
         if (!*end) {
             set_flt(d, f);
             if (f == 0.0) {
-                if (s_haszero(s->s)) {
+                if (riff_str_haszero(s->s)) {
                     set_int(d, 0);
                     return d;
                 } else {
@@ -70,8 +72,9 @@ static riff_val *reduce_key(riff_val *s, riff_val *d) {
 }
 
 riff_int riff_tab_logical_size(riff_tab *t) {
-    if (LIKELY(!t->hint))
+    if (LIKELY(!t->hint)) {
         return t->lsize + riff_htab_logical_size(t->h);
+    }
     riff_int l = 0;
     for (int i = 0; i < t->cap; ++i) {
         if (t->v[i] && !is_null(t->v[i]))
@@ -115,8 +118,9 @@ riff_val *riff_tab_collect_keys(riff_tab *t) {
     }
     // TODO pass `len`, allowing function to exit early if possible
     riff_htab_collect_keys(t->h, keys, &n);
-    if (UNLIKELY(t->nullx))
+    if (UNLIKELY(t->nullx)) {
         keys[n++] = (riff_val) {TYPE_NULL, .i = 0};
+    }
     return keys;
 }
 
@@ -137,15 +141,19 @@ riff_val *riff_tab_lookup(riff_tab *t, riff_val *k, int hint) {
     k = reduce_key(k, &tmp);
     switch (k->type) {
     case TYPE_NULL:
-        if (hint) t->nullx = 1;
+        if (hint) {
+            t->nullx = 1;
+        }
         return t->nullv;
     case TYPE_INT:
         if (k->i >= 0) {
             riff_int ki = k->i;
-            if (t_exists(t, ki))
+            if (t_exists(t, ki)) {
                 return t->v[ki];
-            if (would_fit(t, ki))
+            }
+            if (would_fit(t, ki)) {
                 return riff_tab_insert_int(t, ki, NULL);
+            }
         }
         // Fall-through
     default: return riff_htab_lookup_val(t->h, k);
@@ -164,10 +172,13 @@ riff_val *riff_tab_insert_int(riff_tab *t, riff_int k, riff_val *v) {
         uint32_t new_cap = new_size(t->psize, old_cap, k);
         t->v = realloc(t->v, new_cap * sizeof(riff_val *));
         for (uint32_t i = old_cap; i < new_cap; ++i) {
-            if (t_exists(t,i)) continue;
+            if (t_exists(t,i)) {
+                continue;
+            }
             t->v[i] = riff_htab_delete_val(t->h, &(riff_val){TYPE_INT, .i = i});
-            if (t->v[i])
+            if (t->v[i]) {
                 t->psize++;
+            }
         }
         t->cap = new_cap;
     }
@@ -203,8 +214,9 @@ static uint32_t riff_htab_logical_size(riff_htab *h) {
     for (uint32_t i = 0; i < h->cap; ++i) {
         ht_node *n = h->nodes[i];
         while (n) {
-            if (!is_null(n->v))
+            if (!is_null(n->v)) {
                 ++l;
+            }
             n = next(n);
         }
     }
@@ -228,7 +240,7 @@ static inline uint32_t hashrot(uint32_t lo, uint32_t hi) {
 static inline uint32_t anchor(riff_val *k, uint32_t mask) {
     switch (k->type) {
     case TYPE_INT: return ((uint32_t) k->i) & mask;
-    case TYPE_STR: return s_hash(k->s) & mask;
+    case TYPE_STR: return riff_str_hash(k->s) & mask;
     default:
         return hashrot(
             (uint32_t) (k->i & UINT32_MAX),
@@ -273,11 +285,12 @@ static inline void ht_resize_str(riff_htab *h, size_t new_cap) {
     HT_RESIZE(n->k.str->hash & (new_cap-1))
 }
 
-#define node_eq_str(s1, s2) (s_eq(s1, s2))
+#define node_eq_str(s1, s2) (riff_str_eq(s1, s2))
 
 static inline int node_eq_val(riff_val *v1, riff_val *v2) {
-    if (UNLIKELY(v1->type != v2->type))
+    if (UNLIKELY(v1->type != v2->type)) {
         return 0;
+    }
     switch (v1->type) {
     case TYPE_FLOAT: return v1->f == v2->f;
     case TYPE_STR: return node_eq_str(v1->s, v2->s);
@@ -302,7 +315,7 @@ riff_val *riff_htab_lookup_val(riff_htab *h, riff_val *k) {
 }
 
 riff_val *riff_htab_lookup_str(riff_htab *h, riff_str *k) {
-    HT_LOOKUP(str, s_hash(k) & (h->mask))
+    HT_LOOKUP(str, riff_str_hash(k) & (h->mask))
 }
 
 static inline ht_node *new_node_val(riff_val *k, riff_val *v) {
@@ -347,11 +360,11 @@ riff_val *riff_htab_insert_val(riff_htab *h, riff_val *k, riff_val *v) {
 }
 
 riff_val *riff_htab_insert_str(riff_htab *h, riff_str *k, riff_val *v) {
-    HT_INSERT(str, s_hash(k) & (h->mask))
+    HT_INSERT(str, riff_str_hash(k) & (h->mask))
 }
 
 riff_val *riff_htab_insert_cstr(riff_htab *h, const char *k, riff_val *v) {
-    return riff_htab_insert_str(h, s_new(k, strlen(k)), v);
+    return riff_htab_insert_str(h, riff_str_new(k, strlen(k)), v);
 }
 
 static inline riff_val *riff_htab_delete_val(riff_htab *h, riff_val *k) {

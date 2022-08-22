@@ -6,12 +6,15 @@
 #include <stdio.h>
 
 #ifdef __GNUC__
-#define LIKELY(x)   (__builtin_expect(x, 1))
-#define UNLIKELY(x) (__builtin_expect(x, 0))
+#define LIKELY(x)   (__builtin_expect(!!(x), 1))
+#define UNLIKELY(x) (__builtin_expect(!!(x), 0))
 #else
 #define LIKELY(x)   (x)
 #define UNLIKELY(x) (x)
 #endif
+
+#define FOREACH(a, i) \
+    for (int (i) = 0; i < ((sizeof (a)) / (sizeof (a)[0])); ++(i))
 
 #define rol(x,n) (((x)<<(n)) | ((x)>>(-(int)(n)&(8*sizeof(x)-1))))
 

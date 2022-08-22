@@ -3,19 +3,24 @@
 
 #include "value.h"
 
-#define s_coercible(s) ((s)->hash & 0x80000000u)
-#define s_eq(s1,s2)    (s1 == s2)
-#define s_eq_raw(x,y)  (x->hash == y->hash && x->len == y->len && !memcmp(x->str, y->str, x->len))
-#define s_hash(s)      ((s)->hash)
-#define s_len(s)       ((s)->len)
+enum riff_str_hints {
+    RIFF_STR_HINT_ZERO      = 1 << 0,
+    RIFF_STR_HINT_COERCIBLE = 1 << 1,
+};
 
-static inline int s_haszero(riff_str *s) {
-    return !!memchr(s->str, '0', s_len(s));
-}
+#define riff_str_haszero(s)   ((s)->hints & RIFF_STR_HINT_ZERO)
+#define riff_str_coercible(s) ((s)->hints & RIFF_STR_HINT_COERCIBLE)
+
+#define riff_str_eq(x,y)      ((x) == (y))
+#define riff_str_eq_raw(x,y) \
+    (((x)->hash == (y)->hash) && ((x)->len == (y)->len) && !memcmp((x)->str, (y)->str, (x)->len))
+#define riff_str_hash(s)      ((s)->hash)
+#define riff_strlen(s)        ((s)->len)
 
 void      riff_stab_init(void);
-riff_str *s_new(const char *, size_t);
-riff_str *s_new_concat(char *, char *);
-riff_str *s_substr(char *, riff_int, riff_int, riff_int);
+riff_str *riff_str_new_extra(const char *, size_t, uint8_t);
+riff_str *riff_str_new(const char *, size_t);
+riff_str *riff_str_new_concat(char *, char *);
+riff_str *riff_substr(char *, riff_int, riff_int, riff_int);
 
 #endif

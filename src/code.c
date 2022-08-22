@@ -194,8 +194,8 @@ static int find_constant(riff_code *c, riff_token *tk) {
                 return i;
             break;
         case TK_STR:
-        case TK_ID:
-            if (is_str(&c->k[i]) && s_eq(tk->s, c->k[i].s))
+        case TK_IDENT:
+            if (is_str(&c->k[i]) && riff_str_eq(tk->s, c->k[i].s))
                 return i;
             break;
         }
@@ -209,7 +209,7 @@ void c_constant(riff_code *c, riff_token *tk, uint8_t **ret) {
         push(OP_NUL);
         *ret = LAST_INS_ADDR(0);
         return;
-    } else if (tk->kind == TK_RE) {
+    } else if (tk->kind == TK_REGEX) {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_REGEX, .r = tk->r};
         if (c->nk > (UINT8_MAX + 1))
@@ -258,7 +258,7 @@ void c_constant(riff_code *c, riff_token *tk, uint8_t **ret) {
         }
         break;
     }
-    case TK_STR: case TK_ID: {
+    case TK_STR: case TK_IDENT: {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->s};
         break;
@@ -309,7 +309,7 @@ void c_global(riff_code *c, riff_token *tk, int mode, uint8_t **ret) {
 
     // Search for existing symbol
     for (int i = 0; i < c->nk; ++i) {
-        if (is_str(&c->k[i]) && s_eq(tk->s, c->k[i].s)) {
+        if (is_str(&c->k[i]) && riff_str_eq(tk->s, c->k[i].s)) {
             mode ? push_global_addr(c, i, ret) : push_global_val(c, i, ret);
             return;
         }

@@ -44,7 +44,7 @@ int re_store_numbered_captures(pcre2_match_data *md) {
     while (1) {
         PCRE2_SIZE l = STR_BUF_SZ;
         if (!pcre2_substring_copy_bynumber(md, i, buf, &l)) {
-            riff_val v = (riff_val) {TYPE_STR, .s = s_new((const char *) buf, l)};
+            riff_val v = (riff_val) {TYPE_STR, .s = riff_str_new((const char *) buf, l)};
             riff_tab_insert_int(fldv, (riff_int) i, &v);
         } else {
             break;

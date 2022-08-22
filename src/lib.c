@@ -92,8 +92,9 @@ LIB_FN(eof) {
 
 // eval(s)
 LIB_FN(eval) {
-    if (!is_str(fp))
+    if (!is_str(fp)) {
         return 0;
+    }
     riff_state s;
     riff_fn main;
     riff_code c;
@@ -113,8 +114,9 @@ LIB_FN(eval) {
 // flush([f])
 LIB_FN(flush) {
     FILE *f = argc && is_file(fp) ? fp->fh->p : stdout;
-    if (fflush(f))
+    if (fflush(f)) {
         err("error flushing stream");
+    }
     return 0;
 }
 
@@ -124,13 +126,13 @@ LIB_FN(get) {
     if (argc) {
         size_t count = intval(fp);
         size_t nread = fread(buf, sizeof *buf, count, stdin);
-        set_str(fp-1, s_new(buf, nread));
+        set_str(fp-1, riff_str_new(buf, nread));
         return 1;
     }
     if (!fgets(buf, sizeof buf, stdin)) {
         return 0;
     }
-    set_str(fp-1, s_new(buf, strcspn(buf, "\n")));
+    set_str(fp-1, riff_str_new(buf, strcspn(buf, "\n")));
     return 1;
 }
 
@@ -252,12 +254,12 @@ LIB_FN(read) {
     if (argc > 1 && is_num(fp+1)) {
         size_t count = (size_t) intval(fp+1);
         size_t nread = fread(buf, sizeof *buf, count, f);
-        set_str(fp-1, s_new(buf, nread));
+        set_str(fp-1, riff_str_new(buf, nread));
     } else {
         if (!fgets(buf, sizeof buf, f)) {
             return 0;
         }
-        set_str(fp-1, s_new(buf, strcspn(buf, "\n")));
+        set_str(fp-1, riff_str_new(buf, strcspn(buf, "\n")));
     }
     return 1;
 }
@@ -389,8 +391,8 @@ LIB_FN(srand) {
 LIB_FN(byte) {
     int idx = argc > 1 ? intval(fp+1) : 0;
     if (is_str(fp)) {
-        if (idx > s_len(fp->s))
-            idx = s_len(fp->s);
+        if (idx > riff_strlen(fp->s))
+            idx = riff_strlen(fp->s);
         set_int(fp-1, (uint8_t) fp->s->str[idx]);
     } else {
         set_int(fp-1, 0);
@@ -408,18 +410,19 @@ LIB_FN(char) {
         return 0;
     char buf[STR_BUF_SZ];
     int n = build_char_str(fp, argc, buf);
-    set_str(fp-1, s_new(buf, n));
+    set_str(fp-1, riff_str_new(buf, n));
     return 1;
 }
 
 // fmt(...)
 LIB_FN(fmt) {
-    if (!is_str(fp))
+    if (!is_str(fp)) {
         return 0;
+    }
     --argc;
     char buf[STR_BUF_SZ];
     int n = fmt_snprintf(buf, sizeof buf, fp->s->str, fp + 1, argc);
-    set_str(fp-1, s_new(buf, n));
+    set_str(fp-1, riff_str_new(buf, n));
     return 1;
 }
 
@@ -443,7 +446,7 @@ static int xsub(riff_val *fp, int argc, int flags) {
         s = temp_s;
     } else {
         s = fp->s->str;
-        len = s_len(fp->s);
+        len = riff_strlen(fp->s);
     }
 
     // Pattern `p`
@@ -457,7 +460,7 @@ static int xsub(riff_val *fp, int argc, int flags) {
                 u_flt2str(fp[1].f, temp_p);
             p = re_compile(temp_p, PCRE2_ZERO_TERMINATED, 0, &errcode);
         } else if (is_str(fp+1)) {
-            p = re_compile(fp[1].s->str, s_len(fp[1].s), 0, &errcode);
+            p = re_compile(fp[1].s->str, riff_strlen(fp[1].s), 0, &errcode);
         } else {
             return 0;
         }
@@ -517,7 +520,7 @@ static int xsub(riff_val *fp, int argc, int flags) {
     // Store capture substrings in the global fields table
     re_store_numbered_captures(md);
     pcre2_match_data_free(md);
-    set_str(fp-1, s_new(buf, n));
+    set_str(fp-1, riff_str_new(buf, n));
     return 1;
 }
 
@@ -536,21 +539,21 @@ LIB_FN(hex) {
     riff_int i = intval(fp);
     char buf[20];
     size_t len = sprintf(buf, "0x%"PRIx64, i);
-    set_str(fp-1, s_new(buf, len));
+    set_str(fp-1, riff_str_new(buf, len));
     return 1;
 }
 
 static int allxcase(riff_val *fp, int c) {
     if (!is_str(fp))
         return 0;
-    size_t len = s_len(fp->s);
+    size_t len = riff_strlen(fp->s);
     char str[len + 1];
     for (int i = 0; i < len; ++i) {
         str[i] = c ? toupper(fp->s->str[i])
                    : tolower(fp->s->str[i]);
     }
     str[len] = '\0';
-    set_str(fp-1, s_new(str, len));
+    set_str(fp-1, riff_str_new(str, len));
     return 1;
 }
 
@@ -580,12 +583,14 @@ LIB_FN(num) {
     char *end;
     errno = 0;
     riff_int i = u_str2i64(fp->s->str, &end, base);
-    if (errno == ERANGE || isdigit(*end))
+    if (errno == ERANGE || isdigit(*end)) {
         goto ret_flt;
+    }
     if (*end == '.') {
         if ((base == 10 && isdigit(end[1])) ||
-            (base == 16 && isxdigit(end[1])))
+            (base == 16 && isxdigit(end[1]))) {
             goto ret_flt;
+        }
     } else if (base == 10 && (*end == 'e' || *end == 'E')) {
         goto ret_flt;
     } else if (base == 16 && (*end == 'p' || *end == 'P')) {
@@ -609,16 +614,17 @@ LIB_FN(split) {
     size_t len = 0;
     char temp_s[20];
     if (!is_str(fp)) {
-        if (is_int(fp))
+        if (is_int(fp)) {
             len = u_int2str(fp->i, temp_s);
-        else if (is_float(fp))
+        } else if (is_float(fp)) {
             len = u_flt2str(fp->f, temp_s);
-        else
+        } else {
             return 0;
+        }
         str = temp_s;
     } else {
         str = fp->s->str;
-        len = s_len(fp->s);
+        len = riff_strlen(fp->s);
     }
     riff_str *s;
     riff_tab *t = malloc(sizeof(riff_tab));
@@ -633,9 +639,9 @@ LIB_FN(split) {
         case TYPE_INT: u_int2str(fp[1].i, temp); break;
         case TYPE_FLOAT: u_flt2str(fp[1].f, temp); break;
         case TYPE_STR:
-            if (!s_len(fp[1].s))
+            if (!riff_strlen(fp[1].s))
                 goto split_chars;
-            delim = re_compile(fp[1].s->str, s_len(fp[1].s), 0, &errcode);
+            delim = re_compile(fp[1].s->str, riff_strlen(fp[1].s), 0, &errcode);
             goto do_split;
         default:
             goto split_chars;
@@ -673,7 +679,7 @@ do_split: {
             --n;
         } else {
             size_t l = strlen(p);
-            s = s_new(p, l);
+            s = riff_str_new(p, l);
             p += l + 1;
             n -= l + 1;
             riff_tab_insert_int(t, i++, &(riff_val) {TYPE_STR, .s = s});
@@ -686,7 +692,7 @@ do_split: {
     // Split into single-byte strings
 split_chars: {
     for (riff_int i = 0; i < len; ++i) {
-        s = s_new(str + i, 1);
+        s = riff_str_new(str + i, 1);
         riff_tab_insert_int(t, i, &(riff_val) {TYPE_STR, .s = s});
     }
     set_tab(fp-1, t);
@@ -703,7 +709,7 @@ LIB_FN(type) {
     switch (fp->type) {
     case TYPE_NULL:  str = "null";     len = 4; break;
     case TYPE_INT:   str = "int";      len = 3; break;
-    case TYPE_FLOAT:   str = "float";    len = 5; break;
+    case TYPE_FLOAT: str = "float";    len = 5; break;
     case TYPE_STR:   str = "string";   len = 6; break;
     case TYPE_REGEX: str = "regex";    len = 5; break;
     case TYPE_FILE:  str = "file";     len = 4; break;
@@ -713,7 +719,7 @@ LIB_FN(type) {
     case TYPE_CFN:   str = "function"; len = 8; break;
     default: break;
     }
-    set_str(fp-1, s_new(str, len));
+    set_str(fp-1, riff_str_new(str, len));
     return 1;
 }
 
@@ -784,7 +790,7 @@ static struct {
 static void register_funcs(riff_htab *g) {
     // Initialize the PRNG with the current time
     riff_prng_seed(&prngs, time(0));
-    for (int i = 0; i < (sizeof lib_fn) / (sizeof lib_fn[0]); ++i) {
+    FOREACH(lib_fn, i) {
         riff_htab_insert_cstr(g, lib_fn[i].name, &(riff_val) {TYPE_CFN, .cfn = &lib_fn[i].fn});
     }
 }

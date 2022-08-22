@@ -27,7 +27,7 @@ int wasm_main(int flag, char *str) {
     global_state.main = main;
     global_state.pname = "<playground>";
     global_state.src = str;
-    main.name = s_new(global_state.pname, strlen(global_state.pname));
+    main.name = riff_str_new(global_state.pname, strlen(global_state.pname));
     riff_compile(&global_state);
     if (flag)
         vm_exec(&global_state);
@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
 
     // -l: List riff's arbitrary disassembly for the given program
     if (disas) {
-        main.name = s_new(global_state.pname, strlen(global_state.pname));
+        main.name = riff_str_new(global_state.pname, strlen(global_state.pname));
         d_prog(&global_state);
     } else {
         main.name = NULL;

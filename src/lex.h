@@ -28,7 +28,7 @@ enum token_kind {
 
     TK_AND = 128, // &&
     TK_DEC,       // --
-    TK_DOTS,      // ..
+    TK_2DOTS,     // ..
     TK_EQ,        // ==
     TK_GE,        // >=
     TK_INC,       // ++
@@ -72,10 +72,10 @@ enum token_kind {
     TK_FLOAT,
     TK_INT,
     TK_STR,
-    TK_RE,
+    TK_REGEX,
 
     // Identifiers
-    TK_ID,
+    TK_IDENT,
 
     // End of input
     TK_EOI

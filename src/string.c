@@ -27,15 +27,20 @@ void riff_stab_init(void) {
     st->mask  = ST_MIN_CAP - 1;
     st->cap   = ST_MIN_CAP;
     riff_str *e = malloc(sizeof(riff_str));
-    *e = (riff_str) {0, 0, "", NULL};
+    *e = (riff_str) {
+        .hash  = 0,
+        .hints = 0,
+        .extra = 0,
+        .len   = 0,
+        .str   = "",
+        .next  = NULL
+    };
     st->empty = e;
 }
 
 static inline strhash chunk(const void *p) {
     return *(strhash *) p;
 }
-
-#define coercible_mask(s) (memchr("+-.0123456789", *s, 13) ? 0x80000000u : 0)
 
 static inline strhash str_hash(const char *str, size_t len) {
     strhash a, b, h = len;
@@ -56,9 +61,16 @@ static inline strhash str_hash(const char *str, size_t len) {
     a ^= h; a -= rol(h, 11);
     b ^= a; b -= rol(a, 25);
     h ^= b; h -= rol(b, 16);
+    return h;
+}
 
-    h &= ~0x80000000u; // clear MSB
-    return h | coercible_mask(str);
+#define has_zero(s,l)       (!!memchr(s, '0', l))
+#define likely_coercible(s) (!!memchr("+-.0123456789", *s, 13))
+
+// NOTE: existence of '0' does not imply coercibility
+static inline uint8_t str_hints(const char *str, size_t len) {
+    return (has_zero(str, len)    & RIFF_STR_HINT_ZERO) |
+           (likely_coercible(str) & RIFF_STR_HINT_COERCIBLE);
 }
 
 static inline riff_str *next(riff_str *s) {
@@ -77,18 +89,21 @@ static inline void insert_str(riff_str **nodes, riff_str *new, uint32_t i) {
         nodes[i] = new;
         return;
     }
-    while (n->next)
+    while (n->next) {
         n = next(n);
+    }
     n->next = new;
 }
 
 static inline riff_str *new_str(riff_str *s) {
-    size_t len = s_len(s);
+    size_t len = riff_strlen(s);
     riff_str *new = malloc(sizeof(riff_str));
     char *str = malloc(len * sizeof(char) + 1);
     memcpy(str, s->str, len);
     str[len] = '\0';
-    *new = (riff_str) {s->hash, len, str, NULL};
+    memcpy(new, s, sizeof(riff_str));
+    new->str = str;
+    new->next = NULL;
     return new;
 }
 
@@ -112,57 +127,75 @@ static inline void st_resize(riff_stab *t, size_t new_cap) {
 static inline riff_str *st_lookup(riff_stab *t, riff_str *s) {
     riff_str *n = t->nodes[s->hash & t->mask];
     while (n) {
-        if (LIKELY(s_eq_raw(n,s)))
+        if (LIKELY(riff_str_eq_raw(n,s))) {
             return n;
+        }
         n = next(n);
     }
-    if (UNLIKELY(potential_lf(t) > ST_MAX_LOAD_FACTOR))
+    if (UNLIKELY(potential_lf(t) > ST_MAX_LOAD_FACTOR)) {
         st_resize(t, t->cap << 1);
+    }
     riff_str *new = new_str(s);
     insert_str(t->nodes, new, s->hash & t->mask);
     t->size++;
     return new;
 }
 
+riff_str *riff_str_new_extra(const char *start, size_t len, uint8_t extra) {
+    return LIKELY(len)
+        ? st_lookup(st,
+            &(riff_str) {
+                .hash  = str_hash(start, len),
+                .hints = str_hints(start, len),
+                .extra = extra,
+                .len   = len,
+                .str   = (char *) start,
+                .next  = NULL
+            }
+          )
+        : st->empty;
+}
+
 // Create string (does not assume null-terminated input)
-riff_str *s_new(const char *start, size_t len) {
-    return LIKELY(len) ? st_lookup(st, &(riff_str){str_hash(start,len),len,(char *)start,NULL}) : st->empty;
+riff_str *riff_str_new(const char *start, size_t len) {
+    return riff_str_new_extra(start, len, 0);
 }
 
 // Assumes null-terminated strings
-riff_str *s_new_concat(char *l, char *r) {
+riff_str *riff_str_new_concat(char *l, char *r) {
     size_t l_len = strlen(l);
     size_t r_len = strlen(r);
     size_t new_len = l_len + r_len;
     char *new = malloc(new_len * sizeof(char) + 1);
     memcpy(new, l, l_len);
     memcpy(new + l_len, r, r_len);
-    return s_new(new, new_len);
+    return riff_str_new(new, new_len);
 }
 
-riff_str *s_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
+riff_str *riff_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
     // Correct out-of-bounds ranges
     size_t sl = strlen(s) - 1;
     from = from > sl ? sl : from < 0 ? 0 : from;
     to   = to   > sl ? sl : to   < 0 ? 0 : to;
 
     size_t len;
-    if (itvl > 0)
+    if (itvl > 0) {
         len = (size_t) (to - from) + 1;
-    else
+    } else {
         len = (size_t) (from - to) + 1;
+    }
     // Disallow contradicting directions. E.g. negative intervals when
     // from > to. Infer the direction from the from/to range and
     // override the provided interval with its negative value.
     if ((from < to && itvl < 1) ||
-        (from > to && itvl > -1))
+        (from > to && itvl > -1)) {
         itvl = -itvl;
-
+    }
     len = (size_t) ceil(fabs((double) len / (double) itvl));
     char *str = malloc(len * sizeof(char));
     for (size_t i = 0; i < len; ++i) {
         str[i] = s[from];
         from += itvl;
     }
-    return s_new(str, len);
+    return riff_str_new(str, len);
 }

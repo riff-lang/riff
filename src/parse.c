@@ -90,7 +90,7 @@ static int is_asgmt(int tk) {
 }
 
 static int is_literal(int tk) {
-    return tk >= TK_NULL && tk <= TK_RE;
+    return tk >= TK_NULL && tk <= TK_REGEX;
 }
 
 static int is_incdec(int tk) {
@@ -135,7 +135,7 @@ static int lbp(int tk) {
     case TK_EQ: case TK_NE:       return 6;
     case TK_AND:                  return 5;
     case TK_OR:                   return 4;
-    case TK_DOTS:                 return 3;
+    case TK_2DOTS:                return 3;
     case '?':                     return 2;
     default:
         return is_asgmt(tk);
@@ -185,7 +185,7 @@ static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
     i -= !!(flags & EXPR_FOR_Z);
 
     for (; i >= 0; --i) {
-        if (s_eq(y->lcl[i].id, s) && y->lcl[i].d <= y->ld) {
+        if (riff_str_eq(y->lcl[i].id, s) && y->lcl[i].d <= y->ld) {
             return i;
         }
     }
@@ -318,7 +318,7 @@ static int paren_expr_list(riff_parser *y, int c) {
 // member_access_expr = id '.' id
 static void member_access(riff_parser *y, uint32_t flags) {
     uint8_t *last_ins = y->ins;
-    if (!TK_KIND(TK_ID)) {
+    if (!TK_KIND(TK_IDENT)) {
         err(y, "expected identifier in member access expression");
     }
     riff_str *s = y->x->tk.s;
@@ -355,7 +355,7 @@ static void table(riff_parser *y, int tk) {
 // anon_fn_expr = 'fn' ['(' [id {',' id}] '{' stmt_list '}'
 static void anon_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
-    riff_str *name = s_new("", 0);
+    riff_str *name = riff_str_new("", 0);
     f_init(f, name);
     m_growarray(y->state->fn, y->state->nf, y->state->fcap, riff_fn *);
     y->state->fn[y->state->nf++] = f;
@@ -455,7 +455,7 @@ static int nud(riff_parser *y, uint32_t flags) {
         // '{' + 2 = '}'
         table(y, tk + 2);
         break;
-    case TK_DOTS:
+    case TK_2DOTS:
         set(ox);
         advance();
         e = range(y, flags & ~EXPR_REF, 0);
@@ -465,7 +465,7 @@ static int nud(riff_parser *y, uint32_t flags) {
         if (advance()) {
             err(y, "expected symbol following prefix ++/--");
         }
-        if (!(TK_KIND(TK_ID) || TK_KIND('$'))) {
+        if (!(TK_KIND(TK_IDENT) || TK_KIND('$'))) {
             err(y, "unexpected symbol following prefix ++/--");
         }
         expr(y, flags | EXPR_REF, 14);
@@ -476,10 +476,10 @@ static int nud(riff_parser *y, uint32_t flags) {
     case TK_INT:
     case TK_FLOAT:
     case TK_STR:
-    case TK_RE:
+    case TK_REGEX:
         literal(y, flags);
         break;
-    case TK_ID:
+    case TK_IDENT:
         identifier(y, flags);
         break;
     case TK_FN:
@@ -500,7 +500,7 @@ static int nud(riff_parser *y, uint32_t flags) {
 
 static int led(riff_parser *y, uint32_t flags, int p, int tk) {
     switch (tk) {
-    case TK_DOTS:
+    case TK_2DOTS:
         set(ox);
         advance();
         return range(y, flags & ~EXPR_REF, 1);
@@ -685,7 +685,7 @@ static void do_stmt(riff_parser *y) {
 
 static void add_local(riff_parser *y, riff_str *id) {
     m_growarray(y->lcl, y->nlcl, y->lcap, local);
-    y->lcl[y->nlcl++] = (local) {s_new(id->str, s_len(id)), y->ld};
+    y->lcl[y->nlcl++] = (local) {riff_str_new(id->str, riff_strlen(id)), y->ld};
 }
 
 // Returns the arity of the parsed function
@@ -699,7 +699,7 @@ static int compile_fn(riff_parser *y) {
         // Read parameter identifiers, reserving them as locals to the
         // function
         while (1) {
-            if (TK_KIND(TK_ID)) {
+            if (TK_KIND(TK_IDENT)) {
                 add_local(y, y->x->tk.s);
                 ++arity;
                 advance();
@@ -735,14 +735,14 @@ static int compile_fn(riff_parser *y) {
 //
 // Named local functions should be able to reference themselves
 static void local_fn(riff_parser *y) {
-    if (!TK_KIND(TK_ID)) {
+    if (!TK_KIND(TK_IDENT)) {
         err(y, "expected identifier for local function definition");
     }
     riff_str *id = y->x->tk.s;
     int idx = resolve_local(y, 0, id);
 
     // Create string for disassembly
-    riff_str *fn_name = s_new_concat("local ", y->x->tk.s->str);
+    riff_str *fn_name = riff_str_new_concat("local ", y->x->tk.s->str);
 
     // If the identifier doesn't already exist as a local at the current scope,
     // add a new local.
@@ -775,10 +775,10 @@ static void local_fn(riff_parser *y) {
 static void fn_stmt(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_str *id;
-    if (!TK_KIND(TK_ID)) {
+    if (!TK_KIND(TK_IDENT)) {
         err(y, "expected identifier for function definition");
     } else {
-        id = s_new(y->x->tk.s->str, s_len(y->x->tk.s));
+        id = riff_str_new(y->x->tk.s->str, riff_strlen(y->x->tk.s));
         advance();
     }
     f_init(f, id);
@@ -818,7 +818,7 @@ static void for_stmt(riff_parser *y) {
     // Increment lexical depth once before adding locals [k,] v so they're only
     // visible to the loop.
     ++y->ld;
-    if (!TK_KIND(TK_ID)) {
+    if (!TK_KIND(TK_IDENT)) {
         err(y, "expected identifier");
     }
     add_local(y, y->x->tk.s);
@@ -829,7 +829,7 @@ static void for_stmt(riff_parser *y) {
         flags |= EXPR_FOR_Z;
         kv = 1;
         advance();
-        if (!TK_KIND(TK_ID)) {
+        if (!TK_KIND(TK_IDENT)) {
             err(y, "expected identifier following ','");
         }
         add_local(y, y->x->tk.s);
@@ -950,9 +950,9 @@ static void local_stmt(riff_parser *y) {
     while (1) {
         unset_all();
         riff_str *id;
-        if (!TK_KIND(TK_ID)) {
+        if (!TK_KIND(TK_IDENT)) {
             peek();
-            if (!LA_KIND(TK_ID)) {
+            if (!LA_KIND(TK_IDENT)) {
                 err(y, "local declaration requires valid identifier");
             }
             id = y->x->la.s;
@@ -1091,7 +1091,7 @@ static void stmt(riff_parser *y) {
     case TK_DO:     advance(); do_stmt(y);       break;
     case TK_FN:
         peek();
-        if (LA_KIND(TK_ID)) {
+        if (LA_KIND(TK_IDENT)) {
             advance();
             fn_stmt(y);
         } else {
