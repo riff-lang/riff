@@ -47,7 +47,7 @@ static inline int test(riff_val *v) {
     // Otherwise, return whether the string is longer than 0.
     case TYPE_STR: {
         char *end;
-        riff_float f = u_str2d(v->s->str, &end, 0);
+        riff_float f = riff_strtod(v->s->str, &end, 0);
         if (!*end) {
             // Check for literal '0' character in string
             if (f == 0.0 && riff_str_haszero(v->s))
@@ -134,7 +134,7 @@ VM_UOP(not) { set_int(v, ~intval(v)); }
             return; \
         } \
         char *end; \
-        riff_float f = u_str2d(l->s->str, &end, 0); \
+        riff_float f = riff_strtod(l->s->str, &end, 0); \
         if (*end) { \
             set_int(l, 0); \
         } else { \
@@ -146,7 +146,7 @@ VM_UOP(not) { set_int(v, ~intval(v)); }
             return; \
         } \
         char *end; \
-        riff_float f = u_str2d(r->s->str, &end, 0); \
+        riff_float f = riff_strtod(r->s->str, &end, 0); \
         if (*end) { \
             set_int(l, 0); \
         } else { \
@@ -211,8 +211,8 @@ VM_BINOP(cat) {
     char temp_rhs[32];
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT:   u_int2str(l->i, temp_lhs); break;
-        case TYPE_FLOAT: u_flt2str(l->f, temp_lhs); break;
+        case TYPE_INT:   riff_lltostr(l->i, temp_lhs); break;
+        case TYPE_FLOAT: riff_dtostr(l->f, temp_lhs); break;
         default:         temp_lhs[0] = '\0';        break;
         }
         lhs = temp_lhs;
@@ -221,8 +221,8 @@ VM_BINOP(cat) {
     }
     if (!is_str(r)) {
         switch (r->type) {
-        case TYPE_INT:   u_int2str(r->i, temp_rhs); break;
-        case TYPE_FLOAT: u_flt2str(r->f, temp_rhs); break;
+        case TYPE_INT:   riff_lltostr(r->i, temp_rhs); break;
+        case TYPE_FLOAT: riff_dtostr(r->f, temp_rhs); break;
         default:         temp_rhs[0] = '\0';        break;
         }
         rhs = temp_rhs;
@@ -242,8 +242,8 @@ static inline riff_int match(riff_val *l, riff_val *r) {
     char temp_rhs[32];
     if (!is_str(l)) {
         switch (l->type) {
-        case TYPE_INT:   len = u_int2str(l->i, temp_lhs); break;
-        case TYPE_FLOAT: len = u_flt2str(l->f, temp_lhs); break;
+        case TYPE_INT:   len = riff_lltostr(l->i, temp_lhs); break;
+        case TYPE_FLOAT: len = riff_dtostr(l->f, temp_lhs); break;
         default:         temp_lhs[0] = '\0';              break;
         }
         lhs = temp_lhs;
@@ -257,8 +257,8 @@ static inline riff_int match(riff_val *l, riff_val *r) {
         int errcode;
         int capture = 0;
         switch (r->type) {
-        case TYPE_INT:   u_int2str(r->i, temp_rhs); break;
-        case TYPE_FLOAT: u_flt2str(r->f, temp_rhs); break;
+        case TYPE_INT:   riff_lltostr(r->i, temp_rhs); break;
+        case TYPE_FLOAT: riff_dtostr(r->f, temp_rhs); break;
         case TYPE_STR:
             capture = 1;
             temp_re = re_compile(r->s->str, riff_strlen(r->s), 0, &errcode);
@@ -289,7 +289,7 @@ VM_BINOP(idx) {
     char temp[32];
     switch (l->type) {
     case TYPE_INT: {
-        u_int2str(l->i, temp);
+        riff_lltostr(l->i, temp);
         if (is_range(r)) {
             set_str(l, riff_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
@@ -305,7 +305,7 @@ VM_BINOP(idx) {
         break;
     }
     case TYPE_FLOAT: {
-        u_flt2str(l->f, temp);
+        riff_dtostr(l->f, temp);
         if (is_range(r)) {
             set_str(l, riff_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {

@@ -131,12 +131,12 @@ typedef struct {
 
 static inline riff_int str2int(riff_str *s) {
     char *end;
-    return u_str2i64(s->str, &end, 0);
+    return riff_strtoll(s->str, &end, 0);
 }
 
 static inline riff_float str2flt(riff_str *s) {
     char *end;
-    return u_str2d(s->str, &end, 0);
+    return riff_strtod(s->str, &end, 0);
 }
 
 void        re_register_fldv(riff_tab *);

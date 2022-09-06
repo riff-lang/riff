@@ -65,7 +65,7 @@ static inline strhash str_hash(const char *str, size_t len) {
 }
 
 #define has_zero(s,l)       (!!memchr(s, '0', l))
-#define likely_coercible(s) (!!memchr("+-.0123456789", *s, 13))
+#define likely_coercible(s) (riff_strchr("+-.0123456789", *s))
 
 // NOTE: existence of '0' does not imply coercibility
 static inline uint8_t str_hints(const char *str, size_t len) {

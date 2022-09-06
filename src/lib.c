@@ -222,7 +222,7 @@ static int build_char_str(riff_val *fp, int argc, char *buf) {
             buf[n++] = (char) c;
         } else {
             char ubuf[8];
-            int j = 8 - u_unicode2utf8(ubuf, c);
+            int j = 8 - riff_unicodetoutf8(ubuf, c);
             for (; j < 8; ++j) {
                 buf[n++] = ubuf[j];
             }
@@ -438,9 +438,9 @@ static int xsub(riff_val *fp, int argc, int flags) {
     // String `s`
     if (!is_str(fp)) {
         if (is_int(fp))
-            len = u_int2str(fp->i, temp_s);
+            len = riff_lltostr(fp->i, temp_s);
         else if (is_float(fp))
-            len = u_flt2str(fp->f, temp_s);
+            len = riff_dtostr(fp->f, temp_s);
         else
             return 0;
         s = temp_s;
@@ -455,9 +455,9 @@ static int xsub(riff_val *fp, int argc, int flags) {
         if (is_num(fp+1)) {
             char temp_p[32];
             if (is_int(fp+1))
-                u_int2str(fp[1].i, temp_p);
+                riff_lltostr(fp[1].i, temp_p);
             else if (is_float(fp+1))
-                u_flt2str(fp[1].f, temp_p);
+                riff_dtostr(fp[1].f, temp_p);
             p = re_compile(temp_p, PCRE2_ZERO_TERMINATED, 0, &errcode);
         } else if (is_str(fp+1)) {
             p = re_compile(fp[1].s->str, riff_strlen(fp[1].s), 0, &errcode);
@@ -472,9 +472,9 @@ static int xsub(riff_val *fp, int argc, int flags) {
     if (argc > 2) {
         if (!is_str(fp+2)) {
             if (is_int(fp+2))
-                u_int2str(fp[2].i, temp_r);
+                riff_lltostr(fp[2].i, temp_r);
             else if (is_float(fp+2))
-                u_flt2str(fp[2].f, temp_r);
+                riff_dtostr(fp[2].f, temp_r);
             else
                 temp_r[0] = '\0';
             r = temp_r;
@@ -582,7 +582,7 @@ LIB_FN(num) {
         base = intval(fp+1);
     char *end;
     errno = 0;
-    riff_int i = u_str2i64(fp->s->str, &end, base);
+    riff_int i = riff_strtoll(fp->s->str, &end, base);
     if (errno == ERANGE || isdigit(*end)) {
         goto ret_flt;
     }
@@ -599,7 +599,7 @@ LIB_FN(num) {
     set_int(fp-1, i);
     return 1;
 ret_flt:
-    set_flt(fp-1, u_str2d(fp->s->str, &end, base));
+    set_flt(fp-1, riff_strtod(fp->s->str, &end, base));
     return 1;
 }
 
@@ -615,9 +615,9 @@ LIB_FN(split) {
     char temp_s[20];
     if (!is_str(fp)) {
         if (is_int(fp)) {
-            len = u_int2str(fp->i, temp_s);
+            len = riff_lltostr(fp->i, temp_s);
         } else if (is_float(fp)) {
-            len = u_flt2str(fp->f, temp_s);
+            len = riff_dtostr(fp->f, temp_s);
         } else {
             return 0;
         }
@@ -636,8 +636,8 @@ LIB_FN(split) {
     } else if (!is_regex(fp+1)) {
         char temp[32];
         switch (fp[1].type) {
-        case TYPE_INT: u_int2str(fp[1].i, temp); break;
-        case TYPE_FLOAT: u_flt2str(fp[1].f, temp); break;
+        case TYPE_INT: riff_lltostr(fp[1].i, temp); break;
+        case TYPE_FLOAT: riff_dtostr(fp[1].f, temp); break;
         case TYPE_STR:
             if (!riff_strlen(fp[1].s))
                 goto split_chars;

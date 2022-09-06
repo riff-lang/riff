@@ -207,7 +207,7 @@ capture_flags:
                     int n1 = 0;
                     char ubuf[8];
                     char tbuf[9];
-                    int j = 8 - u_unicode2utf8(ubuf, c);
+                    int j = 8 - riff_unicodetoutf8(ubuf, c);
                     for (; j < 8; ++j) {
                         tbuf[n1++] = ubuf[j];
                     }

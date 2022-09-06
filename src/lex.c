@@ -12,6 +12,8 @@
 #include <string.h>
 
 #define advance() (++x->p)
+#define decval(c) (c - '0')
+#define hexval(c) (isdigit(c) ? decval(c) : tolower(c) - 'a' + 10)
 
 static void err(riff_lexer *x, const char *msg) {
     fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
@@ -33,12 +35,12 @@ static int valid_alphanum(char c) {
 }
 
 static int valid_regex_flag(char c) {
-    return !!memchr("ADJUimnsux", c, 10);
+    return riff_strchr("ADJUimnsux", c);
 }
 
 static int float_literal(riff_lexer *x, riff_token *tk, const char *start, int base) {
     char *end;
-    tk->f = u_str2d(start, &end, base);
+    tk->f = riff_strtod(start, &end, base);
     x->p = end;
     return TK_FLOAT;
 }
@@ -46,7 +48,7 @@ static int float_literal(riff_lexer *x, riff_token *tk, const char *start, int b
 static int int_literal(riff_lexer *x, riff_token *tk, const char *start, int base) {
     char *end;
     errno = 0;
-    int64_t i = u_str2i64(start, &end, base);
+    int64_t i = riff_strtoll(start, &end, base);
 
     // Interpret as float in the event of overflow
     if (errno == ERANGE || isdigit(*end)) {
@@ -107,10 +109,10 @@ static int hex_esc(riff_lexer *x) {
     if (!isxdigit(*x->p)) {
         err(x, "expected hexadecimal digit");
     }
-    int e = u_hexval(*x->p++);
+    int e = hexval(*x->p++);
     if (isxdigit(*x->p)) {
         e <<= 4;
-        e += u_hexval(*x->p++);
+        e += hexval(*x->p++);
     }
     return e;
 }
@@ -121,13 +123,13 @@ static int oct_esc(riff_lexer *x) {
     if (!isoctal(*x->p)) {
         err(x, "expected octal digit");
     }
-    int e = u_decval(*x->p++);
+    int e = decval(*x->p++);
     for (int i = 0; i < 2; ++i) {
         if (!isoctal(*x->p)) {
             break;
         }
         e *= 8;
-        e += u_decval(*x->p++);
+        e += decval(*x->p++);
     }
     if (e > UCHAR_MAX) {
         err(x, "invalid octal escape");
@@ -139,7 +141,7 @@ static uint32_t unicode_int(riff_lexer *x, int len) {
     uint32_t c = 0;
     for (int i = 0; i < len && isxdigit(*x->p); ++i) {
         c <<= 4;
-        c += u_hexval(*x->p++);
+        c += hexval(*x->p++);
     }
     return c;
 }
@@ -147,7 +149,7 @@ static uint32_t unicode_int(riff_lexer *x, int len) {
 static void unicode_esc(riff_lexer *x, int len) {
     uint32_t c = unicode_int(x, len);
     char buf[8];
-    int n = 8 - u_unicode2utf8(buf, c);
+    int n = 8 - riff_unicodetoutf8(buf, c);
     for (; n < 8; ++n) {
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = buf[n];
@@ -205,7 +207,7 @@ static int char_literal(riff_lexer *x, riff_token *tk, int d) {
         default:
             if (c & 0x80) {
                 char *end;
-                riff_int u = u_utf82unicode(x->p, &end);
+                riff_int u = riff_utf8tounicode(x->p, &end);
                 v <<= u & 0xff000000 ? 24 :
                       u & 0x00ff0000 ? 16 :
                       u & 0x0000ff00 ?  8 : 0;

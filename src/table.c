@@ -44,7 +44,7 @@ static riff_val *reduce_key(riff_val *s, riff_val *d) {
             return s;
         }
         char *end;
-        riff_int i = u_str2i64(s->s->str, &end, 0);
+        riff_int i = riff_strtoll(s->s->str, &end, 0);
         if (!*end) {
             set_int(d, i);
             if (!i) {
@@ -52,7 +52,7 @@ static riff_val *reduce_key(riff_val *s, riff_val *d) {
             }
             return d;
         }
-        riff_float f = u_str2d(s->s->str, &end, 0);
+        riff_float f = riff_strtod(s->s->str, &end, 0);
         if (!*end) {
             set_flt(d, f);
             if (f == 0.0) {

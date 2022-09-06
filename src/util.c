@@ -4,30 +4,24 @@
 #include <errno.h>
 #include <stdlib.h>
 
-int u_decval(int c) {
-    return c - '0';
-}
-
-int u_hexval(int c) {
-    return isdigit(c) ? c - '0' : tolower(c) - 'a' + 10;
-}
-
 // Returns the numeric value of the character `c` for a given radix.
 // Returns -1 if the character is outside the range of the base.
-int u_baseval(int c, int base) {
+static int baseval(int c, int base) {
     int val = -1;
-    if (isdigit(c))
+    if (isdigit(c)) {
         val = c - '0';
-    else if (isalpha(c))
+    } else if (isalpha(c)) {
         val = tolower(c) - 'a' + 10;
-    if (val >= 0 && val > (base - 1))
+    }
+    if (val >= 0 && val > (base - 1)) {
         val = -1;
+    }
     return val;
 }
 
 #define MAXNUMSTR 128
 
-double u_str2d(const char *str, char **end, int base) {
+double riff_strtod(const char *str, char **end, int base) {
 
     // Eat leading whitespace
     while (isspace(*str))
@@ -128,7 +122,7 @@ parse_end:
 // - Allows arbitrary underscores in numeric strings
 // - Prevents numbers prefixed with `0` from being interpreted as
 //   octal by default (base 0).
-int64_t u_str2i64(const char *str, char **end, int base) {
+int64_t riff_strtoll(const char *str, char **end, int base) {
 
     // Reset base if outside valid range
     if (base < 2 || base > 36)
@@ -164,7 +158,7 @@ int64_t u_str2i64(const char *str, char **end, int base) {
     if (!base) base = 10;
 
     // Copy valid digits to buffer, ignoring underscores
-    for (; *str && (n < (MAXNUMSTR - 1)) && (*str == '_' || (u_baseval(*str, base) >= 0)); ++str) {
+    for (; *str && (n < (MAXNUMSTR - 1)) && (*str == '_' || (baseval(*str, base) >= 0)); ++str) {
         if (*str == '_')
             continue;
         buf[n++] = *str;
@@ -181,7 +175,7 @@ int64_t u_str2i64(const char *str, char **end, int base) {
 // Decodes a UTF-8 sequence, returning the unicode code point as a
 // Riff integer.
 // Source: Lua's utf8_decode()
-int64_t u_utf82unicode(const char *str, char **end) {
+int64_t riff_utf8tounicode(const char *str, char **end) {
     unsigned int c0 = (unsigned int) *str++;
     int64_t r = 0;
     if (c0 <= 0x7f)
@@ -211,7 +205,7 @@ ret:
 // Encodes a unicode codepoint to UTF-8 sequence. Fills the buffer
 // backwards. Size of buf should be >= 8.
 // Source: Lua's luaO_utf8esc()
-int u_unicode2utf8(char *buf, uint32_t c) {
+int riff_unicodetoutf8(char *buf, uint32_t c) {
     int n = 1;
     if (c <= 0x7f)
         buf[7] = (char) c;
