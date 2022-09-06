@@ -53,9 +53,9 @@ static int int_literal(riff_lexer *x, riff_token *tk, const char *start, int bas
         return float_literal(x, tk, start, base);
     }
 
+    // Extra float conditions
     if (*end == '.') {
-        if ((base == 10 && isdigit(end[1])) ||
-            (base == 16 && isxdigit(end[1]))) {
+        if (end[1] != '.') {
             return float_literal(x, tk, start, base);
         }
     } else if (base == 10 && (*end == 'e' || *end == 'E')) {
