@@ -544,6 +544,7 @@ int riff_lex_init(riff_lexer *x, const char *src) {
         const char *str;
         uint8_t     tk;
     } reserved[] = {
+        { "and",      TK_AND    },
         { "break",    TK_BREAK  },
         { "continue", TK_CONT   },
         { "do",       TK_DO     },
@@ -555,7 +556,9 @@ int riff_lex_init(riff_lexer *x, const char *src) {
         { "in",       TK_IN     },
         { "local",    TK_LOCAL  },
         { "loop",     TK_LOOP   },
+        { "not",      '!'       },
         { "null",     TK_NULL   },
+        { "or",       TK_OR     },
         { "return",   TK_RETURN },
         { "while",    TK_WHILE  }
     };
