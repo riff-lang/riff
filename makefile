@@ -50,10 +50,11 @@ SRC          += src/util.c
 SRC          += src/value.c
 SRC          += src/vm.c
 
-TESTS         = test/expressions.bats
-TESTS        += test/fmt.bats
-TESTS        += test/literals.bats
-TESTS        += test/etc.bats
+BATSDIR       = test
+
+BATSFLAGS     = --pretty
+BATSFLAGS    += --print-output-on-failure
+BATSFLAGS    += --recursive
 
 # Version string (riff -v)
 CFLAGS       += -DRIFF_VERSION=\"$(shell git describe)\"
@@ -76,8 +77,10 @@ asan: bin/asan
 instr: bin/instr
 lsan: bin/lsan
 
-test: bin/riff
-	bats -p $(TESTS)
+test: bin/riff bats
+
+bats:
+	bats $(BATSFLAGS) $(BATSDIR)
 
 warn: bin/warn
 

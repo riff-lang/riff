@@ -1,0 +1,3 @@
+RIFFBIN=bin/riff
+RUNCODE="run $RIFFBIN -e"
+RUNFILE="run $RIFFBIN"
