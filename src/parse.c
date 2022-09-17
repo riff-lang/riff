@@ -743,7 +743,7 @@ static void do_stmt(riff_parser *y) {
 
 static void add_local(riff_parser *y, riff_str *id) {
     m_growarray(y->lcl, y->nlcl, y->lcap, local);
-    y->lcl[y->nlcl++] = (local) {riff_str_new(id->str, riff_strlen(id)), y->ld};
+    y->lcl[y->nlcl++] = (local) {id, y->ld};
 }
 
 // Returns the arity of the parsed function
@@ -833,10 +833,10 @@ static void local_fn(riff_parser *y) {
 static void fn_stmt(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_str *id;
-    if (!TK_KIND(TK_IDENT)) {
+    if (UNLIKELY(!TK_KIND(TK_IDENT))) {
         err(y, "expected identifier for function definition");
     } else {
-        id = riff_str_new(y->x->tk.s->str, riff_strlen(y->x->tk.s));
+        id = y->x->tk.s;
         advance();
     }
     f_init(f, id);
