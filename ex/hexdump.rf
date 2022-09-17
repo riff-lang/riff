@@ -11,7 +11,7 @@ fn dump(f) {
         if #s < 16
             for i in #s..15
                 write(i == 7 ? "    " : "   ")
-        printf(" %s\n", gsub(s, /[^ -~]/, "."))
+        print(" #{gsub(s, /[^ -~]/, ".")}")
     }
 }
 

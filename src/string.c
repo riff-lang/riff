@@ -161,15 +161,12 @@ riff_str *riff_str_new(const char *start, size_t len) {
     return riff_str_new_extra(start, len, 0);
 }
 
-// Assumes null-terminated strings
-riff_str *riff_str_new_concat(char *l, char *r) {
-    size_t l_len = strlen(l);
-    size_t r_len = strlen(r);
-    size_t new_len = l_len + r_len;
-    char *new = malloc(new_len * sizeof(char) + 1);
-    memcpy(new, l, l_len);
-    memcpy(new + l_len, r, r_len);
-    return riff_str_new(new, new_len);
+riff_str *riff_strcat(char *l, char *r, size_t llen, size_t rlen) {
+    size_t len = llen + rlen;
+    char new[len];
+    memcpy(new, l, llen);
+    memcpy(new + llen, r, rlen);
+    return riff_str_new(new, len);
 }
 
 riff_str *riff_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
@@ -192,7 +189,7 @@ riff_str *riff_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
         itvl = -itvl;
     }
     len = (size_t) ceil(fabs((double) len / (double) itvl));
-    char *str = malloc(len * sizeof(char));
+    char str[len];
     for (size_t i = 0; i < len; ++i) {
         str[i] = s[from];
         from += itvl;

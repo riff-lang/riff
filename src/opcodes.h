@@ -71,9 +71,10 @@ OP_STR(GT,      0),
 OP_STR(GE,      0),
 OP_STR(LT,      0),
 OP_STR(LE,      0),
-OP_STR(CAT,     0),
 OP_STR(MATCH,   0),
 OP_STR(NMATCH,  0),
+OP_STR(CAT,     0),
+OPCODE(CATI,    1, "CAT"),
 
 OP_STR(VIDXV,   0),
 

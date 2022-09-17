@@ -555,6 +555,17 @@ void c_postfix(riff_code *c, int op, uint8_t **ret) {
     *ret = LAST_INS_ADDR(0);
 }
 
+void c_concat(riff_code *c, int n, uint8_t **ret) {
+    if (n == 2) {
+        push(OP_CAT);
+        *ret = LAST_INS_ADDR(0);
+    } else if (n > 2) {
+        push(OP_CATI);
+        push((uint8_t) n);
+        *ret = LAST_INS_ADDR(1);
+    }
+}
+
 void c_pop(riff_code *c, int n, uint8_t **ret) {
     if (n == 1) {
         push(OP_POP);

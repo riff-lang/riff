@@ -184,8 +184,9 @@ LIB_FN(open) {
 
 static inline void fputs_val(FILE *f, riff_val *v) {
     char buf[STR_BUF_SZ];
-    riff_tostr(v, buf);
-    fputs(buf, f);
+    char *p = buf;
+    riff_tostr(v, &p);
+    fputs(p, f);
 }
 
 // print(...)

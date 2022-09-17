@@ -1,6 +1,7 @@
 #include "disas.h"
 
 #include "conf.h"
+#include "string.h"
 
 #include <inttypes.h>
 #include <math.h>
@@ -53,18 +54,18 @@ static uint16_t tou16(uint8_t b1, uint8_t b2) {
 // Wrap string in quotes
 // TODO deconstruct bytes that correspond to escape sequences into their literal
 //      forms
-static void disas_tostr(riff_val *v, char *buf) {
+static size_t disas_tostr(riff_val *v, char **out) {
     if (is_str(v)) {
-        sprintf(buf, "\"%s\"", v->s->str);
-    } else {
-        riff_tostr(v, buf);
+        return (size_t) sprintf(*out, "\"%s\"", v->s->str);
     }
+    return riff_tostr(v, out);
 }
 
 static void d_code_obj(riff_code *c, int ipw) {
     int ip = 0;
-    char s[STR_BUF_SZ];
+    char buf[STR_BUF_SZ];
     while (ip < c->n) {
+        char *sptr = buf;
         uint8_t  b0  = c->code[ip];
         uint8_t  b1  = c->code[ip+1];
         uint8_t  b2  = c->code[ip+2];
@@ -73,16 +74,16 @@ static void d_code_obj(riff_code *c, int ipw) {
         if (OP_ARITY) {
             switch (b0) {
             case OP_CONST:
-                disas_tostr(&c->k[b1], s);
-                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
+                disas_tostr(&c->k[b1], &sptr);
+                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, sptr);
                 break;
             case OP_TABK:
             case OP_GBLA:
             case OP_GBLV:
             case OP_SIDXA:
             case OP_SIDXV:
-                riff_tostr(&c->k[b1], s);
-                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, s);
+                riff_tostr(&c->k[b1], &sptr);
+                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, sptr);
                 break;
             case OP_JMP8:
             case OP_JZ8:
@@ -115,18 +116,18 @@ static void d_code_obj(riff_code *c, int ipw) {
             }
         } else if (b0 >= OP_CONST0 && b0 <= OP_GBLV2) {
             switch (b0) {
-            case OP_CONST0: disas_tostr(&c->k[0], s); break;
-            case OP_CONST1: disas_tostr(&c->k[1], s); break;
-            case OP_CONST2: disas_tostr(&c->k[2], s); break;
+            case OP_CONST0: disas_tostr(&c->k[0], &sptr); break;
+            case OP_CONST1: disas_tostr(&c->k[1], &sptr); break;
+            case OP_CONST2: disas_tostr(&c->k[2], &sptr); break;
             case OP_GBLA0:
-            case OP_GBLV0:  riff_tostr(&c->k[0], s);     break;
+            case OP_GBLV0:  riff_tostr(&c->k[0], &sptr);  break;
             case OP_GBLA1:
-            case OP_GBLV1:  riff_tostr(&c->k[1], s);     break;
+            case OP_GBLV1:  riff_tostr(&c->k[1], &sptr);  break;
             case OP_GBLA2:
-            case OP_GBLV2:  riff_tostr(&c->k[2], s);     break;
+            case OP_GBLV2:  riff_tostr(&c->k[2], &sptr);  break;
             default: break;
             }
-            printf(INST0DEREF, ipw, ip, b0, MNEMONIC, s);
+            printf(INST0DEREF, ipw, ip, b0, MNEMONIC, sptr);
         } else {
             printf(INST0, ipw, ip, b0, MNEMONIC);
         }

@@ -78,3 +78,35 @@ load conf.bash
 line")'
     [ "$output" = "multiline" ]
 }
+
+@test "String interpolation" {
+    $RUNCODE 'x="world" print("hello #x")'
+    [ "$output" = "hello world" ]
+
+    $RUNCODE 'x="world" print("hello #{x}")'
+    [ "$output" = "hello world" ]
+
+    $RUNCODE 'print("hello #{"world"}")'
+    [ "$output" = "hello world" ]
+
+    $RUNCODE 'x="bar" print("foo #x baz")'
+    [ "$output" = "foo bar baz" ]
+
+    $RUNCODE 'x="bar" print("foo #{x} baz")'
+    [ "$output" = "foo bar baz" ]
+
+    $RUNCODE 'x="bar" y="baz" print("foo #{x} #y")'
+    [ "$output" = "foo bar baz" ]
+
+    $RUNCODE 'x="bar" y="baz" print("foo #x #{y}")'
+    [ "$output" = "foo bar baz" ]
+
+    $RUNCODE 'print("4 == #{2+2}")'
+    [ "$output" = "4 == 4" ]
+
+    $RUNCODE 'x=4 print("#{x++}", x)'
+    [ "$output" = "4 5" ]
+
+    $RUNCODE 'x=4 print("#{++x}", x)'
+    [ "$output" = "5 5" ]
+}

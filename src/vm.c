@@ -206,30 +206,25 @@ VM_UOP(len) {
 }
 
 VM_BINOP(cat) {
-    char *lhs, *rhs;
-    char temp_lhs[32];
-    char temp_rhs[32];
-    if (!is_str(l)) {
-        switch (l->type) {
-        case TYPE_INT:   riff_lltostr(l->i, temp_lhs); break;
-        case TYPE_FLOAT: riff_dtostr(l->f, temp_lhs); break;
-        default:         temp_lhs[0] = '\0';        break;
-        }
-        lhs = temp_lhs;
-    } else {
-        lhs = l->s->str;
+    char lbuf[STR_BUF_SZ];
+    char rbuf[STR_BUF_SZ];
+    char *ls = lbuf, *rs = rbuf;
+    size_t llen = riff_tostr(l, &ls);
+    size_t rlen = riff_tostr(r, &rs);
+    set_str(l, riff_strcat(ls, rs, llen, rlen));
+}
+
+static inline void vm_catn(vm_stack *fp, int n) {
+    char buf[STR_BUF_SZ];
+    char tbuf[STR_BUF_SZ];
+    char *p = tbuf;
+    size_t len = 0;
+    for (int i = -n; i <= -1; ++i) {
+        size_t tlen = riff_tostr(&fp[i].v, &p);
+        memcpy(buf + len, p, tlen);
+        len += tlen;
     }
-    if (!is_str(r)) {
-        switch (r->type) {
-        case TYPE_INT:   riff_lltostr(r->i, temp_rhs); break;
-        case TYPE_FLOAT: riff_dtostr(r->f, temp_rhs); break;
-        default:         temp_rhs[0] = '\0';        break;
-        }
-        rhs = temp_rhs;
-    } else {
-        rhs = r->s->str;
-    }
-    set_str(l, riff_str_new_concat(lhs, rhs));
+    set_str(&fp[-n].v, riff_str_new(buf, len));
 }
 
 static inline riff_int match(riff_val *l, riff_val *r) {
@@ -637,9 +632,15 @@ L(GT)       binop(gt);     BREAK;
 L(GE)       binop(ge);     BREAK;
 L(LT)       binop(lt);     BREAK;
 L(LE)       binop(le);     BREAK;
-L(CAT)      binop(cat);    BREAK;
 L(MATCH)    binop(match);  BREAK;
 L(NMATCH)   binop(nmatch); BREAK;
+L(CAT)      binop(cat);    BREAK;
+
+L(CATI)     vm_catn(sp, ip[1]);
+            sp -= ip[1] - 1;
+            ip += 2;
+            BREAK;
+
 L(VIDXV)    binop(idx);    BREAK;
 
 // Pre-increment/decrement

@@ -41,6 +41,7 @@ void c_str_index(riff_code *, uint8_t *, riff_str *, int, uint8_t **);
 void c_prefix(riff_code *, int, uint8_t **);
 void c_infix(riff_code *, int, uint8_t **);
 void c_postfix(riff_code *, int, uint8_t **);
+void c_concat(riff_code *, int, uint8_t **);
 void c_jump(riff_code *, int, int, uint8_t **);
 void c_loop(riff_code *, int, uint8_t **);
 void c_range(riff_code *, int, int, int, uint8_t **);

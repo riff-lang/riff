@@ -6,6 +6,7 @@
 #include "string.h"
 #include "value.h"
 
+#include <ctype.h>
 #include <stdio.h>
 
 #define push(b) c_push(y->c, b)
@@ -83,6 +84,15 @@ static void y_init(riff_parser *);
 static void err(riff_parser *y, const char *msg) {
     fprintf(stderr, "riff: [compile] line %d: %s\n", y->x->ln, msg);
     exit(1);
+}
+
+static char closing_delim(char c) {
+    switch (c) {
+    case '[': return ']';
+    case '(': return ')';
+    case '{': return '}';
+    default:  return c;
+    }
 }
 
 static int is_asgmt(int tk) {
@@ -239,6 +249,53 @@ static void literal(riff_parser *y, uint32_t flags) {
     }
 }
 
+static void interpolated_str(riff_parser *y) {
+    uint8_t n = 0;
+    while (TK_KIND(TK_STR_INTER)) {
+        if (riff_strlen(y->x->tk.s) > 0) {
+            ++n;
+            y->x->tk.kind = TK_STR;
+            c_constant(y->c, &y->x->tk, &y->ins);
+        }
+        advance();
+
+        // Lexer ensures validity of the following token
+        if (TK_KIND(TK_IDENT)) {
+            int scope = resolve_local(y, 0, y->x->tk.s);
+            if (scope >= 0) {
+                c_local(y->c, scope, 0, !y->lhs && y->lx, &y->ins);
+            } else {
+                c_global(y->c, &y->x->tk, 0, &y->ins);
+            }
+            ++n;
+            advance_mode(LEX_STR);
+        } else {
+            char c = closing_delim(y->x->tk.kind);
+            peek();
+            if (!LA_KIND(c)) {
+                advance();
+                expr(y, 0, 0);
+                ++n;
+                consume_mode(y, LEX_STR, c, "expected closing delimeter following interpolated expression");
+            } else {
+                advance_mode(LEX_STR);
+            }
+        }
+    }
+
+    // TK_STR denotes the end of a string literal
+    if (LIKELY(TK_KIND(TK_STR))) {
+        if (riff_strlen(y->x->tk.s) > 0) {
+            ++n;
+            c_constant(y->c, &y->x->tk, &y->ins);
+        }
+        advance_mode(LEX_LED);
+    } else {
+        err(y, "invalid interpolation");
+    }
+    c_concat(y->c, n, &y->ins);
+}
+
 static int paren_expr(riff_parser *y) {
     save_and_unset(lhs);
     save_and_unset(ox);
@@ -345,9 +402,9 @@ static void call(riff_parser *y) {
 
 // table_expr = '{' expr_list '}'
 //            | '[' expr_list ']'
-static void table(riff_parser *y, int tk) {
-    int n = expr_list(y, tk);
-    consume_mode(y, LEX_LED, tk, "expected closing brace/bracket");
+static void table(riff_parser *y, int delim) {
+    int n = expr_list(y, delim);
+    consume_mode(y, LEX_LED, delim, "expected closing brace/bracket");
     c_table(y->c, n, &y->ins);
 }
 
@@ -451,9 +508,7 @@ static int nud(riff_parser *y, uint32_t flags) {
     case '[':
     case '{':
         advance();
-        // '[' + 2 = ']'
-        // '{' + 2 = '}'
-        table(y, tk + 2);
+        table(y, closing_delim(tk));
         break;
     case TK_2DOTS:
         set(ox);
@@ -478,6 +533,9 @@ static int nud(riff_parser *y, uint32_t flags) {
     case TK_STR:
     case TK_REGEX:
         literal(y, flags);
+        break;
+    case TK_STR_INTER:
+        interpolated_str(y);
         break;
     case TK_IDENT:
         identifier(y, flags);
@@ -742,7 +800,7 @@ static void local_fn(riff_parser *y) {
     int idx = resolve_local(y, 0, id);
 
     // Create string for disassembly
-    riff_str *fn_name = riff_str_new_concat("local ", y->x->tk.s->str);
+    riff_str *fn_name = riff_strcat("local ", y->x->tk.s->str, 6, riff_strlen(y->x->tk.s));
 
     // If the identifier doesn't already exist as a local at the current scope,
     // add a new local.

@@ -34,6 +34,10 @@ static int valid_alphanum(char c) {
     return valid_alpha(c) || isdigit(c);
 }
 
+static int valid_interpolation_delim(char c) {
+    return riff_strchr("({", c);
+}
+
 static int valid_regex_flag(char c) {
     return riff_strchr("ADJUimnsux", c);
 }
@@ -234,6 +238,15 @@ static int str_literal(riff_lexer *x, riff_token *tk, int d) {
 str_start:
     while ((c = *x->p) != d) {
         switch(c) {
+        // Interpolated string
+        case '#':
+            if (valid_alpha(x->p[1]) || valid_interpolation_delim(x->p[1])) {
+                tk->s = riff_str_new(x->buf.c, x->buf.n);
+                advance();
+                return TK_STR_INTER;
+            }
+            advance();
+            break;
         case '\\':
             advance();
             switch (*x->p) {
@@ -256,14 +269,13 @@ str_start:
                 ++x->ln;
                 advance();
                 goto str_start;
-            case '\\':
-            case '\'':
-            case '"':
-                c = *x->p;
-                advance();
+            case '0': case '1': case '2': case '3':
+            case '4': case '5': case '6': case '7':
+                c = oct_esc(x);
                 break;
             default:
-                c = oct_esc(x);
+                c = *x->p;
+                advance();
                 break;
             }
             break;
@@ -284,9 +296,8 @@ str_start:
         m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
         x->buf.c[x->buf.n++] = c;
     }
-    riff_str *s = riff_str_new(x->buf.c, x->buf.n);
+    tk->s = riff_str_new(x->buf.c, x->buf.n);
     advance();
-    tk->s = s;
     return TK_STR;
 }
 
@@ -458,6 +469,9 @@ static void block_comment(riff_lexer *x) {
 
 static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
     int c;
+    if (mode == LEX_STR) {
+        return str_literal(x, tk, '"');
+    }
     while (1) {
         switch (c = *x->p++) {
         case '\0': return 1;

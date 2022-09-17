@@ -20,7 +20,8 @@ typedef struct {
 
 enum lexer_mode {
     LEX_NUD,
-    LEX_LED
+    LEX_LED,
+    LEX_STR
 };
 
 enum token_kind {
@@ -72,6 +73,7 @@ enum token_kind {
     TK_FLOAT,
     TK_INT,
     TK_STR,
+    TK_STR_INTER,
     TK_REGEX,
 
     // Identifiers

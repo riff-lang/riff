@@ -1,6 +1,7 @@
 #ifndef STRING_H
 #define STRING_H
 
+#include "conf.h"
 #include "value.h"
 
 enum riff_str_hints {
@@ -17,10 +18,30 @@ enum riff_str_hints {
 #define riff_str_hash(s)      ((s)->hash)
 #define riff_strlen(s)        ((s)->len)
 
+static inline size_t riff_tostr(riff_val *v, char **buf) {
+    switch (v->type) {
+    case TYPE_NULL:  return sprintf(*buf, "null");
+    case TYPE_INT:   return sprintf(*buf, "%"PRId64, v->i);
+    case TYPE_FLOAT: return sprintf(*buf, FLT_PRINT_FMT, v->f);
+    case TYPE_STR:
+        *buf = v->s->str;
+        return riff_strlen(v->s);
+    case TYPE_REGEX: return sprintf(*buf, "regex: %p", v->r);
+    case TYPE_FILE:  return sprintf(*buf, "file: %p", v->fh->p);
+    case TYPE_RANGE:
+        return sprintf(*buf, "range: %"PRId64"..%"PRId64":%"PRId64,
+                v->q->from, v->q->to, v->q->itvl);
+    case TYPE_TAB:   return sprintf(*buf, "table: %p", v->t);
+    case TYPE_RFN:
+    case TYPE_CFN:   return sprintf(*buf, "fn: %p", v->fn);
+    }
+    return 0;
+}
+
 void      riff_stab_init(void);
 riff_str *riff_str_new_extra(const char *, size_t, uint8_t);
 riff_str *riff_str_new(const char *, size_t);
-riff_str *riff_str_new_concat(char *, char *);
+riff_str *riff_strcat(char *, char *, size_t, size_t);
 riff_str *riff_substr(char *, riff_int, riff_int, riff_int);
 
 #endif

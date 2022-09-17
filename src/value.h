@@ -147,6 +147,5 @@ riff_int    re_match(char *, size_t, riff_regex *, int);
 riff_val   *v_newnull(void);
 riff_val   *v_newtab(uint32_t);
 riff_val   *v_copy(riff_val *);
-void        riff_tostr(riff_val *, char *);
 
 #endif
