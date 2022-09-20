@@ -1,6 +1,8 @@
 # Change this to change where `make install` places the `riff` executable
 LOC           = /usr/local/bin
 
+RIFF_VERSION  = $(shell git describe)
+
 CFLAGS        = -O3
 CFLAGS       += $(shell pcre2-config --cflags)
 CFLAGS       += -Wunused
@@ -13,6 +15,12 @@ WASM_CFLAGS  += -Ilib/pcre2/src
 
 WASM_LDFLAGS  = -lm
 WASM_LDFLAGS += -Llib/pcre2/.libs -lpcre2-8
+
+WASM_SFLAGS   = -sEXPORTED_FUNCTIONS=_riff_version,_riff_main
+WASM_SFLAGS  += -sEXPORTED_RUNTIME_METHODS=ccall
+WASM_SFLAGS  += -sALLOW_MEMORY_GROWTH=1
+WASM_SFLAGS  += -sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=$$ccall
+WASM_SFLAGS  += -sINCOMING_MODULE_JS_API=onRuntimeInitialized,print,printErr
 
 # AddressSanitizer
 AFLAGS        = -g
@@ -57,7 +65,8 @@ BATSFLAGS    += --print-output-on-failure
 BATSFLAGS    += --recursive
 
 # Version string (riff -v)
-CFLAGS       += -DRIFF_VERSION=\"$(shell git describe)\"
+CFLAGS       += -DRIFF_VERSION=\"$(RIFF_VERSION)\"
+WASM_CFLAGS  += -DRIFF_VERSION=\"$(RIFF_VERSION)\"
 
 # Homebrew-installed Clang
 BREW_CLANG    = /opt/homebrew/bin/clang
@@ -86,7 +95,7 @@ warn: bin/warn
 
 wasm: $(SRC)
 	mkdir -p bin
-	emcc $(WASM_CFLAGS) -Ilib/pcre2/src $(SRC) $(WASM_LDFLAGS) -s EXPORTED_FUNCTIONS='["_wasm_main"]' -s EXPORTED_RUNTIME_METHODS='["ccall"]' -s ALLOW_MEMORY_GROWTH=1 -o bin/riff.js
+	emcc $(WASM_CFLAGS) $(SRC) $(WASM_LDFLAGS) $(WASM_SFLAGS) -o bin/riff.js
 
 # Run this target if PCRE2 not built locally
 pcre2-wasm:

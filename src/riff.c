@@ -13,9 +13,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Entry point for the Emscripten-compiled WASM/JS module
 #ifdef __EMSCRIPTEN__
-int wasm_main(int flag, char *str) {
+
+char *riff_version(void) {
+    return RIFF_VERSION;
+}
+
+// Entry point for the Emscripten-compiled WASM/JS module
+int riff_main(int flag, char *str) {
     riff_stab_init();
     riff_state global_state;
     riff_state_init(&global_state);
@@ -35,7 +40,9 @@ int wasm_main(int flag, char *str) {
         d_prog(&global_state);
     return 0;
 }
+
 #else
+
 static void version(void) {
     puts("riff " RIFF_VERSION " Copyright 2020-2022, Darryl Abbate");
 }
@@ -182,4 +189,5 @@ int main(int argc, char **argv) {
     }
     return 0;
 }
+
 #endif
