@@ -1026,7 +1026,7 @@ static void local_stmt(riff_parser *y) {
             set(lx);    // Only set for newly-declared locals
             add_local(y, id);
         }
-        expr(y, 0, 0);
+        expr(y, EXPR_REF, 0);
         c_pop_expr_stmt(y->c, 1, &y->ins);
         unset(lx);
         if (TK_KIND(',')) {
