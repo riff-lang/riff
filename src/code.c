@@ -570,7 +570,7 @@ void c_pop(riff_code *c, int n, uint8_t **ret) {
     if (n == 1) {
         push(OP_POP);
         *ret = LAST_INS_ADDR(0);
-    } else {
+    } else if (n > 1) {
         push(OP_POPI);
         push((uint8_t) n);
         *ret = LAST_INS_ADDR(1);
