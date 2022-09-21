@@ -67,8 +67,8 @@ static void d_code_obj(riff_code *c, int ipw) {
     while (ip < c->n) {
         char *sptr = buf;
         uint8_t  b0  = c->code[ip];
-        uint8_t  b1  = c->code[ip+1];
-        uint8_t  b2  = c->code[ip+2];
+        uint8_t  b1  = ip+1 < c->n ? c->code[ip+1] : 0;
+        uint8_t  b2  = ip+2 < c->n ? c->code[ip+2] : 0;
         int16_t  i16 = toi16(b1, b2);
         uint16_t u16 = tou16(b1, b2);
         if (OP_ARITY) {
