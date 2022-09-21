@@ -217,9 +217,9 @@ VM_BINOP(cat) {
 static inline void vm_catn(vm_stack *fp, int n) {
     char buf[STR_BUF_SZ];
     char tbuf[STR_BUF_SZ];
-    char *p = tbuf;
     size_t len = 0;
     for (int i = -n; i <= -1; ++i) {
+        char *p = tbuf;
         size_t tlen = riff_tostr(&fp[i].v, &p);
         memcpy(buf + len, p, tlen);
         len += tlen;
