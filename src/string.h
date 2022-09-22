@@ -18,9 +18,17 @@ enum riff_str_hints {
 #define riff_str_hash(s)      ((s)->hash)
 #define riff_strlen(s)        ((s)->len)
 
+void      riff_stab_init(void);
+riff_str *riff_str_new_extra(const char *, size_t, uint8_t);
+riff_str *riff_str_new(const char *, size_t);
+riff_str *riff_strcat(char *, char *, size_t, size_t);
+riff_str *riff_substr(char *, riff_int, riff_int, riff_int);
+
 static inline size_t riff_tostr(riff_val *v, char **buf) {
     switch (v->type) {
-    case TYPE_NULL:  return sprintf(*buf, "null");
+    case TYPE_NULL:
+        *buf = riff_str_new("", 0)->str;
+        return 0;
     case TYPE_INT:   return sprintf(*buf, "%"PRId64, v->i);
     case TYPE_FLOAT: return sprintf(*buf, FLT_PRINT_FMT, v->f);
     case TYPE_STR:
@@ -37,11 +45,5 @@ static inline size_t riff_tostr(riff_val *v, char **buf) {
     }
     return 0;
 }
-
-void      riff_stab_init(void);
-riff_str *riff_str_new_extra(const char *, size_t, uint8_t);
-riff_str *riff_str_new(const char *, size_t);
-riff_str *riff_strcat(char *, char *, size_t, size_t);
-riff_str *riff_substr(char *, riff_int, riff_int, riff_int);
 
 #endif
