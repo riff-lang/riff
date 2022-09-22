@@ -11,7 +11,7 @@ LDFLAGS       = -lm
 LDFLAGS      += $(shell pcre2-config --libs8)
 
 WASM_CFLAGS   = -O3
-WASM_CFLAGS  += -Ilib/pcre2/src
+WASM_CFLAGS  += -Ilib/pcre2/src -DPCRE2_STATIC
 
 WASM_LDFLAGS  = -lm
 WASM_LDFLAGS += -Llib/pcre2/.libs -lpcre2-8
@@ -94,12 +94,13 @@ bats:
 warn: bin/warn
 
 wasm: $(SRC)
+# Build PCRE2 if necessary
+ifeq ($(wildcard lib/pcre2/pcre2test.wasm),)
+	@echo Building PCRE2
+	(cd lib/pcre2; ./autogen.sh; emconfigure ./configure --disable-shared; emmake make)
+endif
 	mkdir -p bin
 	emcc $(WASM_CFLAGS) $(SRC) $(WASM_LDFLAGS) $(WASM_SFLAGS) -o bin/riff.js
-
-# Run this target if PCRE2 not built locally
-pcre2-wasm:
-	(cd lib/pcre2; ./autogen.sh; emconfigure ./configure --disable-shared; emmake make)
 
 # Targets
 
