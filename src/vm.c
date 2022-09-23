@@ -281,31 +281,16 @@ VM_BINOP(match)  { set_int(l,  match(l, r)); }
 VM_BINOP(nmatch) { set_int(l, !match(l, r)); }
 
 VM_BINOP(idx) {
-    char temp[32];
     switch (l->type) {
-    case TYPE_INT: {
-        riff_lltostr(l->i, temp);
-        if (is_range(r)) {
-            set_str(l, riff_substr(temp, r->q->from, r->q->to, r->q->itvl));
-        } else {
-            riff_int r1  = intval(r);
-            riff_int len = (riff_int) strlen(temp);
-            if (r1 < 0)
-                r1 += len;
-            if (r1 > len - 1 || r1 < 0)
-                set_null(l);
-            else
-                set_str(l, riff_str_new(temp + r1, 1));
-        }
-        break;
-    }
+    case TYPE_INT:
     case TYPE_FLOAT: {
-        riff_dtostr(l->f, temp);
+        char temp[32];
+        char *p = temp;
+        riff_int len = (riff_int) riff_tostr(l, &p);
         if (is_range(r)) {
             set_str(l, riff_substr(temp, r->q->from, r->q->to, r->q->itvl));
         } else {
             riff_int r1  = intval(r);
-            riff_int len = (riff_int) strlen(temp);
             if (r1 < 0)
                 r1 += len;
             if (r1 > len - 1 || r1 < 0)
