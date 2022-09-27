@@ -7,6 +7,7 @@
 #include "value.h"
 
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #define push(b) c_push(y->c, b)
@@ -41,6 +42,7 @@ enum expr_flags {
 typedef struct {
     riff_str *id;
     int       d;
+    int       reserved: 1;
 } local;
 
 // Patch lists used for break/continue statements in loops
@@ -77,7 +79,7 @@ typedef struct {
 static int  expr(riff_parser *, uint32_t, int);
 static void stmt_list(riff_parser *);
 static void stmt(riff_parser *);
-static void add_local(riff_parser *, riff_str *);
+static void add_local(riff_parser *, riff_str *, int);
 static int  compile_fn(riff_parser *);
 static void y_init(riff_parser *);
 
@@ -203,13 +205,15 @@ static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
 }
 
 static void identifier(riff_parser *y, uint32_t flags) {
-    int scope = resolve_local(y, flags, y->x->tk.s);
+    int scope  = resolve_local(y, flags, y->x->tk.s);
+    local *var = scope >= 0 ? &y->lcl[scope] : NULL;
 
     // If symbol succeeds a prefix ++/-- operation, signal codegen to push the
     // address of the symbol
     if (flags & EXPR_REF) {
-        if (scope >= 0) {
-            c_local(y->c, scope, 1, !y->lhs && y->lx, &y->ins);
+        if (var) {
+            c_local(y->c, scope, 1, !var->reserved, &y->ins);
+            var->reserved = 1;
         } else {
             c_global(y->c, &y->x->tk, 1, &y->ins);
         }
@@ -225,14 +229,15 @@ static void identifier(riff_parser *y, uint32_t flags) {
             (is_incdec(y->x->la.kind) ||
              is_asgmt(y->x->la.kind)  ||
              LA_KIND('.') || LA_KIND('['))) {
-        if (scope >= 0) {
-            c_local(y->c, scope, 1, !y->lhs && y->lx, &y->ins);
+        if (var) {
+            c_local(y->c, scope, 1, !var->reserved, &y->ins);
+            var->reserved = 1;
         } else {
             c_global(y->c, &y->x->tk, 1, &y->ins);
         }
     } else {
-        if (scope >= 0) {
-            c_local(y->c, scope, 0, !y->lhs && y->lx, &y->ins);
+        if (var) {
+            c_local(y->c, scope, 0, 0, &y->ins);
         } else {
             c_global(y->c, &y->x->tk, 0, &y->ins);
         }
@@ -263,7 +268,7 @@ static void interpolated_str(riff_parser *y) {
         if (TK_KIND(TK_IDENT)) {
             int scope = resolve_local(y, 0, y->x->tk.s);
             if (scope >= 0) {
-                c_local(y->c, scope, 0, !y->lhs && y->lx, &y->ins);
+                c_local(y->c, scope, 0, 0, &y->ins);
             } else {
                 c_global(y->c, &y->x->tk, 0, &y->ins);
             }
@@ -421,7 +426,7 @@ static void anon_fn(riff_parser *y) {
     fy.x = y->x;
     fy.c = f->code;
     y_init(&fy);
-    add_local(&fy, name);   // Dummy reference to itself
+    add_local(&fy, name, 1);   // Dummy reference to itself
     f->arity = compile_fn(&fy);
     c_fn_constant(y->c, f, &y->ins);
 }
@@ -741,9 +746,9 @@ static void do_stmt(riff_parser *y) {
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
-static void add_local(riff_parser *y, riff_str *id) {
+static void add_local(riff_parser *y, riff_str *id, int reserved) {
     m_growarray(y->lcl, y->nlcl, y->lcap, local);
-    y->lcl[y->nlcl++] = (local) {id, y->ld};
+    y->lcl[y->nlcl++] = (local) {id, y->ld, reserved};
 }
 
 // Returns the arity of the parsed function
@@ -758,7 +763,7 @@ static int compile_fn(riff_parser *y) {
         // function
         while (1) {
             if (TK_KIND(TK_IDENT)) {
-                add_local(y, y->x->tk.s);
+                add_local(y, y->x->tk.s, 1);
                 ++arity;
                 advance();
             }
@@ -805,7 +810,7 @@ static void local_fn(riff_parser *y) {
     // If the identifier doesn't already exist as a local at the current scope,
     // add a new local.
     if (idx < 0 || y->lcl[idx].d != y->ld) {
-        add_local(y, id);
+        add_local(y, id, 1);
         c_local(y->c, y->nlcl-1, 1, 1, &y->ins);
     }
     riff_fn *f = malloc(sizeof(riff_fn));
@@ -819,7 +824,7 @@ static void local_fn(riff_parser *y) {
     y_init(&fy);
 
     // Reserve first local slot for itself. VM will adjust FP accordingly.
-    add_local(&fy, id);
+    add_local(&fy, id, 1);
 
     advance();
     f->arity = compile_fn(&fy);
@@ -854,7 +859,7 @@ static void fn_stmt(riff_parser *y) {
     // local functions which are compiled so they can reference themselves. This
     // is only to keep the VM calling convention consistent and (should) make
     // direct recursion a little faster.
-    add_local(&fy, id);
+    add_local(&fy, id, 1);
 
     f->arity = compile_fn(&fy);
 }
@@ -879,7 +884,7 @@ static void for_stmt(riff_parser *y) {
     if (!TK_KIND(TK_IDENT)) {
         err(y, "expected identifier");
     }
-    add_local(y, y->x->tk.s);
+    add_local(y, y->x->tk.s, 1);
     advance();
     int kv = 0;
     uint32_t flags = 0;
@@ -890,7 +895,7 @@ static void for_stmt(riff_parser *y) {
         if (!TK_KIND(TK_IDENT)) {
             err(y, "expected identifier following ','");
         }
-        add_local(y, y->x->tk.s);
+        add_local(y, y->x->tk.s, 1);
         advance();
     }
     set(lx);
@@ -1024,7 +1029,7 @@ static void local_stmt(riff_parser *y) {
         // current scope, add a new local
         if (idx < 0 || y->lcl[idx].d != y->ld) {
             set(lx);    // Only set for newly-declared locals
-            add_local(y, id);
+            add_local(y, id, 0);
         }
         expr(y, EXPR_REF, 0);
         c_pop_expr_stmt(y->c, 1, &y->ins);
