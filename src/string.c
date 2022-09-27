@@ -69,8 +69,10 @@ static inline strhash str_hash(const char *str, size_t len) {
 
 // NOTE: existence of '0' does not imply coercibility
 static inline uint8_t str_hints(const char *str, size_t len) {
-    return (has_zero(str, len)    & RIFF_STR_HINT_ZERO) |
-           (likely_coercible(str) & RIFF_STR_HINT_COERCIBLE);
+    uint8_t flags = 0;
+    if (has_zero(str, len))    flags |= RIFF_STR_HINT_ZERO;
+    if (likely_coercible(str)) flags |= RIFF_STR_HINT_COERCIBLE;
+    return flags;
 }
 
 static inline riff_str *next(riff_str *s) {
