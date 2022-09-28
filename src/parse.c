@@ -29,8 +29,6 @@
 #define TK_KIND(t)   (y->x->tk.kind == (t))
 #define LA_KIND(t)   (y->x->la.kind == (t))
 
-#define LAST_INS_ADDR(arity) (&y->c->code[y->c->n-(arity)-1])
-
 enum expr_flags {
     EXPR_UNARY  = 1 << 0,
     EXPR_FIELD  = 1 << 1,
@@ -59,7 +57,6 @@ typedef struct {
     int         nlcl;       // Number of locals in scope
     int         lcap;
     local      *lcl;        // Array of local vars
-    uint8_t    *ins;        // Last instruction pushed
     uint8_t     ld;         // Lexical depth/scope
     uint8_t     fd;         // Top-level scope of the current function
     uint8_t     id;         // Iterator depth (`for` loops only)
@@ -212,10 +209,10 @@ static void identifier(riff_parser *y, uint32_t flags) {
     // address of the symbol
     if (flags & EXPR_REF) {
         if (var) {
-            c_local(y->c, scope, 1, !var->reserved, &y->ins);
+            c_local(y->c, scope, 1, !var->reserved);
             var->reserved = 1;
         } else {
-            c_global(y->c, &y->x->tk, 1, &y->ins);
+            c_global(y->c, &y->x->tk, 1);
         }
         advance_mode(LEX_LED);
         return;
@@ -230,23 +227,23 @@ static void identifier(riff_parser *y, uint32_t flags) {
              is_asgmt(y->x->la.kind)  ||
              LA_KIND('.') || LA_KIND('['))) {
         if (var) {
-            c_local(y->c, scope, 1, !var->reserved, &y->ins);
+            c_local(y->c, scope, 1, !var->reserved);
             var->reserved = 1;
         } else {
-            c_global(y->c, &y->x->tk, 1, &y->ins);
+            c_global(y->c, &y->x->tk, 1);
         }
     } else {
         if (var) {
-            c_local(y->c, scope, 0, 0, &y->ins);
+            c_local(y->c, scope, 0, 0);
         } else {
-            c_global(y->c, &y->x->tk, 0, &y->ins);
+            c_global(y->c, &y->x->tk, 0);
         }
     }
     advance_mode(LEX_NUD);
 }
 
 static void literal(riff_parser *y, uint32_t flags) {
-    c_constant(y->c, &y->x->tk, &y->ins);
+    c_constant(y->c, &y->x->tk);
     advance_mode(LEX_LED);
     // Assert no assignment appears following a constant literal
     if (!(flags & EXPR_FIELD) && is_asgmt(y->x->tk.kind)) {
@@ -260,7 +257,7 @@ static void interpolated_str(riff_parser *y) {
         if (riff_strlen(y->x->tk.s) > 0) {
             ++n;
             y->x->tk.kind = TK_STR;
-            c_constant(y->c, &y->x->tk, &y->ins);
+            c_constant(y->c, &y->x->tk);
         }
         advance();
 
@@ -268,9 +265,9 @@ static void interpolated_str(riff_parser *y) {
         if (TK_KIND(TK_IDENT)) {
             int scope = resolve_local(y, 0, y->x->tk.s);
             if (scope >= 0) {
-                c_local(y->c, scope, 0, 0, &y->ins);
+                c_local(y->c, scope, 0, 0);
             } else {
-                c_global(y->c, &y->x->tk, 0, &y->ins);
+                c_global(y->c, &y->x->tk, 0);
             }
             ++n;
             advance_mode(LEX_STR);
@@ -292,13 +289,13 @@ static void interpolated_str(riff_parser *y) {
     if (LIKELY(TK_KIND(TK_STR))) {
         if (riff_strlen(y->x->tk.s) > 0) {
             ++n;
-            c_constant(y->c, &y->x->tk, &y->ins);
+            c_constant(y->c, &y->x->tk);
         }
         advance_mode(LEX_LED);
     } else {
         err(y, "invalid interpolation");
     }
-    c_concat(y->c, n, &y->ins);
+    c_concat(y->c, n);
 }
 
 static int paren_expr(riff_parser *y) {
@@ -379,30 +376,28 @@ static int paren_expr_list(riff_parser *y, int c) {
 
 // member_access_expr = id '.' id
 static void member_access(riff_parser *y, uint32_t flags) {
-    uint8_t *last_ins = y->ins;
+    int last_ins_idx = y->c->last;
     if (!TK_KIND(TK_IDENT)) {
         err(y, "expected identifier in member access expression");
     }
     riff_str *s = y->x->tk.s;
     advance_mode(LEX_LED);
-    c_str_index(y->c, last_ins, s, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['), &y->ins);
+    c_str_index(y->c, last_ins_idx, s, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['));
 }
 
 // subscript_expr = id '[' expr ']'
 static void subscript(riff_parser *y, uint32_t flags) {
-    uint8_t *last_ins = y->ins;
+    int last_ins_idx = y->c->last;
     int n = paren_expr_list(y, ']');
     consume_mode(y, LEX_LED, ']', "expected ']' following subscript expression");
-    c_index(y->c, last_ins, n, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['), &y->ins);
+    c_index(y->c, last_ins_idx, n, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind) || TK_KIND('.') || TK_KIND('['));
 }
 
 // call_expr = expr '(' [expr_list] ')'
 static void call(riff_parser *y) {
     int n = paren_expr_list(y, ')');
     consume_mode(y, LEX_LED, ')', "expected ')'");
-    push(OP_CALL);
-    push((uint8_t) n);
-    y->ins = LAST_INS_ADDR(1);
+    c_call(y->c, n);
 }
 
 // table_expr = '{' expr_list '}'
@@ -410,7 +405,7 @@ static void call(riff_parser *y) {
 static void table(riff_parser *y, int delim) {
     int n = expr_list(y, delim);
     consume_mode(y, LEX_LED, delim, "expected closing brace/bracket");
-    c_table(y->c, n, &y->ins);
+    c_table(y->c, n);
 }
 
 // Function literals
@@ -428,7 +423,7 @@ static void anon_fn(riff_parser *y) {
     y_init(&fy);
     add_local(&fy, name, 1);   // Dummy reference to itself
     f->arity = compile_fn(&fy);
-    c_fn_constant(y->c, f, &y->ins);
+    c_fn_constant(y->c, f);
 }
 
 // range_expr = [expr] '..' [expr] [':' expr] 
@@ -448,7 +443,7 @@ static int range(riff_parser *y, uint32_t flags, int type) {
         advance();
         e = expr(y, flags, 0);
     } else if (TK_KIND(')') || TK_KIND('}') || TK_KIND(']')) {
-        c_range(y->c, from, to, step, &y->ins);
+        c_range(y->c, from, to, step);
         return e;
     }
 
@@ -463,7 +458,7 @@ static int range(riff_parser *y, uint32_t flags, int type) {
         }
     }
 
-    c_range(y->c, from, to, step, &y->ins);
+    c_range(y->c, from, to, step);
     return e;
 }
 
@@ -474,7 +469,7 @@ static int nud(riff_parser *y, uint32_t flags) {
         set(ox);
         advance();
         e = expr(y, flags | EXPR_UNARY, 13);
-        c_prefix(y->c, tk, &y->ins);
+        c_prefix(y->c, tk);
         return e;
     }
     switch (tk) {
@@ -484,12 +479,7 @@ static int nud(riff_parser *y, uint32_t flags) {
         save_and_unset(ox);
         advance();
         expr(y, EXPR_FIELD, 17);
-        if (flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind)) {
-            push(OP_FLDA);
-        } else {
-            push(OP_FLDV);
-        }
-        y->ins = LAST_INS_ADDR(0);
+        c_fldv_index(y->c, flags & EXPR_REF || is_asgmt(y->x->tk.kind) || is_incdec(y->x->tk.kind));
         set(lhs);
         restore(ox);
         break;
@@ -529,7 +519,7 @@ static int nud(riff_parser *y, uint32_t flags) {
             err(y, "unexpected symbol following prefix ++/--");
         }
         expr(y, flags | EXPR_REF, 14);
-        c_prefix(y->c, tk, &y->ins);
+        c_prefix(y->c, tk);
         set(lhs);
         break;
     case TK_NULL:
@@ -573,7 +563,7 @@ static int led(riff_parser *y, uint32_t flags, int p, int tk) {
             return p;
         }
         set(lhs);
-        c_postfix(y->c, tk, &y->ins);
+        c_postfix(y->c, tk);
         advance_mode(LEX_LED);
         return y->x->tk.kind;
     case '?':
@@ -611,7 +601,7 @@ static int led(riff_parser *y, uint32_t flags, int p, int tk) {
             }
             advance();
             p = expr(y, flags & ~EXPR_REF, lbop(tk) ? lbp(tk) : lbp(tk) - 1);
-            c_infix(y->c, tk, &y->ins);
+            c_infix(y->c, tk);
         }
         break;
     }
@@ -650,7 +640,7 @@ static int expr(riff_parser *y, uint32_t flags, int rbp) {
 // expr_stmt = expr_list
 static void expr_stmt(riff_parser *y) {
     int n = expr_list(y, 0);
-    c_pop_expr_stmt(y->c, n, &y->ins);
+    c_pop_expr_stmt(y->c, n);
 }
 
 // After exiting scope, "pop" local variables no longer in scope by
@@ -663,7 +653,7 @@ static uint8_t pop_locals(riff_parser *y, int depth, int f) {
         ++count;
     }
     if (count) {
-        c_pop(y->c, count, &y->ins);
+        c_pop(y->c, count);
     }
     return count;
 }
@@ -738,7 +728,7 @@ static void do_stmt(riff_parser *y) {
         c_patch(y->c, c.l[i]);
     }
     expr(y, 0, 0);
-    c_jump(y->c, JNZ, l1, &y->ins);
+    c_jump(y->c, JNZ, l1);
     // Patch break stmts
     for (int i = 0; i < b.n; i++) {
         c_patch(y->c, b.l[i]);
@@ -811,7 +801,7 @@ static void local_fn(riff_parser *y) {
     // add a new local.
     if (idx < 0 || y->lcl[idx].d != y->ld) {
         add_local(y, id, 1);
-        c_local(y->c, y->nlcl-1, 1, 1, &y->ins);
+        c_local(y->c, y->nlcl-1, 1, 1);
     }
     riff_fn *f = malloc(sizeof(riff_fn));
     f_init(f, fn_name);
@@ -830,8 +820,8 @@ static void local_fn(riff_parser *y) {
     f->arity = compile_fn(&fy);
 
     // Add function to the outer scope
-    c_fn_constant(y->c, f, &y->ins);
-    c_infix(y->c, '=', &y->ins);
+    c_fn_constant(y->c, f);
+    c_infix(y->c, '=');
 }
 
 // fn_stmt = 'fn' id ['(' [id {',' id} ')'] '{' stmt_list '}'
@@ -930,7 +920,7 @@ static void for_stmt(riff_parser *y) {
     y->nlcl -= pop_locals(y, y->ld, 1);
 
     c_patch(y->c, l1);
-    c_loop(y->c, l1 + 2, &y->ins);
+    c_loop(y->c, l1 + 2);
 
     // Patch break stmts
     for (int i = 0; i < b.n; i++) {
@@ -940,7 +930,7 @@ static void for_stmt(riff_parser *y) {
     // OP_POPL cleans up iterator state in the VM. Needs to be its own
     // instruction since break statements need to jump past the OP_LOOP
     // instructions to prevent further iteration
-    c_end_loop(y->c, &y->ins);
+    c_end_loop(y->c);
 
     y->ld -= 1;
     y->id -= 1;
@@ -1032,7 +1022,7 @@ static void local_stmt(riff_parser *y) {
             add_local(y, id, 0);
         }
         expr(y, EXPR_REF, 0);
-        c_pop_expr_stmt(y->c, 1, &y->ins);
+        c_pop_expr_stmt(y->c, 1);
         unset(lx);
         if (TK_KIND(',')) {
             advance();
@@ -1066,7 +1056,7 @@ static void loop_stmt(riff_parser *y) {
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
     }
-    c_jump(y->c, JMP, l1, &y->ins);
+    c_jump(y->c, JMP, l1);
     // Patch break stmts
     for (int i = 0; i < b.n; i++) {
         c_patch(y->c, b.l[i]);
@@ -1080,13 +1070,13 @@ static void ret_stmt(riff_parser *y) {
     // iterators before parsing any return expression allows for codegen to
     // still check for tailcalls.
     for (int i = y->id; i > 0; --i) {
-        c_end_loop(y->c, &y->ins);
+        c_end_loop(y->c);
     }
     if (y->ld == y->fd) {
         set(retx);
     }
     if (TK_KIND(TK_EOI) || TK_KIND(';') || TK_KIND('}')) {
-        c_return(y->c, y->ins, 0, &y->ins);
+        c_return(y->c, 0);
         return;
     }
 
@@ -1095,7 +1085,7 @@ static void ret_stmt(riff_parser *y) {
 
     // p != y->x->p when a valid expression is parsed following the `return`
     // keyword.
-    c_return(y->c, y->ins, p != y->x->p, &y->ins);
+    c_return(y->c, p != y->x->p);
 }
 
 // while_stmt = 'while' expr stmt
@@ -1125,7 +1115,7 @@ static void while_stmt(riff_parser *y) {
     for (int i = 0; i < c.n; i++) {
         c_patch(y->c, c.l[i]);
     }
-    c_jump(y->c, JMP, l1, &y->ins);
+    c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
     // Patch break stmts
     for (int i = 0; i < b.n; i++) {
@@ -1189,7 +1179,6 @@ static void y_init(riff_parser *y) {
     y->nlcl = 0;
     y->lcap = 0;
     y->lcl  = NULL;
-    y->ins  = NULL;
     y->ld   = 0;
     y->fd   = 0;
     y->id   = 0;
