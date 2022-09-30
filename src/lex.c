@@ -12,8 +12,6 @@
 #include <string.h>
 
 #define advance() (++x->p)
-#define decval(c) (c - '0')
-#define hexval(c) (isdigit(c) ? decval(c) : tolower(c) - 'a' + 10)
 
 static void err(riff_lexer *x, const char *msg) {
     fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
@@ -22,6 +20,14 @@ static void err(riff_lexer *x, const char *msg) {
 
 static int isoctal(char c) {
     return c >= '0' && c <= '7';
+}
+
+static int decval(char c) {
+    return c - '0';
+}
+
+static int hexval(char c) {
+    return isdigit(c) ? decval(c) : tolower(c) - 'a' + 10;
 }
 
 static int valid_alpha(char c) {

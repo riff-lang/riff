@@ -79,6 +79,14 @@ line")'
     [ "$output" = "multiline" ]
 }
 
+@test "Escape sequences" {
+    $RUNCODE 'print(byte("\x1b"))'
+    [ "$output" = "27" ]
+
+    $RUNCODE 'print(byte("\e"))'
+    [ "$output" = "27" ]
+}
+
 @test "String interpolation" {
     $RUNCODE 'x="world" print("hello #x")'
     [ "$output" = "hello world" ]
