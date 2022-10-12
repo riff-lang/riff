@@ -26,6 +26,12 @@ load conf.bash
     [ "$output" = "26997" ]
 }
 
+# Purely for testing OP_IMM16
+@test "UINT16_MAX" {
+    $RUNCODE 'print(0xffff)'
+    [ "$output" = "65535" ]
+}
+
 @test "Decimal INT64_MAX" {
     $RUNCODE 'print(9223372036854775807)'
     [ "$output" = "9223372036854775807" ]

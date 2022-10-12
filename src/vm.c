@@ -714,11 +714,11 @@ L(NUL):     set_null(&sp++->v); ++ip; BREAK;
 // Assign integer value x to the top of the stack.
 #define PUSHIMM(x) set_int(&sp++->v, (x))
 
-L(IMM8):    PUSHIMM(ip[1]);               ip += 2; BREAK;
-L(IMM16):   PUSHIMM(*(int16_t *) &ip[1]); ip += 3; BREAK;
-L(IMM0):    PUSHIMM(0);                   ++ip;    BREAK;
-L(IMM1):    PUSHIMM(1);                   ++ip;    BREAK;
-L(IMM2):    PUSHIMM(2);                   ++ip;    BREAK;
+L(IMM8):    PUSHIMM(ip[1]);                ip += 2; BREAK;
+L(IMM16):   PUSHIMM(*(uint16_t *) &ip[1]); ip += 3; BREAK;
+L(IMM0):    PUSHIMM(0);                    ++ip;    BREAK;
+L(IMM1):    PUSHIMM(1);                    ++ip;    BREAK;
+L(IMM2):    PUSHIMM(2);                    ++ip;    BREAK;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the stack.

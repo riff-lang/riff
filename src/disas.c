@@ -108,7 +108,7 @@ static void d_code_obj(riff_code *c, int ipw) {
                 printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, ip - u16);
                 break;
             case OP_IMM16:
-                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, i16);
+                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, u16);
                 break;
             default:
                 printf(INST1, ipw, ip, b0, b1, MNEMONIC, b1);
