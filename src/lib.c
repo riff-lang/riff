@@ -1,5 +1,6 @@
 #include "lib.h"
 
+#include "buf.h"
 #include "conf.h"
 #include "state.h"
 #include "fmt.h"
@@ -248,24 +249,106 @@ LIB_FN(putc) {
     return 1;
 }
 
-// read(f[,n])
-LIB_FN(read) {
-    char buf[STR_BUF_SZ];
-    FILE *f = argc && is_file(fp) ? fp->fh->p : stdin;
-    if (argc > 1 && is_num(fp+1)) {
-        size_t count = (size_t) intval(fp+1);
-        size_t nread = fread(buf, sizeof *buf, count, f);
-        set_str(fp-1, riff_str_new(buf, nread));
+#define READ_BUF_SZ 0x10000
+
+static inline int read_bytes(FILE *f, riff_int n, riff_str **ret) {
+    if (n) {
+        riff_buf buf;
+        riff_buf_init_size(&buf, n);
+        size_t nr = fread(buf.buf, sizeof (char), n, f);
+        *ret = riff_str_new(buf.buf, nr);
+        riff_buf_free(&buf);
+        return nr > 0;
     } else {
-        if (!fgets(buf, sizeof buf, f)) {
-            return 0;
+        int c = getc(f);
+        ungetc(c, f);
+        *ret = riff_str_new("", 0);
+        return c != EOF;
+    }
+}
+
+static inline int read_line(FILE *f, riff_str **ret) {
+    riff_buf buf;
+    size_t m = READ_BUF_SZ;
+    riff_buf_init_size(&buf, m);
+    while (1) {
+        riff_buf_resize(&buf, m);
+        if (fgets(buf.buf + buf.n, m - buf.n, f) == NULL) {
+            break;
         }
-        set_str(fp-1, riff_str_new(buf, strcspn(buf, "\n")));
+        buf.n += (size_t) strlen(buf.buf + buf.n);
+        if (buf.n && buf.buf[buf.n-1] == '\n') {
+            --buf.n;
+            break;
+        }
+        if (buf.n >= m - 64) {
+            m += m;
+        }
+    }
+    *ret = riff_str_new(buf.buf, buf.n);
+    riff_buf_free(&buf);
+    return 1;
+}
+
+static inline int read_all(FILE *f, riff_str **ret) {
+    riff_buf buf;
+    size_t m = READ_BUF_SZ;
+    riff_buf_init_size(&buf, m);
+    do {
+        riff_buf_resize(&buf, m);
+        buf.n += fread(buf.buf + buf.n, sizeof (char), m - buf.n, f);
+        m += m;
+    } while (buf.n == m);
+    *ret = riff_str_new(buf.buf, buf.n);
+    riff_buf_free(&buf);
+    return 1;
+}
+
+static inline int read_file_mode(FILE *f, char *mode, riff_str **ret) {
+    switch (*mode) {
+    case 'A':
+    case 'a':
+        return read_all(f, ret);
+    case 'L':
+    case 'l':
+    default:
+        return read_line(f, ret);
+    }
+}
+
+// read([a[,b]])
+LIB_FN(read) {
+    riff_str *ret = NULL;
+    int res = 0;
+    if (!argc) {
+        read_line(stdin, &ret);
+    } else if (!is_file(fp)) {
+        if (is_str(fp)) {
+            res = read_file_mode(stdin, fp->s->str, &ret);
+        } else {
+            res = read_bytes(stdin, intval(fp), &ret);
+        }
+    } else if (is_file(fp)) {
+        if (argc == 1) {
+            res = read_line(fp->fh->p, &ret);
+        } else {
+            if (is_str(fp+1)) {
+                res = read_file_mode(fp->fh->p, fp[1].s->str, &ret);
+            } else {
+                res = read_bytes(fp->fh->p, intval(fp+1), &ret);
+            }
+        }
+    }
+
+    if (UNLIKELY(!res)) {
+        set_int(fp-1, 0);
+    } else {
+        set_str(fp-1, ret);
     }
     return 1;
 }
 
-// write(s[,f])
+// write(v[,f])
 LIB_FN(write) {
     if (UNLIKELY(!argc)) {
         return 0;
