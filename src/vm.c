@@ -118,6 +118,15 @@ static inline int exec(uint8_t *, riff_val *, vm_stack *, vm_stack *);
         } \
     }
 
+static inline void register_lib(void) {
+    riff_lib_register_base(&globals);
+    riff_lib_register_io(&globals);
+    riff_lib_register_math(&globals);
+    riff_lib_register_os(&globals);
+    riff_lib_register_prng(&globals);
+    riff_lib_register_str(&globals);
+}
+
 // VM entry point/initialization
 int vm_exec(riff_state *e) {
     riff_htab_init(&globals);
@@ -126,7 +135,7 @@ int vm_exec(riff_state *e) {
     re_register_fldv(&fldv);
     init_argv(&argv, e->arg0, e->argc, e->argv);
     riff_htab_insert_cstr(&globals, "arg", &(riff_val){TYPE_TAB, .t = &argv});
-    l_register_builtins(&globals);
+    register_lib();
     // Add user-defined functions to the global hash table
     add_user_funcs();
     return exec(e->main.code->code, e->main.code->k, stack, stack);
