@@ -27,12 +27,6 @@ LIB_FN(close) {
     return 0;
 }
 
-// eof(f)
-LIB_FN(eof) {
-    set_int(fp-1, !is_file(fp) || feof(fp->fh->p));
-    return 1;
-}
-
 // eval(s)
 LIB_FN(eval) {
     if (!is_str(fp)) {
@@ -61,22 +55,6 @@ LIB_FN(flush) {
         err("error flushing stream");
     }
     return 0;
-}
-
-// get([n])
-LIB_FN(get) {
-    char buf[STR_BUF_SZ];
-    if (argc) {
-        size_t count = intval(fp);
-        size_t nread = fread(buf, sizeof *buf, count, stdin);
-        set_str(fp-1, riff_str_new(buf, nread));
-        return 1;
-    }
-    if (!fgets(buf, sizeof buf, stdin)) {
-        return 0;
-    }
-    set_str(fp-1, riff_str_new(buf, strcspn(buf, "\n")));
-    return 1;
 }
 
 // getc([f])
@@ -266,10 +244,8 @@ LIB_FN(write) {
 
 static riff_lib_fn_reg iolib[] = {
     LIB_FN_REG(close,  1),
-    LIB_FN_REG(eof,    0),
     LIB_FN_REG(eval,   1),
     LIB_FN_REG(flush,  0),
-    LIB_FN_REG(get,    0),
     LIB_FN_REG(getc,   0),
     LIB_FN_REG(open,   1),
     LIB_FN_REG(printf, 1),
