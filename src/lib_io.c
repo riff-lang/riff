@@ -3,10 +3,7 @@
 #include "buf.h"
 #include "conf.h"
 #include "fmt.h"
-#include "parse.h"
-#include "state.h"
 #include "string.h"
-#include "vm.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -24,27 +21,6 @@ LIB_FN(close) {
     if (is_file(fp))
         if (!(fp->fh->flags & FH_STD))
             fclose(fp->fh->p);
-    return 0;
-}
-
-// eval(s)
-LIB_FN(eval) {
-    if (!is_str(fp)) {
-        return 0;
-    }
-    riff_state s;
-    riff_fn main;
-    riff_code c;
-
-    riff_state_init(&s);
-    c_init(&c);
-    main.code = &c;
-    main.arity = 0;
-    s.main = main;
-    s.src = fp->s->str;
-    main.name = NULL;
-    riff_compile(&s);
-    vm_exec_reenter(&s, (vm_stack *) fp);
     return 0;
 }
 
@@ -244,7 +220,6 @@ LIB_FN(write) {
 
 static riff_lib_fn_reg iolib[] = {
     LIB_FN_REG(close,  1),
-    LIB_FN_REG(eval,   1),
     LIB_FN_REG(flush,  0),
     LIB_FN_REG(getc,   0),
     LIB_FN_REG(open,   1),

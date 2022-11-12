@@ -1,11 +1,35 @@
 #include "lib.h"
 
+#include "parse.h"
+#include "state.h"
 #include "string.h"
 #include "util.h"
+#include "vm.h"
 
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+
+// eval(s)
+LIB_FN(eval) {
+    if (!is_str(fp)) {
+        return 0;
+    }
+    riff_state s;
+    riff_fn main;
+    riff_code c;
+
+    riff_state_init(&s);
+    c_init(&c);
+    main.code = &c;
+    main.arity = 0;
+    s.main = main;
+    s.src = fp->s->str;
+    main.name = NULL;
+    riff_compile(&s);
+    vm_exec_reenter(&s, (vm_stack *) fp);
+    return 0;
+}
 
 // num(s[,b])
 // Takes a string `s` and an optional base `b` and returns the interpreted num.
@@ -85,6 +109,7 @@ LIB_FN(type) {
 }
 
 static riff_lib_fn_reg baselib[] = {
+    LIB_FN_REG(eval,  1),
     LIB_FN_REG(num,   1),
     LIB_FN_REG(print, 1),
     LIB_FN_REG(type,  1)
