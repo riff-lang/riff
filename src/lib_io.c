@@ -228,7 +228,7 @@ LIB_FN(read) {
     riff_str *ret = NULL;
     int res = 0;
     if (!argc) {
-        read_line(stdin, &ret);
+        res = read_line(stdin, &ret);
     } else if (!is_file(fp)) {
         if (is_str(fp)) {
             res = read_file_mode(stdin, fp->s->str, &ret);
