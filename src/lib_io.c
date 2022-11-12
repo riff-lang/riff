@@ -169,8 +169,7 @@ static inline int read_bytes(FILE *f, riff_int n, riff_str **ret) {
     } else {
         int c = getc(f);
         ungetc(c, f);
-        *ret = riff_str_new("", 0);
-        return c != EOF;
+        return -(c != EOF);
     }
 }
 
@@ -247,10 +246,10 @@ LIB_FN(read) {
         }
     }
 
-    if (UNLIKELY(!res)) {
-        set_int(fp-1, 0);
-    } else {
+    if (LIKELY(res > 0)) {
         set_str(fp-1, ret);
+    } else {
+        set_int(fp-1, !!res);
     }
     return 1;
 }
