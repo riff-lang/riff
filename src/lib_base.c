@@ -10,6 +10,34 @@
 #include <errno.h>
 #include <string.h>
 
+static void err(const char *msg) {
+    fprintf(stderr, "riff: %s\n", msg);
+    exit(1);
+}
+
+#include "vm_ops.h"
+
+LIB_FN(error);
+
+// assert(e[,s])
+LIB_FN(assert) {
+    if (UNLIKELY(!argc)) {
+        err("expected expression for assertion");
+    }
+    if (UNLIKELY(!vm_test(fp))) {
+        l_error(fp+1, argc-1);
+    }
+    return 0;
+}
+
+// error([s])
+LIB_FN(error) {
+    if (argc && !is_null(fp)) {
+        fputs_val(stderr, fp);
+    }
+    exit(1);
+}
+
 // eval(s)
 LIB_FN(eval) {
     if (!is_str(fp)) {
@@ -109,10 +137,12 @@ LIB_FN(type) {
 }
 
 static riff_lib_fn_reg baselib[] = {
-    LIB_FN_REG(eval,  1),
-    LIB_FN_REG(num,   1),
-    LIB_FN_REG(print, 1),
-    LIB_FN_REG(type,  1)
+    LIB_FN_REG(assert, 0),
+    LIB_FN_REG(error,  0),
+    LIB_FN_REG(eval,   1),
+    LIB_FN_REG(num,    1),
+    LIB_FN_REG(print,  1),
+    LIB_FN_REG(type,   1),
 };
 
 void riff_lib_register_base(riff_htab *g) {
