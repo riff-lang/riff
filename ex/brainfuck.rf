@@ -12,7 +12,7 @@ op['['] = "while m[i]{"
 op[']'] = "}"
 
 file = arg[1] ? open(arg[1]) : stdin
-while !eof(file)
+while read(file,0)
     prog #= op[getc(file)]
 close(file)
 i = 0

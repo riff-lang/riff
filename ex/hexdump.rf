@@ -3,7 +3,7 @@
 // Reversible hexdump utility
 
 fn dump(f) {
-    while !eof(f) {
+    while read(f,0) {
         if !(s = read(f,16)) break
         printf("%07x0: ", ln++)
         for i in #s-1
@@ -16,9 +16,8 @@ fn dump(f) {
 }
 
 fn rev(f) {
-    while !eof(f) {
-        s = read(f)
-        if s ~ /.*: (.{48})/
+    while read(f,0) {
+        if read(f) ~ /.*: (.{48})/
             for i in split($1)
                 putc(num(i,16))
     }
