@@ -161,14 +161,13 @@ static void unicode_esc(riff_lexer *x, int len) {
     char buf[8];
     int n = 8 - riff_unicodetoutf8(buf, c);
     for (; n < 8; ++n) {
-        m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
-        x->buf.c[x->buf.n++] = buf[n];
+        riff_buf_add_char(x->buf, buf[n]);
     }
 }
 
 // TODO handling of multi-line string literals
 static int str_literal(riff_lexer *x, riff_token *tk, int d) {
-    x->buf.n = 0;
+    x->buf->n = 0;
     int c;
 str_start:
     while ((c = *x->p) != d) {
@@ -176,7 +175,7 @@ str_start:
         // Interpolated string
         case '#':
             if (valid_alpha(x->p[1]) || valid_interpolation_delim(x->p[1])) {
-                tk->s = riff_str_new(x->buf.c, x->buf.n);
+                tk->s = riff_str_new(x->buf->buf, x->buf->n);
                 advance();
                 return d == '\''
                     ? TK_STR_INTER_SQ
@@ -230,16 +229,15 @@ str_start:
             advance();
             break;
         }
-        m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
-        x->buf.c[x->buf.n++] = c;
+        riff_buf_add_char(x->buf, c);
     }
-    tk->s = riff_str_new(x->buf.c, x->buf.n);
+    tk->s = riff_str_new(x->buf->buf, x->buf->n);
     advance();
     return TK_STR;
 }
 
 static int regex_literal(riff_lexer *x, riff_token *tk, int d) {
-    x->buf.n = 0;
+    x->buf->n = 0;
     int c;
 re_start:
     while ((c = *x->p) != d) {
@@ -260,11 +258,9 @@ re_start:
                 advance();
                 break;
             default:
-                // Copy over escape sequence unmodified - let PCRE2
-                // handle it.
-                m_growarray(x->buf.c, x->buf.n + 1, x->buf.cap, x->buf.c);
-                x->buf.c[x->buf.n++] =  '\\';
-                x->buf.c[x->buf.n++] =  *x->p;
+                // Copy over escape sequence unmodified; let PCRE2 handle it.
+                riff_buf_add_char(x->buf, '\\');
+                riff_buf_add_char(x->buf, *x->p);
                 advance();
                 goto re_start;
             }
@@ -283,8 +279,7 @@ re_start:
             advance();
             break;
         }
-        m_growarray(x->buf.c, x->buf.n, x->buf.cap, x->buf.c);
-        x->buf.c[x->buf.n++] = c;
+        riff_buf_add_char(x->buf, c);
     }
     uint32_t flags = 0;
     advance();
@@ -313,7 +308,7 @@ re_start:
         advance();
     }
     int errcode;
-    riff_regex *r = re_compile(x->buf.c, x->buf.n, flags, &errcode);
+    riff_regex *r = re_compile(x->buf->buf, x->buf->n, flags, &errcode);
 
     // Regex compilation error handling
     if (errcode != 100) {
@@ -525,19 +520,8 @@ int riff_lex_init(riff_lexer *x, const char *src) {
     x->la.kind = 0;
     x->ln      = 1;
     x->p       = src;
-    x->buf.n   = 0;
-    x->buf.cap = 0;
-    x->buf.c   = NULL;
     riff_lex_advance(x, 0);
     return 0;
-}
-
-// Lexer itself should be stack-allocated, but the string buffer is
-// heap-allocated
-void riff_lex_free(riff_lexer *x) {
-    if (x->buf.c != NULL) {
-        free(x->buf.c);
-    }
 }
 
 int riff_lex_advance(riff_lexer *x, int mode) {

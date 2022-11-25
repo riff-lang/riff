@@ -1,6 +1,7 @@
 #ifndef LEX_H
 #define LEX_H
 
+#include "buf.h"
 #include "value.h"
 
 #include <stdint.h>
@@ -90,15 +91,10 @@ typedef struct {
     riff_token  la;     // Lookahead token
     int         ln;     // Current line of the source
     const char *p;      // Pointer to the current position in the source
-    struct {
-        int   n;
-        int   cap;
-        char *c;
-    } buf;              // String buffer
+    riff_buf   *buf;    // String buffer
 } riff_lexer;
 
 int  riff_lex_init(riff_lexer *, const char *);
-void riff_lex_free(riff_lexer *);
 int  riff_lex_advance(riff_lexer *, int);
 int  riff_lex_peek(riff_lexer *, int);
 
