@@ -184,6 +184,15 @@ static int allxcase(riff_val *fp, int c) {
     return 1;
 }
 
+// ord(s)
+LIB_FN(ord) {
+    if (!is_str(fp))
+        return 0;
+    char *end;
+    set_int(fp-1, riff_utf8tounicode(fp->s->str, &end));
+    return 1;
+}
+
 // lower/upper(s)
 LIB_FN(lower) { return allxcase(fp, 0); }
 LIB_FN(upper) { return allxcase(fp, 1); }
@@ -291,6 +300,7 @@ static riff_lib_fn_reg strlib[] = {
     LIB_FN_REG(fmt,   1),
     LIB_FN_REG(gsub,  2),
     LIB_FN_REG(hex,   1),
+    LIB_FN_REG(ord,   1),
     LIB_FN_REG(lower, 1),
     LIB_FN_REG(split, 1),
     LIB_FN_REG(sub,   2),
