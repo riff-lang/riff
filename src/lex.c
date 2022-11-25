@@ -166,77 +166,6 @@ static void unicode_esc(riff_lexer *x, int len) {
     }
 }
 
-static int char_literal(riff_lexer *x, riff_token *tk, int d) {
-    int c;
-    riff_int v = 0;
-    while ((c = *x->p) != d) {
-
-        // NOTE: check for (v & (0xFFull << 55) to assert a multicharacter
-        // sequence contains only 64 bits worth of characters. Otherwise, the
-        // resulting value will simply be the lowest 64 bits of the sequence.
-
-        v <<= 8;
-        switch (c) {
-        case '\\':
-            advance();
-            switch (*x->p) {
-            case 'a':  advance(); v += '\a';       break;
-            case 'b':  advance(); v += '\b';       break;
-            case 'e':  advance(); v += 0x1b;       break; // Escape char
-            case 'f':  advance(); v += '\f';       break;
-            case 'n':  advance(); v += '\n';       break;
-            case 'r':  advance(); v += '\r';       break;
-            case 't':  advance(); v += '\t';       break;
-            case 'v':  advance(); v += '\v';       break;
-            case 'x':  advance(); v += hex_esc(x); break;
-            case '\\': advance(); v += '\\';       break; 
-            case '\'': advance(); v += '\'';       break; 
-            case 'u': {
-                advance();
-                uint32_t u = unicode_int(x, 4);
-                v <<= u & 0xff00 ? 8 : 0;
-                v += u;
-                break;
-            }
-            case 'U': {
-                advance();
-                uint32_t u = unicode_int(x, 8);
-                v <<= u & 0xff000000 ? 24 :
-                      u & 0x00ff0000 ? 16 :
-                      u & 0x0000ff00 ?  8 : 0;
-                v += u;
-                break;
-            }
-            default:
-               v += oct_esc(x);
-               break;
-            }
-            break;
-        case '\0':
-            err(x, "reached end of input with unterminated character literal");
-        default:
-            if (c & 0x80) {
-                char *end;
-                riff_int u = riff_utf8tounicode(x->p, &end);
-                v <<= u & 0xff000000 ? 24 :
-                      u & 0x00ff0000 ? 16 :
-                      u & 0x0000ff00 ?  8 : 0;
-                v += u;
-                x->p = end;
-                if (u < 0)
-                    err(x, "invalid unicode character");
-            } else {
-                advance();
-                v += c;
-            }
-            break;
-        }
-    }
-    advance();
-    tk->i = v;
-    return TK_INT;
-}
-
 // TODO handling of multi-line string literals
 static int str_literal(riff_lexer *x, riff_token *tk, int d) {
     x->buf.n = 0;
@@ -249,7 +178,9 @@ str_start:
             if (valid_alpha(x->p[1]) || valid_interpolation_delim(x->p[1])) {
                 tk->s = riff_str_new(x->buf.c, x->buf.n);
                 advance();
-                return TK_STR_INTER;
+                return d == '\''
+                    ? TK_STR_INTER_SQ
+                    : TK_STR_INTER_DQ;
             }
             advance();
             break;
@@ -475,7 +406,9 @@ static void block_comment(riff_lexer *x) {
 
 static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
     int c;
-    if (mode == LEX_STR) {
+    if (mode == LEX_STR_SQ) {
+        return str_literal(x, tk, '\'');
+    } else if (mode == LEX_STR_DQ) {
         return str_literal(x, tk, '"');
     }
     while (1) {
@@ -489,7 +422,9 @@ static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
             } else {
                 return check2(x, '=', TK_NE, '!');
             }
-        case '"': return str_literal(x, tk, c);
+        case '"':
+        case '\'':
+            return str_literal(x, tk, c);
         case '#': return check2(x, '=', TK_CATX, '#');
         case '%': return check2(x, '=', TK_MODX, '%');
         case '&': return check3(x, '=', TK_ANDX, '&', TK_AND, '&');
@@ -544,7 +479,6 @@ static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
                                    '=', TK_SHRX, TK_SHR, '>');
         case '^': return check2(x, '=', TK_XORX, '^');
         case '|': return check3(x, '=', TK_ORX, '|', TK_OR, '|');
-        case '\'': return char_literal(x, tk, c);
         case '$': case '(': case ')': case ',': case ':':
         case ';': case '?': case ']': case '[': case '{':
         case '}': case '~':

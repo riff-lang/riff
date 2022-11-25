@@ -21,7 +21,8 @@ typedef struct {
 enum lexer_mode {
     LEX_NUD,
     LEX_LED,
-    LEX_STR
+    LEX_STR_SQ,     // Interpolated string (single quotes)
+    LEX_STR_DQ      // Interpolated string (double quotes)
 };
 
 enum token_kind {
@@ -73,7 +74,8 @@ enum token_kind {
     TK_FLOAT,
     TK_INT,
     TK_STR,
-    TK_STR_INTER,
+    TK_STR_INTER_SQ,
+    TK_STR_INTER_DQ,
     TK_REGEX,
 
     // Identifiers

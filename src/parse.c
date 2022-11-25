@@ -251,9 +251,11 @@ static void literal(riff_parser *y, uint32_t flags) {
     }
 }
 
-static void interpolated_str(riff_parser *y) {
+static void interpolated_str(riff_parser *y, char d) {
     uint8_t n = 0;
-    while (TK_KIND(TK_STR_INTER)) {
+    int inter_mode = d == '\'' ? TK_STR_INTER_SQ : TK_STR_INTER_DQ;
+    int lex_mode = d == '\'' ? LEX_STR_SQ : LEX_STR_DQ;
+    while (TK_KIND(inter_mode)) {
         if (riff_strlen(y->x->tk.s) > 0) {
             ++n;
             y->x->tk.kind = TK_STR;
@@ -270,7 +272,7 @@ static void interpolated_str(riff_parser *y) {
                 c_global(y->c, &y->x->tk, 0);
             }
             ++n;
-            advance_mode(LEX_STR);
+            advance_mode(lex_mode);
         } else {
             char c = closing_delim(y->x->tk.kind);
             peek();
@@ -278,9 +280,9 @@ static void interpolated_str(riff_parser *y) {
                 advance();
                 expr(y, 0, 0);
                 ++n;
-                consume_mode(y, LEX_STR, c, "expected closing delimeter following interpolated expression");
+                consume_mode(y, lex_mode, c, "expected closing delimeter following interpolated expression");
             } else {
-                advance_mode(LEX_STR);
+                advance_mode(lex_mode);
             }
         }
     }
@@ -529,8 +531,11 @@ static int nud(riff_parser *y, uint32_t flags) {
     case TK_REGEX:
         literal(y, flags);
         break;
-    case TK_STR_INTER:
-        interpolated_str(y);
+    case TK_STR_INTER_SQ:
+        interpolated_str(y, '\'');
+        break;
+    case TK_STR_INTER_DQ:
+        interpolated_str(y, '"');
         break;
     case TK_IDENT:
         identifier(y, flags);

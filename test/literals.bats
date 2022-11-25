@@ -65,17 +65,6 @@ load conf.bash
     [ "$output" = "-9223372036854775808" ]
 }
 
-@test "Character literals" {
-    $RUNCODE "print('A')"
-    [ "$output" -eq 65 ]
-
-    $RUNCODE "print('abcd')"
-    [ "$output" = "1633837924" ]
-
-    $RUNCODE "print('abcdefgh')"
-    [ "$output" = "7017280452245743464" ]
-}
-
 @test "String literals" {
     $RUNCODE 'print("hello")'
     [ "$output" = "hello" ]

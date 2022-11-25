@@ -13,7 +13,7 @@ op[']'] = "}"
 
 file = arg[1] ? open(arg[1]) : stdin
 while read(file,0)
-    prog #= op[getc(file)]
+    prog #= op[read(file,1)]
 close(file)
 i = 0
 eval(prog)
