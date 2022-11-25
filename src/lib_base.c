@@ -21,10 +21,10 @@ LIB_FN(error);
 
 // assert(e[,s])
 LIB_FN(assert) {
-    if (UNLIKELY(!argc)) {
+    if (riff_unlikely(!argc)) {
         err("expected expression for assertion");
     }
-    if (UNLIKELY(!vm_test(fp))) {
+    if (riff_unlikely(!vm_test(fp))) {
         l_error(fp+1, argc-1);
     }
     return 0;
@@ -114,7 +114,7 @@ LIB_FN(print) {
 
 // type(x)
 LIB_FN(type) {
-    if (UNLIKELY(!argc)) {
+    if (riff_unlikely(!argc)) {
         return 0;
     }
     char *str;

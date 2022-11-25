@@ -87,7 +87,7 @@ static inline double potential_lf(riff_stab *t) {
 
 static inline void insert_str(riff_str **nodes, riff_str *new, uint32_t i) {
     riff_str *n = nodes[i];
-    if (UNLIKELY(!n)) {
+    if (riff_unlikely(!n)) {
         nodes[i] = new;
         return;
     }
@@ -129,12 +129,12 @@ static inline void st_resize(riff_stab *t, size_t new_cap) {
 static inline riff_str *st_lookup(riff_stab *t, riff_str *s) {
     riff_str *n = t->nodes[s->hash & t->mask];
     while (n) {
-        if (LIKELY(riff_str_eq_raw(n,s))) {
+        if (riff_likely(riff_str_eq_raw(n,s))) {
             return n;
         }
         n = next(n);
     }
-    if (UNLIKELY(potential_lf(t) > ST_MAX_LOAD_FACTOR)) {
+    if (riff_unlikely(potential_lf(t) > ST_MAX_LOAD_FACTOR)) {
         st_resize(t, t->cap << 1);
     }
     riff_str *new = new_str(s);
@@ -144,7 +144,7 @@ static inline riff_str *st_lookup(riff_stab *t, riff_str *s) {
 }
 
 riff_str *riff_str_new_extra(const char *start, size_t len, uint8_t extra) {
-    return LIKELY(len)
+    return riff_likely(len)
         ? st_lookup(st,
             &(riff_str) {
                 .hash  = str_hash(start, len),

@@ -210,7 +210,7 @@ static inline void vm_catn(vm_stack *fp, int n) {
 
 static inline riff_int match(riff_val *l, riff_val *r) {
     // Common case: LHS string, RHS regex
-    if (LIKELY(is_str(l) && is_regex(r)))
+    if (riff_likely(is_str(l) && is_regex(r)))
         return re_match(l->s->str, riff_strlen(l->s), r->r, 1);
     char *lhs;
     size_t len = 0;
@@ -245,7 +245,7 @@ static inline riff_int match(riff_val *l, riff_val *r) {
 do_match:
         // Check for invalid regex in RHS
         // TODO treat as literal string in this case? (PCRE2_LITERAL)
-        if (UNLIKELY(errcode != 100)) {
+        if (riff_unlikely(errcode != 100)) {
             PCRE2_UCHAR errstr[0x200];
             pcre2_get_error_message(errcode, errstr, 0x200);
             err((const char *) errstr);

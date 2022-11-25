@@ -100,7 +100,7 @@ LIB_FN(printf) {
 // Ex:
 //   putc(114, 105, 102, 102) -> "riff"
 LIB_FN(putc) {
-    if (UNLIKELY(!argc))
+    if (riff_unlikely(!argc))
         return 0;
     char buf[STR_BUF_SZ];
     int n = build_char_str(fp, argc, buf);
@@ -200,7 +200,7 @@ LIB_FN(read) {
         }
     }
 
-    if (LIKELY(res > 0)) {
+    if (riff_likely(res > 0)) {
         set_str(fp-1, ret);
     } else {
         set_int(fp-1, !!res);
@@ -210,7 +210,7 @@ LIB_FN(read) {
 
 // write(v[,f])
 LIB_FN(write) {
-    if (UNLIKELY(!argc)) {
+    if (riff_unlikely(!argc)) {
         return 0;
     }
     FILE *f = argc > 1 && is_file(fp+1) ? fp[1].fh->p : stdout;

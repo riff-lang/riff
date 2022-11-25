@@ -165,7 +165,7 @@ int vm_exec_reenter(riff_state *e, vm_stack *fp) {
 
 // VM interpreter loop
 static inline int exec(uint8_t *ep, riff_val *k, vm_stack *sp, vm_stack *fp) {
-    if (UNLIKELY(sp - stack >= VM_STACK_SIZE)) {
+    if (riff_unlikely(sp - stack >= VM_STACK_SIZE)) {
         err("stack overflow");
     }
     vm_stack *retp = sp; // Save original SP
@@ -214,7 +214,7 @@ L(XJZ16):   XJUMPCOND16(!vm_test(&sp[-1].v)); BREAK;
 L(LOOP8):
 L(LOOP16):{
     int jmp16 = *ip == OP_LOOP16;
-    if (UNLIKELY(!iter->n--)) {
+    if (riff_unlikely(!iter->n--)) {
         if (jmp16)
             ip += 3;
         else
@@ -223,7 +223,7 @@ L(LOOP16):{
     }
     switch (iter->t) {
     case LOOP_RNG:
-        if (UNLIKELY(is_null(iter->v)))
+        if (riff_unlikely(is_null(iter->v)))
             *iter->v = (riff_val) {TYPE_INT, .i = iter->st};
         else
             iter->v->i += iter->set.itvl;
@@ -486,7 +486,7 @@ L(LCLV2):   PUSHLOCALVAL(2);     ++ip;    BREAK;
 // Recycle current call frame
 L(TCALL): {
     int nargs = ip[1] + 1;
-    if (UNLIKELY(!is_fn(&sp[-nargs].v)))
+    if (riff_unlikely(!is_fn(&sp[-nargs].v)))
         err("attempt to call non-function value");
     if (is_rfn(&sp[-nargs].v)) {
         sp -= nargs;
@@ -547,7 +547,7 @@ L(TCALL): {
 // values to be returned to the caller.
 L(CALL): {
     int nargs = ip[1];
-    if (UNLIKELY(!is_fn(&sp[-nargs-1].v)))
+    if (riff_unlikely(!is_fn(&sp[-nargs-1].v)))
         err("attempt to call non-function value");
 
     int arity, nret;

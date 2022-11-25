@@ -6,11 +6,11 @@
 #include <stdio.h>
 
 #ifdef __GNUC__
-#define LIKELY(x)   (__builtin_expect(!!(x), 1))
-#define UNLIKELY(x) (__builtin_expect(!!(x), 0))
+#define riff_likely(x)   (__builtin_expect(!!(x), 1))
+#define riff_unlikely(x) (__builtin_expect(!!(x), 0))
 #else
-#define LIKELY(x)   (x)
-#define UNLIKELY(x) (x)
+#define riff_likely(x)   (x)
+#define riff_unlikely(x) (x)
 #endif
 
 #define FOREACH(a,i) \

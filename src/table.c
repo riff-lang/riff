@@ -34,13 +34,13 @@ void riff_tab_init(riff_tab *t) {
 static riff_val *reduce_key(riff_val *s, riff_val *d) {
     switch (s->type) {
     case TYPE_FLOAT:
-        if (UNLIKELY(s->f == ceil(s->f))) {
+        if (riff_unlikely(s->f == ceil(s->f))) {
             set_int(d, (riff_int) s->f);
             return d;
         }
         break;
     case TYPE_STR: {
-        if (LIKELY(!riff_str_coercible(s->s))) {
+        if (riff_likely(!riff_str_coercible(s->s))) {
             return s;
         }
         char *end;
@@ -72,7 +72,7 @@ static riff_val *reduce_key(riff_val *s, riff_val *d) {
 }
 
 riff_int riff_tab_logical_size(riff_tab *t) {
-    if (LIKELY(!t->hint)) {
+    if (riff_likely(!t->hint)) {
         return t->lsize + riff_htab_logical_size(t->h);
     }
     riff_int l = 0;
@@ -96,7 +96,7 @@ static inline void riff_htab_collect_keys(riff_htab *h, riff_val *keys, int *n) 
     for (uint32_t i = 0; i < h->cap; ++i) {
         ht_node *node = h->nodes[i];
         while (node) {
-            if (LIKELY(!is_null(node->v)))
+            if (riff_likely(!is_null(node->v)))
                 keys[(*n)++] = (riff_val) {node->k.val->type, node->k.val->i};
             node = next(node);
         }
@@ -118,7 +118,7 @@ riff_val *riff_tab_collect_keys(riff_tab *t) {
     }
     // TODO pass `len`, allowing function to exit early if possible
     riff_htab_collect_keys(t->h, keys, &n);
-    if (UNLIKELY(t->nullx)) {
+    if (riff_unlikely(t->nullx)) {
         keys[n++] = (riff_val) {TYPE_NULL, .i = 0};
     }
     return keys;
@@ -182,10 +182,10 @@ riff_val *riff_tab_insert_int(riff_tab *t, riff_int k, riff_val *v) {
         }
         t->cap = new_cap;
     }
-    if (LIKELY(!t_exists(t,k))) {
+    if (riff_likely(!t_exists(t,k))) {
         t->v[k] = v == NULL ? v_newnull() : v_copy(v);
         t->psize++;
-    } else if (LIKELY(v != NULL)) {
+    } else if (riff_likely(v != NULL)) {
         *t->v[k] = *v;
     }
     t->hint = 1;
@@ -251,7 +251,7 @@ static inline uint32_t anchor(riff_val *k, uint32_t mask) {
 
 static inline void insert_node(ht_node **nodes, ht_node *new, uint32_t i) {
     ht_node *n = nodes[i];
-    if (UNLIKELY(!n)) {
+    if (riff_unlikely(!n)) {
         nodes[i] = new;
         return;
     }
@@ -288,7 +288,7 @@ static inline void ht_resize_str(riff_htab *h, size_t new_cap) {
 #define node_eq_str(s1, s2) (riff_str_eq(s1, s2))
 
 static inline int node_eq_val(riff_val *v1, riff_val *v2) {
-    if (UNLIKELY(v1->type != v2->type)) {
+    if (riff_unlikely(v1->type != v2->type)) {
         return 0;
     }
     switch (v1->type) {
@@ -299,11 +299,11 @@ static inline int node_eq_val(riff_val *v1, riff_val *v2) {
 }
 
 #define HT_LOOKUP(type, mask) \
-    if (UNLIKELY(h->nodes == NULL)) \
+    if (riff_unlikely(h->nodes == NULL)) \
         return riff_htab_insert_##type(h, k, NULL); \
     ht_node *n = h->nodes[(mask)]; \
     while (n) { \
-        if (UNLIKELY(node_eq_##type(n->k.type, k))) \
+        if (riff_unlikely(node_eq_##type(n->k.type, k))) \
             return n->v; \
         n = next(n); \
     } \
@@ -339,7 +339,7 @@ static inline ht_node *new_node_str(riff_str *k, riff_val *v) {
 }
 
 #define HT_INSERT(type, mask_type) \
-    if (UNLIKELY(h->nodes == NULL)) { \
+    if (riff_unlikely(h->nodes == NULL)) { \
         h->nodes = calloc(HT_MIN_CAP, sizeof(ht_node *)); \
         h->mask = HT_MIN_CAP - 1; \
         h->cap = HT_MIN_CAP; \
@@ -347,7 +347,7 @@ static inline ht_node *new_node_str(riff_str *k, riff_val *v) {
         double lf = ht_potential_lf(h); \
         if (lf > HT_MAX_LOAD_FACTOR) \
             ht_resize_##type(h, h->cap << 1); \
-        else if (UNLIKELY(h->cap > HT_MIN_CAP && lf < HT_MIN_LOAD_FACTOR)) \
+        else if (riff_unlikely(h->cap > HT_MIN_CAP && lf < HT_MIN_LOAD_FACTOR)) \
             ht_resize_##type(h, h->cap >> 1); \
     } \
     ht_node *new = new_node_##type(k,v); \
@@ -368,7 +368,7 @@ riff_val *riff_htab_insert_cstr(riff_htab *h, const char *k, riff_val *v) {
 }
 
 static inline riff_val *riff_htab_delete_val(riff_htab *h, riff_val *k) {
-    if (UNLIKELY(h->nodes == NULL))
+    if (riff_unlikely(h->nodes == NULL))
         return NULL;
     ht_node **a = &h->nodes[anchor(k, h->mask)];
     ht_node *n = *a;

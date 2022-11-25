@@ -288,7 +288,7 @@ static void interpolated_str(riff_parser *y, char d) {
     }
 
     // TK_STR denotes the end of a string literal
-    if (LIKELY(TK_KIND(TK_STR))) {
+    if (riff_likely(TK_KIND(TK_STR))) {
         if (riff_strlen(y->x->tk.s) > 0) {
             ++n;
             c_constant(y->c, &y->x->tk);
@@ -833,7 +833,7 @@ static void local_fn(riff_parser *y) {
 static void fn_stmt(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_str *id;
-    if (UNLIKELY(!TK_KIND(TK_IDENT))) {
+    if (riff_unlikely(!TK_KIND(TK_IDENT))) {
         err(y, "expected identifier for function definition");
     } else {
         id = y->x->tk.s;
