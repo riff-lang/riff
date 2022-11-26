@@ -186,16 +186,16 @@ void c_fn_constant(riff_code *c, riff_fn *fn) {
 static int find_constant(riff_code *c, riff_token *tk) {
     for (int i = 0; i < c->nk; ++i) {
         switch (tk->kind) {
-        case TK_INT:
+        case RIFF_TK_INT:
             if (is_int(&c->k[i]) && tk->i == c->k[i].i)
                 return i;
             break;
-        case TK_FLOAT:
+        case RIFF_TK_FLOAT:
             if (is_float(&c->k[i]) && tk->f == c->k[i].f)
                 return i;
             break;
-        case TK_STR:
-        case TK_IDENT:
+        case RIFF_TK_STR:
+        case RIFF_TK_IDENT:
             if (is_str(&c->k[i]) && riff_str_eq(tk->s, c->k[i].s))
                 return i;
             break;
@@ -206,11 +206,11 @@ static int find_constant(riff_code *c, riff_token *tk) {
 
 // Add a riff_val literal to a code object's constant table, if necessary
 void c_constant(riff_code *c, riff_token *tk) {
-    if (tk->kind == TK_NULL) {
+    if (tk->kind == RIFF_TK_NULL) {
         push(OP_NUL);
         c->last = LAST_INS_IDX(0);
         return;
-    } else if (tk->kind == TK_REGEX) {
+    } else if (tk->kind == RIFF_TK_REGEX) {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_REGEX, .r = tk->r};
         if (c->nk > (UINT8_MAX + 1))
@@ -227,11 +227,11 @@ void c_constant(riff_code *c, riff_token *tk) {
 
     // Provided literal does not already exist in constant table
     switch (tk->kind) {
-    case TK_FLOAT:
+    case RIFF_TK_FLOAT:
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_FLOAT, .f = tk->f};
         break;
-    case TK_INT: {
+    case RIFF_TK_INT: {
         riff_int i = tk->i;
         switch (i) {
         case 0:
@@ -259,7 +259,7 @@ void c_constant(riff_code *c, riff_token *tk) {
         }
         break;
     }
-    case TK_STR: case TK_IDENT: {
+    case RIFF_TK_STR: case RIFF_TK_IDENT: {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->s};
         break;
@@ -479,7 +479,7 @@ void c_str_index(riff_code *c, int prev_idx, riff_str *k, int addr) {
     if (!is_addr(*prev)) {
         err(c, "invalid member access");
     }
-    int idx = find_constant(c, &(riff_token) {TK_STR, .s = k});
+    int idx = find_constant(c, &(riff_token) {RIFF_TK_STR, .s = k});
     if (idx < 0) {
         m_growarray(c->k, c->nk, c->kcap, riff_val);
         c->k[c->nk++] = (riff_val) {TYPE_STR, .s = k};
@@ -508,39 +508,39 @@ void c_call(riff_code *c, int n) {
 // constants if possible.
 void c_infix(riff_code *c, int op) {
     switch (op) {
-    case '+':       push(OP_ADD);    break;
-    case '-':       push(OP_SUB);    break;
-    case '*':       push(OP_MUL);    break;
-    case '/':       push(OP_DIV);    break;
-    case '#':       push(OP_CAT);    break;
-    case '%':       push(OP_MOD);    break;
-    case '>':       push(OP_GT);     break;
-    case '<':       push(OP_LT);     break;
-    case '=':       push(OP_SET);    break;
-    case '&':       push(OP_AND);    break;
-    case '|':       push(OP_OR);     break;
-    case '^':       push(OP_XOR);    break;
-    case '~':       push(OP_MATCH);  break;
-    case TK_NMATCH: push(OP_NMATCH); break;
-    case TK_SHL:    push(OP_SHL);    break;
-    case TK_SHR:    push(OP_SHR);    break;
-    case TK_POW:    push(OP_POW);    break;
-    case TK_GE:     push(OP_GE);     break;
-    case TK_LE:     push(OP_LE);     break;
-    case TK_EQ:     push(OP_EQ);     break;
-    case TK_NE:     push(OP_NE);     break;
-    case TK_ADDX:   push(OP_ADDX);   break;
-    case TK_ANDX:   push(OP_ANDX);   break;
-    case TK_DIVX:   push(OP_DIVX);   break;
-    case TK_MODX:   push(OP_MODX);   break;
-    case TK_MULX:   push(OP_MULX);   break;
-    case TK_ORX:    push(OP_ORX);    break;
-    case TK_SUBX:   push(OP_SUBX);   break;
-    case TK_XORX:   push(OP_XORX);   break;
-    case TK_CATX:   push(OP_CATX);   break;
-    case TK_POWX:   push(OP_POWX);   break;
-    case TK_SHLX:   push(OP_SHLX);   break;
-    case TK_SHRX:   push(OP_SHRX);   break;
+    case '+':            push(OP_ADD);    break;
+    case '-':            push(OP_SUB);    break;
+    case '*':            push(OP_MUL);    break;
+    case '/':            push(OP_DIV);    break;
+    case '#':            push(OP_CAT);    break;
+    case '%':            push(OP_MOD);    break;
+    case '>':            push(OP_GT);     break;
+    case '<':            push(OP_LT);     break;
+    case '=':            push(OP_SET);    break;
+    case '&':            push(OP_AND);    break;
+    case '|':            push(OP_OR);     break;
+    case '^':            push(OP_XOR);    break;
+    case '~':            push(OP_MATCH);  break;
+    case RIFF_TK_NMATCH: push(OP_NMATCH); break;
+    case RIFF_TK_SHL:    push(OP_SHL);    break;
+    case RIFF_TK_SHR:    push(OP_SHR);    break;
+    case RIFF_TK_POW:    push(OP_POW);    break;
+    case RIFF_TK_GE:     push(OP_GE);     break;
+    case RIFF_TK_LE:     push(OP_LE);     break;
+    case RIFF_TK_EQ:     push(OP_EQ);     break;
+    case RIFF_TK_NE:     push(OP_NE);     break;
+    case RIFF_TK_ADDX:   push(OP_ADDX);   break;
+    case RIFF_TK_ANDX:   push(OP_ANDX);   break;
+    case RIFF_TK_DIVX:   push(OP_DIVX);   break;
+    case RIFF_TK_MODX:   push(OP_MODX);   break;
+    case RIFF_TK_MULX:   push(OP_MULX);   break;
+    case RIFF_TK_ORX:    push(OP_ORX);    break;
+    case RIFF_TK_SUBX:   push(OP_SUBX);   break;
+    case RIFF_TK_XORX:   push(OP_XORX);   break;
+    case RIFF_TK_CATX:   push(OP_CATX);   break;
+    case RIFF_TK_POWX:   push(OP_POWX);   break;
+    case RIFF_TK_SHLX:   push(OP_SHLX);   break;
+    case RIFF_TK_SHRX:   push(OP_SHRX);   break;
     default: break;
     }
     c->last = LAST_INS_IDX(0);
@@ -548,13 +548,13 @@ void c_infix(riff_code *c, int op) {
 
 void c_prefix(riff_code *c, int op) {
     switch (op) {
-    case '!':    push(OP_LNOT);   break;
-    case '#':    push(OP_LEN);    break;
-    case '+':    push(OP_NUM);    break;
-    case '-':    push(OP_NEG);    break;
-    case '~':    push(OP_NOT);    break;
-    case TK_INC: push(OP_PREINC); break;
-    case TK_DEC: push(OP_PREDEC); break;
+    case '!':         push(OP_LNOT);   break;
+    case '#':         push(OP_LEN);    break;
+    case '+':         push(OP_NUM);    break;
+    case '-':         push(OP_NEG);    break;
+    case '~':         push(OP_NOT);    break;
+    case RIFF_TK_INC: push(OP_PREINC); break;
+    case RIFF_TK_DEC: push(OP_PREDEC); break;
     default: break;
     }
     c->last = LAST_INS_IDX(0);
@@ -562,8 +562,8 @@ void c_prefix(riff_code *c, int op) {
 
 void c_postfix(riff_code *c, int op) {
     switch (op) {
-    case TK_INC: push(OP_POSTINC); break;
-    case TK_DEC: push(OP_POSTDEC); break;
+    case RIFF_TK_INC: push(OP_POSTINC); break;
+    case RIFF_TK_DEC: push(OP_POSTDEC); break;
     default: break;
     }
     c->last = LAST_INS_IDX(0);

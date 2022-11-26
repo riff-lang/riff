@@ -54,7 +54,7 @@ static int float_literal(riff_lexer *x, riff_token *tk, const char *start, int b
     char *end;
     tk->f = riff_strtod(start, &end, base);
     x->p = end;
-    return TK_FLOAT;
+    return RIFF_TK_FLOAT;
 }
 
 static int int_literal(riff_lexer *x, riff_token *tk, const char *start, int base) {
@@ -83,7 +83,7 @@ static int int_literal(riff_lexer *x, riff_token *tk, const char *start, int bas
     }
     x->p = end;
     tk->i = i;
-    return TK_INT;
+    return RIFF_TK_INT;
 }
 
 static int num_literal(riff_lexer *x, riff_token *tk) {
@@ -180,8 +180,8 @@ str_start:
                 tk->s = riff_str_new(x->buf->buf, x->buf->n);
                 advance();
                 return d == '\''
-                    ? TK_STR_INTER_SQ
-                    : TK_STR_INTER_DQ;
+                    ? RIFF_TK_STR_INTER_SQ
+                    : RIFF_TK_STR_INTER_DQ;
             }
             advance();
             break;
@@ -235,7 +235,7 @@ str_start:
     }
     tk->s = riff_str_new(x->buf->buf, x->buf->n);
     advance();
-    return TK_STR;
+    return RIFF_TK_STR;
 }
 
 static int regex_literal(riff_lexer *x, riff_token *tk, int d) {
@@ -319,7 +319,7 @@ re_start:
         err(x, (const char *) errstr);
     }
     tk->r = r;
-    return TK_REGEX;
+    return RIFF_TK_REGEX;
 }
 
 static int ident_or_reserved(riff_lexer *x, riff_token *tk) {
@@ -330,7 +330,7 @@ static int ident_or_reserved(riff_lexer *x, riff_token *tk) {
         advance();
     }
     tk->s = riff_str_new(start, count);
-    return tk->s->extra ? tk->s->extra : TK_IDENT;
+    return tk->s->extra ? tk->s->extra : RIFF_TK_IDENT;
 }
 
 static int check2(riff_lexer *x, int c, int t1, int t2) {
@@ -415,21 +415,21 @@ static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
         case ' ': case '\t': break;
         case '!':
             if (mode) {
-                return check3(x, '=', TK_NE, '~', TK_NMATCH, '!');
+                return check3(x, '=', RIFF_TK_NE, '~', RIFF_TK_NMATCH, '!');
             } else {
-                return check2(x, '=', TK_NE, '!');
+                return check2(x, '=', RIFF_TK_NE, '!');
             }
         case '"':
         case '\'':
             return str_literal(x, tk, c);
-        case '#': return check2(x, '=', TK_CATX, '#');
-        case '%': return check2(x, '=', TK_MODX, '%');
-        case '&': return check3(x, '=', TK_ANDX, '&', TK_AND, '&');
-        case '*': return check4(x, '=', TK_MULX, '*', 
-                                   '=', TK_POWX, TK_POW, '*');
+        case '#': return check2(x, '=', RIFF_TK_CATX, '#');
+        case '%': return check2(x, '=', RIFF_TK_MODX, '%');
+        case '&': return check3(x, '=', RIFF_TK_ANDX, '&', RIFF_TK_AND, '&');
+        case '*': return check4(x, '=', RIFF_TK_MULX, '*', 
+                                   '=', RIFF_TK_POWX, RIFF_TK_POW, '*');
         case '+':
             if (mode) {
-                return check3(x, '=', TK_ADDX, '+', TK_INC, '+');
+                return check3(x, '=', RIFF_TK_ADDX, '+', RIFF_TK_INC, '+');
             } else {
                 // Allow `+` to be consumed when directly prefixing a numeric
                 // literal. This has no effect on operator precedence (unlike
@@ -439,17 +439,17 @@ static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
                 if (isdigit(*x->p) || *x->p == '.') {
                     return num_literal(x, tk);
                 } else {
-                    return check3(x, '=', TK_ADDX, '+', TK_INC, '+');
+                    return check3(x, '=', RIFF_TK_ADDX, '+', RIFF_TK_INC, '+');
                 }
             }
             break;
-        case '-': return check3(x, '=', TK_SUBX, '-', TK_DEC, '-');
+        case '-': return check3(x, '=', RIFF_TK_SUBX, '-', RIFF_TK_DEC, '-');
         case '.':
             if (isdigit(*x->p)) {
                 return num_literal(x, tk);
             } else if ((*x->p) == '.') {
                 advance();
-                return TK_2DOTS;
+                return RIFF_TK_2DOTS;
             } else {
                 return '.';
             }
@@ -459,7 +459,7 @@ static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
             case '*': advance(); block_comment(x); break;
             default: 
                 if (mode) {
-                    return check2(x, '=', TK_DIVX, '/');
+                    return check2(x, '=', RIFF_TK_DIVX, '/');
                 } else {
                     return regex_literal(x, tk, c);
                 }
@@ -469,13 +469,13 @@ static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
             return num_literal(x, tk);
-        case '<': return check4(x, '=', TK_LE, '<',
-                                   '=', TK_SHLX, TK_SHL, '<');
-        case '=': return check2(x, '=', TK_EQ, '=');
-        case '>': return check4(x, '=', TK_GE, '>',
-                                   '=', TK_SHRX, TK_SHR, '>');
-        case '^': return check2(x, '=', TK_XORX, '^');
-        case '|': return check3(x, '=', TK_ORX, '|', TK_OR, '|');
+        case '<': return check4(x, '=', RIFF_TK_LE, '<',
+                                   '=', RIFF_TK_SHLX, RIFF_TK_SHL, '<');
+        case '=': return check2(x, '=', RIFF_TK_EQ, '=');
+        case '>': return check4(x, '=', RIFF_TK_GE, '>',
+                                   '=', RIFF_TK_SHRX, RIFF_TK_SHR, '>');
+        case '^': return check2(x, '=', RIFF_TK_XORX, '^');
+        case '|': return check3(x, '=', RIFF_TK_ORX, '|', RIFF_TK_OR, '|');
         case '$': case '(': case ')': case ',': case ':':
         case ';': case '?': case ']': case '[': case '{':
         case '}': case '~':
@@ -495,23 +495,23 @@ int riff_lex_init(riff_lexer *x, const char *src) {
         const char *str;
         uint8_t     tk;
     } reserved[] = {
-        { "and",      TK_AND    },
-        { "break",    TK_BREAK  },
-        { "continue", TK_CONT   },
-        { "do",       TK_DO     },
-        { "elif",     TK_ELIF   },
-        { "else",     TK_ELSE   },
-        { "fn",       TK_FN     },
-        { "for",      TK_FOR    },
-        { "if",       TK_IF     },
-        { "in",       TK_IN     },
-        { "local",    TK_LOCAL  },
-        { "loop",     TK_LOOP   },
+        { "and",      RIFF_TK_AND    },
+        { "break",    RIFF_TK_BREAK  },
+        { "continue", RIFF_TK_CONT   },
+        { "do",       RIFF_TK_DO     },
+        { "elif",     RIFF_TK_ELIF   },
+        { "else",     RIFF_TK_ELSE   },
+        { "fn",       RIFF_TK_FN     },
+        { "for",      RIFF_TK_FOR    },
+        { "if",       RIFF_TK_IF     },
+        { "in",       RIFF_TK_IN     },
+        { "local",    RIFF_TK_LOCAL  },
+        { "loop",     RIFF_TK_LOOP   },
         { "not",      '!'       },
-        { "null",     TK_NULL   },
-        { "or",       TK_OR     },
-        { "return",   TK_RETURN },
-        { "while",    TK_WHILE  }
+        { "null",     RIFF_TK_NULL   },
+        { "or",       RIFF_TK_OR     },
+        { "return",   RIFF_TK_RETURN },
+        { "while",    RIFF_TK_WHILE  }
     };
 
     FOREACH(reserved, i) {
@@ -527,7 +527,7 @@ int riff_lex_init(riff_lexer *x, const char *src) {
 }
 
 int riff_lex_advance(riff_lexer *x, int mode) {
-    if (TK(0).kind == TK_EOI) {
+    if (TK(0).kind == RIFF_TK_EOI) {
         return 1;
     }
 
@@ -538,7 +538,7 @@ int riff_lex_advance(riff_lexer *x, int mode) {
         TK(0).i    = TK(1).i;
         TK(1).kind = 0;
     } else if ((TK(0).kind = tokenize(x, mode, &TK(0))) == 1) {
-        TK(0).kind = TK_EOI;
+        TK(0).kind = RIFF_TK_EOI;
         return 1;
     }
     return 0;
@@ -548,7 +548,7 @@ int riff_lex_advance(riff_lexer *x, int mode) {
 // unchanged
 int riff_lex_peek(riff_lexer *x, int mode) {
     if ((TK(1).kind = tokenize(x, mode, &TK(1))) == 1) {
-        TK(1).kind = TK_EOI;
+        TK(1).kind = RIFF_TK_EOI;
         return 1;
     }
     return 0;

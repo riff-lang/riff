@@ -95,15 +95,15 @@ static char closing_delim(char c) {
 }
 
 static int is_asgmt(int tk) {
-    return tk == '=' || (tk >= TK_ADDX && tk <= TK_XORX);
+    return tk == '=' || (tk >= RIFF_TK_ADDX && tk <= RIFF_TK_XORX);
 }
 
 static int is_literal(int tk) {
-    return tk >= TK_NULL && tk <= TK_REGEX;
+    return tk >= RIFF_TK_NULL && tk <= RIFF_TK_REGEX;
 }
 
 static int is_incdec(int tk) {
-    return tk == TK_INC || tk == TK_DEC;
+    return tk == RIFF_TK_INC || tk == RIFF_TK_DEC;
 }
 
 static int literal_follow_ok(int tk) {
@@ -129,23 +129,23 @@ static void consume_mode(riff_parser *y, int mode, int tk, const char *msg) {
 static int lbp(int tk) {
     switch (tk) {
     case '.': case '(': case'[':
-    case TK_INC: case TK_DEC:     return 16;
-    case TK_POW:                  return 15;
-    case '*': case '/': case '%': return 13;
-    case '+': case '-':           return 12;
-    case '#':                     return 11;
-    case TK_SHL: case TK_SHR:     return 11;
-    case '&':                     return 10;
-    case '^':                     return 9;
-    case '|':                     return 8;
+    case RIFF_TK_INC: case RIFF_TK_DEC: return 16;
+    case RIFF_TK_POW:                   return 15;
+    case '*': case '/': case '%':       return 13;
+    case '+': case '-':                 return 12;
+    case '#':                           return 11;
+    case RIFF_TK_SHL: case RIFF_TK_SHR: return 11;
+    case '&':                           return 10;
+    case '^':                           return 9;
+    case '|':                           return 8;
     case '>': case '<':      
-    case TK_GE: case TK_LE:       return 7;
-    case '~': case TK_NMATCH:     return 6;
-    case TK_EQ: case TK_NE:       return 6;
-    case TK_AND:                  return 5;
-    case TK_OR:                   return 4;
-    case TK_2DOTS:                return 3;
-    case '?':                     return 2;
+    case RIFF_TK_GE: case RIFF_TK_LE:   return 7;
+    case '~': case RIFF_TK_NMATCH:      return 6;
+    case RIFF_TK_EQ: case RIFF_TK_NE:   return 6;
+    case RIFF_TK_AND:                   return 5;
+    case RIFF_TK_OR:                    return 4;
+    case RIFF_TK_2DOTS:                 return 3;
+    case '?':                           return 2;
     default:
         return is_asgmt(tk);
     }
@@ -162,13 +162,13 @@ static int lbop(int tk) {
            tk == '*' || tk == '+' || tk == '-' || tk == '/' ||
            tk == '<' || tk == '>' || tk == '^' || tk == '|' ||
            tk == '.' || tk == '[' || tk == '~' ||
-           tk == TK_AND || tk == TK_EQ  || tk == TK_NE ||
-           tk == TK_GE  || tk == TK_LE  || tk == TK_OR ||
-           tk == TK_SHL || tk == TK_SHR || tk == TK_NMATCH;
+           tk == RIFF_TK_AND || tk == RIFF_TK_EQ  || tk == RIFF_TK_NE ||
+           tk == RIFF_TK_GE  || tk == RIFF_TK_LE  || tk == RIFF_TK_OR ||
+           tk == RIFF_TK_SHL || tk == RIFF_TK_SHR || tk == RIFF_TK_NMATCH;
 }
 
 static int rbop(int tk) {
-    return is_asgmt(tk) || tk == TK_POW;
+    return is_asgmt(tk) || tk == RIFF_TK_POW;
 }
 
 static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
@@ -253,18 +253,18 @@ static void literal(riff_parser *y, uint32_t flags) {
 
 static void interpolated_str(riff_parser *y, char d) {
     uint8_t n = 0;
-    int inter_mode = d == '\'' ? TK_STR_INTER_SQ : TK_STR_INTER_DQ;
+    int inter_mode = d == '\'' ? RIFF_TK_STR_INTER_SQ : RIFF_TK_STR_INTER_DQ;
     int lex_mode = d == '\'' ? LEX_STR_SQ : LEX_STR_DQ;
     while (TK_CMP(0, inter_mode)) {
         if (riff_strlen(TK(0).s) > 0) {
             ++n;
-            TK(0).kind = TK_STR;
+            TK(0).kind = RIFF_TK_STR;
             c_constant(y->c, &TK(0));
         }
         advance();
 
         // Lexer ensures validity of the following token
-        if (TK_CMP(0, TK_IDENT)) {
+        if (TK_CMP(0, RIFF_TK_IDENT)) {
             int scope = resolve_local(y, 0, TK(0).s);
             if (scope >= 0) {
                 c_local(y->c, scope, 0, 0);
@@ -287,8 +287,8 @@ static void interpolated_str(riff_parser *y, char d) {
         }
     }
 
-    // TK_STR denotes the end of a string literal
-    if (riff_likely(TK_CMP(0, TK_STR))) {
+    // RIFF_TK_STR denotes the end of a string literal
+    if (riff_likely(TK_CMP(0, RIFF_TK_STR))) {
         if (riff_strlen(TK(0).s) > 0) {
             ++n;
             c_constant(y->c, &TK(0));
@@ -337,7 +337,7 @@ static int conditional(riff_parser *y, uint32_t flags) {
 // logical_expr = expr logical_op expr
 // logical_op   = '&&' | '||'
 static void logical(riff_parser *y, uint32_t flags, int tk) {
-    int l1 = c_prep_jump(y->c, tk == TK_OR ? XJNZ : XJZ);
+    int l1 = c_prep_jump(y->c, tk == RIFF_TK_OR ? XJNZ : XJZ);
     expr(y, flags, lbp(tk));
     c_patch(y->c, l1);
 }
@@ -379,7 +379,7 @@ static int paren_expr_list(riff_parser *y, int c) {
 // member_access_expr = id '.' id
 static void member_access(riff_parser *y, uint32_t flags) {
     int last_ins_idx = y->c->last;
-    if (!TK_CMP(0, TK_IDENT)) {
+    if (!TK_CMP(0, RIFF_TK_IDENT)) {
         err(y, "expected identifier in member access expression");
     }
     riff_str *s = TK(0).s;
@@ -497,7 +497,7 @@ static int nud(riff_parser *y, uint32_t flags) {
             // Hack to prevent parsing ++/-- as postfix following parenthesized
             // expression
             else if (is_incdec(TK(0).kind)) {
-                return TK_INC;
+                return RIFF_TK_INC;
             }
         }
         return ')';
@@ -507,40 +507,40 @@ static int nud(riff_parser *y, uint32_t flags) {
         advance();
         table(y, closing_delim(tk));
         break;
-    case TK_2DOTS:
+    case RIFF_TK_2DOTS:
         set(ox);
         advance();
         e = range(y, flags & ~EXPR_REF, 0);
         break;
-    case TK_INC:
-    case TK_DEC:
+    case RIFF_TK_INC:
+    case RIFF_TK_DEC:
         if (advance()) {
             err(y, "expected symbol following prefix ++/--");
         }
-        if (!(TK_CMP(0, TK_IDENT) || TK_CMP(0, '$'))) {
+        if (!(TK_CMP(0, RIFF_TK_IDENT) || TK_CMP(0, '$'))) {
             err(y, "unexpected symbol following prefix ++/--");
         }
         expr(y, flags | EXPR_REF, 14);
         c_prefix(y->c, tk);
         set(lhs);
         break;
-    case TK_NULL:
-    case TK_INT:
-    case TK_FLOAT:
-    case TK_STR:
-    case TK_REGEX:
+    case RIFF_TK_NULL:
+    case RIFF_TK_INT:
+    case RIFF_TK_FLOAT:
+    case RIFF_TK_STR:
+    case RIFF_TK_REGEX:
         literal(y, flags);
         break;
-    case TK_STR_INTER_SQ:
+    case RIFF_TK_STR_INTER_SQ:
         interpolated_str(y, '\'');
         break;
-    case TK_STR_INTER_DQ:
+    case RIFF_TK_STR_INTER_DQ:
         interpolated_str(y, '"');
         break;
-    case TK_IDENT:
+    case RIFF_TK_IDENT:
         identifier(y, flags);
         break;
-    case TK_FN:
+    case RIFF_TK_FN:
         advance();
         anon_fn(y);
         break;
@@ -558,12 +558,12 @@ static int nud(riff_parser *y, uint32_t flags) {
 
 static int led(riff_parser *y, uint32_t flags, int p, int tk) {
     switch (tk) {
-    case TK_2DOTS:
+    case RIFF_TK_2DOTS:
         set(ox);
         advance();
         return range(y, flags & ~EXPR_REF, 1);
-    case TK_INC:
-    case TK_DEC:
+    case RIFF_TK_INC:
+    case RIFF_TK_DEC:
         if (is_literal(p) || flags & EXPR_REF) {
             return p;
         }
@@ -575,8 +575,8 @@ static int led(riff_parser *y, uint32_t flags, int p, int tk) {
         set(ox);
         advance();
         return conditional(y, flags & ~EXPR_REF);
-    case TK_AND:
-    case TK_OR:
+    case RIFF_TK_AND:
+    case RIFF_TK_OR:
         set(ox);
         advance();
         logical(y, flags & ~EXPR_REF, tk);
@@ -724,7 +724,7 @@ static void do_stmt(riff_parser *y) {
     } else {
         stmt(y);
     }
-    consume(y, TK_WHILE, "expected 'while' condition after 'do' block");
+    consume(y, RIFF_TK_WHILE, "expected 'while' condition after 'do' block");
     --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
@@ -757,7 +757,7 @@ static int compile_fn(riff_parser *y) {
         // Read parameter identifiers, reserving them as locals to the
         // function
         while (1) {
-            if (TK_CMP(0, TK_IDENT)) {
+            if (TK_CMP(0, RIFF_TK_IDENT)) {
                 add_local(y, TK(0).s, 1);
                 ++arity;
                 advance();
@@ -793,7 +793,7 @@ static int compile_fn(riff_parser *y) {
 //
 // Named local functions should be able to reference themselves
 static void local_fn(riff_parser *y) {
-    if (!TK_CMP(0, TK_IDENT)) {
+    if (!TK_CMP(0, RIFF_TK_IDENT)) {
         err(y, "expected identifier for local function definition");
     }
     riff_str *id = TK(0).s;
@@ -833,7 +833,7 @@ static void local_fn(riff_parser *y) {
 static void fn_stmt(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_str *id;
-    if (riff_unlikely(!TK_CMP(0, TK_IDENT))) {
+    if (riff_unlikely(!TK_CMP(0, RIFF_TK_IDENT))) {
         err(y, "expected identifier for function definition");
     } else {
         id = TK(0).s;
@@ -876,7 +876,7 @@ static void for_stmt(riff_parser *y) {
     // Increment lexical depth once before adding locals [k,] v so they're only
     // visible to the loop.
     ++y->ld;
-    if (!TK_CMP(0, TK_IDENT)) {
+    if (!TK_CMP(0, RIFF_TK_IDENT)) {
         err(y, "expected identifier");
     }
     add_local(y, TK(0).s, 1);
@@ -887,14 +887,14 @@ static void for_stmt(riff_parser *y) {
         flags |= EXPR_FOR_Z;
         kv = 1;
         advance();
-        if (!TK_CMP(0, TK_IDENT)) {
+        if (!TK_CMP(0, RIFF_TK_IDENT)) {
             err(y, "expected identifier following ','");
         }
         add_local(y, TK(0).s, 1);
         advance();
     }
     set(lx);
-    consume(y, TK_IN, "expected 'in'");
+    consume(y, RIFF_TK_IN, "expected 'in'");
     expr(y, flags, 0);
     unset(lx);
     int l1 = c_prep_loop(y->c, kv);
@@ -965,18 +965,18 @@ static void if_stmt(riff_parser *y) {
     }
     --y->ld;
     y->nlcl -= pop_locals(y, y->ld, 1);
-    if (TK_CMP(0, TK_ELIF)) {
+    if (TK_CMP(0, RIFF_TK_ELIF)) {
 y_elif:
         advance();
         l2 = c_prep_jump(y->c, JMP);
         c_patch(y->c, l1);
         if_stmt(y);
         c_patch(y->c, l2);
-    } else if (TK_CMP(0, TK_ELSE)) {
+    } else if (TK_CMP(0, RIFF_TK_ELSE)) {
         advance();
         // Handle as `elif` for `else if`. This avoids the non-breaking issue
         // where lexical depth is double incremented.
-        if (TK_CMP(0, TK_IF)) {
+        if (TK_CMP(0, RIFF_TK_IF)) {
             goto y_elif;
         }
         ++y->ld;
@@ -1000,7 +1000,7 @@ y_elif:
 // local_stmt = 'local' expr {',' expr}
 //            | 'local' fn_stmt
 static void local_stmt(riff_parser *y) {
-    if (TK_CMP(0, TK_FN)) {
+    if (TK_CMP(0, RIFF_TK_FN)) {
         advance();
         local_fn(y);
         return;
@@ -1008,9 +1008,9 @@ static void local_stmt(riff_parser *y) {
     while (1) {
         unset_all();
         riff_str *id;
-        if (!TK_CMP(0, TK_IDENT)) {
+        if (!TK_CMP(0, RIFF_TK_IDENT)) {
             peek();
-            if (!TK_CMP(1, TK_IDENT)) {
+            if (!TK_CMP(1, RIFF_TK_IDENT)) {
                 err(y, "local declaration requires valid identifier");
             }
             id = TK(1).s;
@@ -1080,7 +1080,7 @@ static void ret_stmt(riff_parser *y) {
     if (y->ld == y->fd) {
         set(retx);
     }
-    if (TK_CMP(0, TK_EOI) || TK_CMP(0, ';') || TK_CMP(0, '}')) {
+    if (TK_CMP(0, RIFF_TK_EOI) || TK_CMP(0, ';') || TK_CMP(0, '}')) {
         c_return(y->c, 0);
         return;
     }
@@ -1144,24 +1144,24 @@ static void stmt(riff_parser *y) {
     unset_all();
     switch (TK(0).kind) {
     case ';':       advance();                   break;
-    case TK_BREAK:  advance(); break_stmt(y);    break;
-    case TK_CONT:   advance(); continue_stmt(y); break;
-    case TK_DO:     advance(); do_stmt(y);       break;
-    case TK_FN:
+    case RIFF_TK_BREAK:  advance(); break_stmt(y);    break;
+    case RIFF_TK_CONT:   advance(); continue_stmt(y); break;
+    case RIFF_TK_DO:     advance(); do_stmt(y);       break;
+    case RIFF_TK_FN:
         peek();
-        if (TK_CMP(1, TK_IDENT)) {
+        if (TK_CMP(1, RIFF_TK_IDENT)) {
             advance();
             fn_stmt(y);
         } else {
             expr_stmt(y);
         }
         break;
-    case TK_FOR:    advance(); for_stmt(y);      break;
-    case TK_IF:     advance(); if_stmt(y);       break;
-    case TK_LOCAL:  advance(); local_stmt(y);    break;
-    case TK_LOOP:   advance(); loop_stmt(y);     break;
-    case TK_RETURN: advance(); ret_stmt(y);      break;
-    case TK_WHILE:  advance(); while_stmt(y);    break;
+    case RIFF_TK_FOR:    advance(); for_stmt(y);      break;
+    case RIFF_TK_IF:     advance(); if_stmt(y);       break;
+    case RIFF_TK_LOCAL:  advance(); local_stmt(y);    break;
+    case RIFF_TK_LOOP:   advance(); loop_stmt(y);     break;
+    case RIFF_TK_RETURN: advance(); ret_stmt(y);      break;
+    case RIFF_TK_WHILE:  advance(); while_stmt(y);    break;
     default:                   expr_stmt(y);     break;
     }
 
@@ -1173,7 +1173,7 @@ static void stmt(riff_parser *y) {
 
 // stmt_list = {stmt}
 static void stmt_list(riff_parser *y) {
-    while (!(TK_CMP(0, TK_EOI) || TK_CMP(0, '}'))) {
+    while (!(TK_CMP(0, RIFF_TK_EOI) || TK_CMP(0, '}'))) {
         stmt(y);
     }
 }

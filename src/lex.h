@@ -25,63 +25,65 @@ enum lexer_mode {
 };
 
 enum token_kind {
-    // NOTE: Single character tokens are implicitly enumerated
+    // Single character tokens are implicitly enumerated by their ASCII codes
 
-    TK_AND = 128, // &&
-    TK_DEC,       // --
-    TK_2DOTS,     // ..
-    TK_EQ,        // ==
-    TK_GE,        // >=
-    TK_INC,       // ++
-    TK_LE,        // <=
-    TK_NE,        // !=
-    TK_NMATCH,    // !~
-    TK_OR,        // ||
-    TK_POW,       // **
-    TK_SHL,       // <<
-    TK_SHR,       // >>
-    TK_ADDX,      // +=
-    TK_ANDX,      // &=
-    TK_CATX,      // #=
-    TK_DIVX,      // /=
-    TK_MODX,      // %=
-    TK_MULX,      // *=
-    TK_ORX,       // |=
-    TK_POWX,      // **=
-    TK_SHLX,      // <<=
-    TK_SHRX,      // >>=
-    TK_SUBX,      // -=
-    TK_XORX,      // ^=
+    RIFF_TK_2DOTS = 128,
+    RIFF_TK_AND,
+    RIFF_TK_DEC,
+    RIFF_TK_EQ,
+    RIFF_TK_GE,
+    RIFF_TK_INC,
+    RIFF_TK_LE,
+    RIFF_TK_NE,
+    RIFF_TK_NMATCH,
+    RIFF_TK_OR,
+    RIFF_TK_POW,
+    RIFF_TK_SHL,
+    RIFF_TK_SHR,
+
+    // Compound assignment operators
+    RIFF_TK_ADDX,
+    RIFF_TK_ANDX,
+    RIFF_TK_CATX,
+    RIFF_TK_DIVX,
+    RIFF_TK_MODX,
+    RIFF_TK_MULX,
+    RIFF_TK_ORX,
+    RIFF_TK_POWX,
+    RIFF_TK_SHLX,
+    RIFF_TK_SHRX,
+    RIFF_TK_SUBX,
+    RIFF_TK_XORX,
 
     // Keywords
-    TK_BREAK,
-    TK_CONT,
-    TK_DO,
-    TK_ELIF,
-    TK_ELSE,
-    TK_FN,
-    TK_FOR,
-    TK_IF,
-    TK_IN,
-    TK_LOCAL,
-    TK_LOOP,
-    TK_RETURN,
-    TK_WHILE,
+    RIFF_TK_BREAK,
+    RIFF_TK_CONT,
+    RIFF_TK_DO,
+    RIFF_TK_ELIF,
+    RIFF_TK_ELSE,
+    RIFF_TK_FN,
+    RIFF_TK_FOR,
+    RIFF_TK_IF,
+    RIFF_TK_IN,
+    RIFF_TK_LOCAL,
+    RIFF_TK_LOOP,
+    RIFF_TK_RETURN,
+    RIFF_TK_WHILE,
 
     // Literals
-    TK_NULL,
-    TK_FLOAT,
-    TK_INT,
-    TK_STR,
-    TK_STR_INTER_SQ,
-    TK_STR_INTER_DQ,
-    TK_REGEX,
+    RIFF_TK_NULL,
+    RIFF_TK_FLOAT,
+    RIFF_TK_INT,
+    RIFF_TK_STR,
+    RIFF_TK_STR_INTER_SQ,
+    RIFF_TK_STR_INTER_DQ,
+    RIFF_TK_REGEX,
 
     // Identifiers
-    TK_IDENT,
+    RIFF_TK_IDENT,
 
     // End of input
-    TK_EOI
+    RIFF_TK_EOI
 };
 
 typedef struct {
