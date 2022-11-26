@@ -7,8 +7,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// Lexical Analyzer
-
 typedef struct {
     int kind;
     union {
@@ -87,11 +85,10 @@ enum token_kind {
 };
 
 typedef struct {
-    riff_token  tk;     // Current token
-    riff_token  la;     // Lookahead token
-    int         ln;     // Current line of the source
-    const char *p;      // Pointer to the current position in the source
-    riff_buf   *buf;    // String buffer
+    riff_token  tk[2];  // LL(1)
+    const char *p;
+    int         ln;
+    riff_buf   *buf;
 } riff_lexer;
 
 int  riff_lex_init(riff_lexer *, const char *);

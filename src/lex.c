@@ -11,7 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define advance() (++x->p)
+#define advance()   (++x->p)
+
+#define TK(i)    (x->tk[i])
 
 static void err(riff_lexer *x, const char *msg) {
     fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
@@ -516,27 +518,27 @@ int riff_lex_init(riff_lexer *x, const char *src) {
         riff_str_new_extra(reserved[i].str, strlen(reserved[i].str), reserved[i].tk);
     }
 
-    x->tk.kind = 0;
-    x->la.kind = 0;
-    x->ln      = 1;
-    x->p       = src;
+    TK(0).kind = 0;
+    TK(1).kind = 0;
+    x->ln = 1;
+    x->p = src;
     riff_lex_advance(x, 0);
     return 0;
 }
 
 int riff_lex_advance(riff_lexer *x, int mode) {
-    if (x->tk.kind == TK_EOI) {
+    if (TK(0).kind == TK_EOI) {
         return 1;
     }
 
     // If a lookahead token already exists, assign it to the current
     // token
-    if (x->la.kind != 0) {
-        x->tk.kind = x->la.kind;
-        x->tk.i    = x->la.i;
-        x->la.kind = 0;
-    } else if ((x->tk.kind = tokenize(x, mode, &x->tk)) == 1) {
-        x->tk.kind = TK_EOI;
+    if (TK(1).kind != 0) {
+        TK(0).kind = TK(1).kind;
+        TK(0).i    = TK(1).i;
+        TK(1).kind = 0;
+    } else if ((TK(0).kind = tokenize(x, mode, &TK(0))) == 1) {
+        TK(0).kind = TK_EOI;
         return 1;
     }
     return 0;
@@ -545,8 +547,8 @@ int riff_lex_advance(riff_lexer *x, int mode) {
 // Populate the lookahead riff_token, leaving the current riff_token
 // unchanged
 int riff_lex_peek(riff_lexer *x, int mode) {
-    if ((x->la.kind = tokenize(x, mode, &x->la)) == 1) {
-        x->la.kind = TK_EOI;
+    if ((TK(1).kind = tokenize(x, mode, &TK(1))) == 1) {
+        TK(1).kind = TK_EOI;
         return 1;
     }
     return 0;
