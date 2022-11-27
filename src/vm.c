@@ -22,58 +22,53 @@ static riff_tab   fldv;
 static vm_iter   *iter;
 static vm_stack   stack[VM_STACK_SIZE];
 
-static inline void new_iter(riff_val *set) {
+static inline void new_iter(riff_val *set, int kind) {
     vm_iter *new = malloc(sizeof(vm_iter));
     new->p = iter;
     iter = new;
     switch (set->type) {
     case TYPE_NULL:
         iter->t = LOOP_NULL;
-        iter->keys = NULL;
         iter->n = 1;
         break;
     case TYPE_FLOAT:
         set->i = (riff_int) set->f;
         // Fall-through
     case TYPE_INT:
-        iter->keys = NULL;
-        iter->t = LOOP_RNG;
+        iter->t = kind ? LOOP_RANGE_KV : LOOP_RANGE_V;
         iter->st = 0;
         if (set->i >= 0) {
             iter->n = set->i + 1; // Inclusive
-            iter->set.itvl = 1;
+            iter->itvl = 1;
         } else {
             iter->n = -(set->i) + 1; // Inclusive
-            iter->set.itvl = -1;
+            iter->itvl = -1;
         }
         break;
     case TYPE_STR:
-        iter->t = LOOP_STR;
+        iter->t = kind ? LOOP_STR_KV : LOOP_STR_V;
         iter->n = riff_strlen(set->s);
-        iter->keys = NULL;
-        iter->set.str = set->s->str;
+        iter->str = set->s->str;
         break;
     case TYPE_REGEX:
         err("cannot iterate over regular expression");
-    case TYPE_RANGE:
-        iter->keys = NULL;
-        iter->t = LOOP_RNG;
-        iter->set.itvl = set->q->itvl;
-        if (iter->set.itvl > 0)
-            iter->on = (set->q->to - set->q->from) + 1;
+    case TYPE_RANGE: {
+        riff_int n;
+        iter->t = kind ? LOOP_RANGE_KV : LOOP_RANGE_V;
+        iter->itvl = set->q->itvl;
+        if (iter->itvl > 0)
+            n = (set->q->to - set->q->from) + 1;
         else
-            iter->on = (set->q->from - set->q->to) + 1;
-        if (iter->on <= 0)
-            iter->n = UINT64_MAX; // TODO "Infinite" loop
-        else
-            iter->n = (riff_uint) ceil(fabs(iter->on / (double) iter->set.itvl));
+            n = (set->q->from - set->q->to) + 1;
+        iter->n = n <= 0 ? 0 : (riff_uint) ceil(fabs(n / (double) iter->itvl));
         iter->st = set->q->from;
         break;
+    }
     case TYPE_TAB:
-        iter->t = LOOP_TAB;
-        iter->on = iter->n = riff_tab_logical_size(set->t);
-        iter->keys = riff_tab_collect_keys(set->t);
-        iter->set.tab = set->t;
+        iter->t = kind ? LOOP_TAB_KV : LOOP_TAB_V;
+        iter->n = riff_tab_logical_size(set->t);
+        iter->kp = iter->keys = riff_tab_collect_keys(set->t);
+        iter->tab = set->t;
         break;
     case TYPE_RFN:
     case TYPE_CFN:
@@ -85,11 +80,8 @@ static inline void new_iter(riff_val *set) {
 static inline void destroy_iter(void) {
     vm_iter *old = iter;
     iter = iter->p;
-    if (old->t == LOOP_TAB) {
-        if (!(old->n + 1)) // Loop completed?
-            free(old->keys - old->on);
-        else
-            free(old->keys - (old->on - old->n));
+    if (old->t == LOOP_TAB_KV || old->t == LOOP_TAB_V) {
+        free(old->keys);
     }
     free(old);
 }
@@ -169,7 +161,7 @@ static inline int exec(uint8_t *ep, riff_val *k, vm_stack *sp, vm_stack *fp) {
         err("stack overflow");
     }
     vm_stack *retp = sp; // Save original SP
-    riff_val   *tp;      // Temp pointer
+    riff_val *tp;        // Temp pointer
     register uint8_t *ip = ep;
 
 #ifndef COMPUTED_GOTO
@@ -215,45 +207,43 @@ L(LOOP8):
 L(LOOP16):{
     int jmp16 = *ip == OP_LOOP16;
     if (riff_unlikely(!iter->n--)) {
-        if (jmp16)
-            ip += 3;
-        else
-            ip += 2;
+        ip += 2 + jmp16;
         BREAK;
     }
     switch (iter->t) {
-    case LOOP_RNG:
-        if (riff_unlikely(is_null(iter->v)))
-            *iter->v = (riff_val) {TYPE_INT, .i = iter->st};
-        else
-            iter->v->i += iter->set.itvl;
-        break;
-    case LOOP_STR:
-        if (iter->k != NULL) {
-            if (is_null(iter->k)) {
-                set_int(iter->k, 0);
-            } else {
-                iter->k->i += 1;
-            }
-        }
-        if (!is_null(iter->v)) {
-            iter->v->s = riff_str_new(iter->set.str++, 1);
+    case LOOP_RANGE_KV:
+        if (riff_likely(is_int(iter->k))) {
+            iter->k->i += 1;
         } else {
-            *iter->v = (riff_val) {TYPE_STR, .s = riff_str_new(iter->set.str++, 1)};
+            set_int(iter->k, 0);
+        }
+        // Fall-through
+    case LOOP_RANGE_V:
+        if (riff_likely(is_int(iter->v))) {
+            iter->v->i += iter->itvl;
+        } else {
+            *iter->v = (riff_val) {TYPE_INT, .i = iter->st};
         }
         break;
-    case LOOP_TAB:
-        if (iter->k != NULL) {
-            *iter->k = *iter->keys;
+    case LOOP_STR_KV:
+        if (riff_likely(is_int(iter->k))) {
+            iter->k->i += 1;
+        } else {
+            set_int(iter->k, 0);
         }
-        *iter->v = *riff_tab_lookup(iter->set.tab, iter->keys, 0);
-        iter->keys++;
+        // Fall-through
+    case LOOP_STR_V:
+        if (riff_likely(is_str(iter->v))) {
+            iter->v->s = riff_str_new(iter->str++, 1);
+        } else {
+            *iter->v = (riff_val) {TYPE_STR, .s = riff_str_new(iter->str++, 1)};
+        }
         break;
-    case LOOP_NULL:
-        set_null(iter->v);
-        if (iter->k != NULL) {
-            set_null(iter->k);
-        }
+    case LOOP_TAB_KV:
+        *iter->k = *iter->kp;
+        // Fall-through
+    case LOOP_TAB_V:
+        *iter->v = *riff_tab_lookup(iter->tab, iter->kp++, 0);
         break;
     default: break;
     }
@@ -276,18 +266,15 @@ L(POPL):    destroy_iter();
 // Create iterator and jump to the corresponding OP_LOOP instruction for
 // initialization
 L(ITERV):
-    new_iter(&sp[-1].v); 
-    --sp;
-    set_null(&sp++->v);
-    iter->k = NULL;
+    new_iter(&sp[-1].v, 0); 
+    set_null(&sp[-1].v);
     iter->v = &sp[-1].v;
     JUMP16();
     BREAK;
 
 L(ITERKV):
-    new_iter(&sp[-1].v); 
-    --sp;
-    set_null(&sp++->v);
+    new_iter(&sp[-1].v, 1); 
+    set_null(&sp[-1].v);
 
     // Reserve extra stack slot for k,v iterators
     set_null(&sp++->v);
