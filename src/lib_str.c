@@ -247,11 +247,11 @@ LIB_FN(split) {
 
     // Split on regular expression
 do_split: {
-    char buf[STR_BUF_SZ];
+    size_t n = len * 2;
+    char *buf = malloc(sizeof(char) * n);
     char *p = buf;
-    size_t n = STR_BUF_SZ;
     char *sentinel = "\0";
-    pcre2_substitute(
+    int matches = pcre2_substitute(
             delim,
             (PCRE2_SPTR) str,
             len,
@@ -263,6 +263,12 @@ do_split: {
             1,
             (PCRE2_UCHAR *) buf,
             &n);
+    if (riff_unlikely(matches < 0)) {
+        PCRE2_UCHAR errstr[0x200];
+        pcre2_get_error_message(matches, errstr, 0x200);
+        fprintf(stderr, "riff: [split] %s\n", errstr);
+        exit(1);
+    }
     n += 1;
     // Extra null terminator, since the '\0' at buf[n] is a sentinel
     // value
@@ -279,6 +285,7 @@ do_split: {
             riff_tab_insert_int(t, i++, &(riff_val) {TYPE_STR, .s = s});
         }
     }
+    free(buf);
     set_tab(fp-1, t);
     return 1;
     }
