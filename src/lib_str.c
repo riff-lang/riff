@@ -220,6 +220,8 @@ LIB_FN(split) {
         str = fp->s->str;
         len = riff_strlen(fp->s);
     }
+    if (len == 0)
+        return 0;
     riff_str *s;
     riff_tab *t = malloc(sizeof(riff_tab));
     riff_tab_init(t);
