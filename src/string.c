@@ -173,7 +173,10 @@ riff_str *riff_strcat(char *l, char *r, size_t llen, size_t rlen) {
 
 riff_str *riff_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
     // Correct out-of-bounds ranges
-    size_t sl = strlen(s) - 1;
+    size_t sl = strlen(s);
+    if (!sl)
+        return riff_str_new("", 0);
+    --sl;
     from = from > sl ? sl : from < 0 ? 0 : from;
     to   = to   > sl ? sl : to   < 0 ? 0 : to;
 
