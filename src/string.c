@@ -171,21 +171,31 @@ riff_str *riff_strcat(char *l, char *r, size_t llen, size_t rlen) {
     return riff_str_new(new, len);
 }
 
-riff_str *riff_substr(char *s, riff_int from, riff_int to, riff_int itvl) {
-    // Correct out-of-bounds ranges
-    size_t sl = strlen(s);
-    if (!sl)
-        return riff_str_new("", 0);
-    --sl;
-    from = from > sl ? sl : from < 0 ? 0 : from;
-    to   = to   > sl ? sl : to   < 0 ? 0 : to;
-
-    size_t len;
-    if (itvl > 0) {
-        len = (size_t) (to - from) + 1;
-    } else {
-        len = (size_t) (from - to) + 1;
+static inline riff_int normalize_index(riff_int orig, size_t len) {
+    riff_int idx = orig;
+    if (orig < 0) {
+        idx = len + orig;
+        if (idx < 0)
+            idx = 0;
+        else if (idx >= len)
+            idx = len - 1;
+    } else if (orig >= len) {
+        idx = len - 1;
     }
+    return idx;
+}
+
+riff_str *riff_substr(char *s, size_t len, riff_int from, riff_int to, riff_int itvl) {
+    if (!len)
+        return riff_str_new("", 0);
+
+    from = normalize_index(from, len);
+    to   = normalize_index(to, len);
+
+    if (to > from)
+        len = (size_t) (to - from) + 1;
+    else
+        len = (size_t) (from - to) + 1;
     // Disallow contradicting directions. E.g. negative intervals when
     // from > to. Infer the direction from the from/to range and
     // override the provided interval with its negative value.

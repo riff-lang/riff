@@ -22,7 +22,7 @@ void      riff_stab_init(void);
 riff_str *riff_str_new_extra(const char *, size_t, uint8_t);
 riff_str *riff_str_new(const char *, size_t);
 riff_str *riff_strcat(char *, char *, size_t, size_t);
-riff_str *riff_substr(char *, riff_int, riff_int, riff_int);
+riff_str *riff_substr(char *, size_t, riff_int, riff_int, riff_int);
 
 static inline size_t riff_tostr(riff_val *v, char **buf) {
     switch (v->type) {

@@ -269,7 +269,7 @@ VM_BINOP(idx) {
         char *p = temp;
         riff_int len = (riff_int) riff_tostr(l, &p);
         if (is_range(r)) {
-            set_str(l, riff_substr(temp, r->q->from, r->q->to, r->q->itvl));
+            set_str(l, riff_substr(temp, (size_t) len, r->q->from, r->q->to, r->q->itvl));
         } else {
             riff_int r1  = intval(r);
             if (r1 < 0)
@@ -283,7 +283,7 @@ VM_BINOP(idx) {
     }
     case TYPE_STR: {
         if (is_range(r)) {
-            l->s = riff_substr(l->s->str, r->q->from, r->q->to, r->q->itvl);
+            l->s = riff_substr(l->s->str, riff_strlen(l->s), r->q->from, r->q->to, r->q->itvl);
         } else {
             riff_int r1  = intval(r);
             riff_int len = (riff_int) riff_strlen(l->s);
