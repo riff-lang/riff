@@ -585,7 +585,7 @@ static int led(riff_parser *y, uint32_t flags, int p, int tk) {
     case '.':
         advance();
         member_access(y, flags);
-        return TK(0).kind;
+        return RIFF_TK_IDENT;
     case '[':
         advance();
         subscript(y, flags);
