@@ -99,7 +99,8 @@ static int is_asgmt(int tk) {
 }
 
 static int is_literal(int tk) {
-    return tk >= RIFF_TK_NULL && tk <= RIFF_TK_REGEX;
+    return tk == '[' || tk == '{' || tk == RIFF_TK_FN ||
+        (tk >= RIFF_TK_NULL && tk <= RIFF_TK_REGEX);
 }
 
 static int is_incdec(int tk) {
