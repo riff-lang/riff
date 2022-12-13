@@ -1,5 +1,6 @@
-# Change this to change where `make install` places the `riff` executable
-LOC           = /usr/local/bin
+prefix       ?= /usr/local
+exec_prefix  ?= $(prefix)
+bindir       ?= $(exec_prefix)/bin
 
 RIFF_VERSION  = $(shell git describe)
 
@@ -85,7 +86,7 @@ clean:
 	rm -rf *.dSYM
 
 install: bin/riff
-	install bin/riff $(LOC)/riff
+	install bin/riff $(bindir)/riff
 
 asan: bin/asan
 instr: bin/instr
