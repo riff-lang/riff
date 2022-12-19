@@ -188,8 +188,23 @@ static int allxcase(riff_val *fp, int c) {
 LIB_FN(ord) {
     if (!is_str(fp))
         return 0;
-    char *end;
-    set_int(fp-1, riff_utf8tounicode(fp->s->str, &end));
+    riff_int v = 0;
+    char *s = fp->s->str;
+    while (*s) {
+        v <<= 8;
+        if (*s & 0x80) {
+            char *end;
+            riff_int u = riff_utf8tounicode(s, &end);
+            v <<= u & 0xff000000 ? 24 :
+                  u & 0x00ff0000 ? 16 :
+                  u & 0x0000ff00 ?  8 : 0;
+            v += u;
+            s = end;
+        } else {
+            v += (riff_int) *(s++);
+        }
+    }
+    set_int(fp-1, v);
     return 1;
 }
 
