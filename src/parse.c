@@ -43,7 +43,7 @@ typedef struct {
     int       reserved: 1;
 } local;
 
-// Patch lists used for break/continue statements in loops
+// Patch label lists used for break/continue statements in loops
 typedef struct {
     int  n;
     int  cap;
@@ -83,6 +83,11 @@ static void y_init(riff_parser *);
 static void err(riff_parser *y, const char *msg) {
     fprintf(stderr, "riff: [compile] line %d: %s\n", y->x->ln, msg);
     exit(1);
+}
+
+static void patch_jumps(riff_parser *y, patch_list *p) {
+    for (int i = 0; i < p->n; ++i)
+        c_patch(y->c, p->l[i]);
 }
 
 static char closing_delim(char c) {
@@ -742,15 +747,13 @@ static void do_stmt(riff_parser *y) {
     y->nlcl -= pop_locals(y, y->ld, 1);
 
     // Patch continue stmts
-    for (int i = 0; i < c.n; ++i)
-        c_patch(y->c, c.l[i]);
+    patch_jumps(y, &c);
+
     expr(y, 0, 0);
     c_jump(y->c, jmp, l1);
 
     // Patch break stmts
-    for (int i = 0; i < b.n; ++i)
-        c_patch(y->c, b.l[i]);
-
+    patch_jumps(y, &b);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
@@ -929,9 +932,7 @@ static void for_stmt(riff_parser *y) {
     }
 
     // Patch continue stmts
-    for (int i = 0; i < c.n; i++) {
-        c_patch(y->c, c.l[i]);
-    }
+    patch_jumps(y, &c);
 
     // Pop locals created inside the loop body
     y->ld -= 1;
@@ -941,9 +942,7 @@ static void for_stmt(riff_parser *y) {
     c_loop(y->c, l1 + 2);
 
     // Patch break stmts
-    for (int i = 0; i < b.n; i++) {
-        c_patch(y->c, b.l[i]);
-    }
+    patch_jumps(y, &b);
 
     // OP_POPL cleans up iterator state in the VM. Needs to be its own
     // instruction since break statements need to jump past the OP_LOOP
@@ -1070,15 +1069,14 @@ static void loop_stmt(riff_parser *y) {
     --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
+
     // Patch continue stmts
-    for (int i = 0; i < c.n; i++) {
-        c_patch(y->c, c.l[i]);
-    }
+    patch_jumps(y, &c);
+
     c_jump(y->c, JMP, l1);
+
     // Patch break stmts
-    for (int i = 0; i < b.n; i++) {
-        c_patch(y->c, b.l[i]);
-    }
+    patch_jumps(y, &b);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
@@ -1129,16 +1127,13 @@ static void conditional_loop(riff_parser *y, int jmp) {
     y->nlcl -= pop_locals(y, y->ld, 1);
 
     // Patch continue stmts
-    for (int i = 0; i < c.n; ++i)
-        c_patch(y->c, c.l[i]);
+    patch_jumps(y, &c);
 
     c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
 
     // Patch break stmts
-    for (int i = 0; i < b.n; ++i)
-        c_patch(y->c, b.l[i]);
-
+    patch_jumps(y, &b);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
