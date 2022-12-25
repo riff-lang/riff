@@ -68,6 +68,7 @@ enum token_kind {
     RIFF_TK_LOCAL,
     RIFF_TK_LOOP,
     RIFF_TK_RETURN,
+    RIFF_TK_UNTIL,
     RIFF_TK_WHILE,
 
     // Literals

@@ -507,11 +507,12 @@ int riff_lex_init(riff_lexer *x, const char *src) {
         { "in",       RIFF_TK_IN     },
         { "local",    RIFF_TK_LOCAL  },
         { "loop",     RIFF_TK_LOOP   },
-        { "not",      '!'       },
+        { "not",      '!'            },
         { "null",     RIFF_TK_NULL   },
         { "or",       RIFF_TK_OR     },
         { "return",   RIFF_TK_RETURN },
-        { "while",    RIFF_TK_WHILE  }
+        { "until",    RIFF_TK_UNTIL  },
+        { "while",    RIFF_TK_WHILE  },
     };
 
     FOREACH(reserved, i) {

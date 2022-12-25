@@ -708,7 +708,9 @@ static void exit_loop(riff_parser *y, patch_list *ob, patch_list *oc, patch_list
     if (nc->n) free(nc->l);
 }
 
-// do_stmt = 'do' stmt 'while' expr
+// do_stmt = 'do' stmt 'until' expr
+//         | 'do' stmt 'while' expr
+//         | 'do' '{' stmt_list '}' 'until' expr
 //         | 'do' '{' stmt_list '}' 'while' expr
 static void do_stmt(riff_parser *y) {
     patch_list *r_brk  = y->brk;
@@ -725,20 +727,30 @@ static void do_stmt(riff_parser *y) {
     } else {
         stmt(y);
     }
-    consume(y, RIFF_TK_WHILE, "expected 'while' condition after 'do' block");
+
+    int jmp;
+    if (TK_CMP(0, RIFF_TK_UNTIL))
+        jmp = JZ;
+    else if (TK_CMP(0, RIFF_TK_WHILE))
+        jmp = JNZ;
+    else
+        err(y, "expected 'until' or 'while' condition in 'do' statement");
+    advance();
+
     --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
+
     // Patch continue stmts
-    for (int i = 0; i < c.n; i++) {
+    for (int i = 0; i < c.n; ++i)
         c_patch(y->c, c.l[i]);
-    }
     expr(y, 0, 0);
-    c_jump(y->c, JNZ, l1);
+    c_jump(y->c, jmp, l1);
+
     // Patch break stmts
-    for (int i = 0; i < b.n; i++) {
+    for (int i = 0; i < b.n; ++i)
         c_patch(y->c, b.l[i]);
-    }
+
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
@@ -1094,16 +1106,14 @@ static void ret_stmt(riff_parser *y) {
     c_return(y->c, p != y->x->p);
 }
 
-// while_stmt = 'while' expr stmt
-//            | 'while' expr '{' stmt_list '}'
-static void while_stmt(riff_parser *y) {
+static void conditional_loop(riff_parser *y, int jmp) {
     patch_list *r_brk  = y->brk;
     patch_list *r_cont = y->cont;
     patch_list b, c;
     int l1, l2;
     l1 = y->c->n;
     expr(y, 0, 0);
-    l2 = c_prep_jump(y->c, JZ);
+    l2 = c_prep_jump(y->c, jmp);
     uint8_t old_loop = y->loop;
     y->loop = ++y->ld;
     enter_loop(y, &b, &c);
@@ -1117,17 +1127,31 @@ static void while_stmt(riff_parser *y) {
     --y->ld;
     y->loop = old_loop;
     y->nlcl -= pop_locals(y, y->ld, 1);
+
     // Patch continue stmts
-    for (int i = 0; i < c.n; i++) {
+    for (int i = 0; i < c.n; ++i)
         c_patch(y->c, c.l[i]);
-    }
+
     c_jump(y->c, JMP, l1);
     c_patch(y->c, l2);
+
     // Patch break stmts
-    for (int i = 0; i < b.n; i++) {
+    for (int i = 0; i < b.n; ++i)
         c_patch(y->c, b.l[i]);
-    }
+
     exit_loop(y, r_brk, r_cont, &b, &c);
+}
+
+// until_stmt = 'until' expr stmt
+//            | 'until' expr '{' stmt_list '}'
+static void until_stmt(riff_parser *y) {
+    conditional_loop(y, JNZ);
+}
+
+// while_stmt = 'while' expr stmt
+//            | 'while' expr '{' stmt_list '}'
+static void while_stmt(riff_parser *y) {
+    conditional_loop(y, JZ);
 }
 
 // stmt = ';'
@@ -1140,11 +1164,12 @@ static void while_stmt(riff_parser *y) {
 //      | if_stmt
 //      | local_stmt
 //      | ret_stmt
+//      | until_stmt
 //      | while_stmt
 static void stmt(riff_parser *y) {
     unset_all();
     switch (TK(0).kind) {
-    case ';':       advance();                   break;
+    case ';':            advance();                   break;
     case RIFF_TK_BREAK:  advance(); break_stmt(y);    break;
     case RIFF_TK_CONT:   advance(); continue_stmt(y); break;
     case RIFF_TK_DO:     advance(); do_stmt(y);       break;
@@ -1162,8 +1187,9 @@ static void stmt(riff_parser *y) {
     case RIFF_TK_LOCAL:  advance(); local_stmt(y);    break;
     case RIFF_TK_LOOP:   advance(); loop_stmt(y);     break;
     case RIFF_TK_RETURN: advance(); ret_stmt(y);      break;
+    case RIFF_TK_UNTIL:  advance(); until_stmt(y);    break;
     case RIFF_TK_WHILE:  advance(); while_stmt(y);    break;
-    default:                   expr_stmt(y);     break;
+    default:                        expr_stmt(y);     break;
     }
 
     // Skip token if semicolon used as a statement terminator
