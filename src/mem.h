@@ -11,12 +11,4 @@
         a = realloc(a, sizeof(sz) * cap); \
     }
 
-// Resizes a given buffer to the specified size ONLY IF the buffer
-// does not have enough space
-#define m_resizebuffer(b, n, cap, sz) \
-    if (cap < n) { \
-        cap = n; \
-        b = realloc(b, sizeof(sz) * cap); \
-    }
-
 #endif
