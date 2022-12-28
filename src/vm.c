@@ -130,14 +130,14 @@ int vm_exec(riff_state *e) {
     register_lib();
     // Add user-defined functions to the global hash table
     add_user_funcs();
-    return exec(e->main.code->code, e->main.code->k, stack, stack);
+    return exec(e->main->code->code, e->main->code->k, stack, stack);
 }
 
 // Reentry point for eval()
 int vm_exec_reenter(riff_state *e, vm_stack *fp) {
     // Add user-defined functions to the global hash table
     add_user_funcs();
-    return exec(e->main.code->code, e->main.code->k, fp, fp);
+    return exec(e->main->code->code, e->main->code->k, fp, fp);
 }
 
 #ifndef COMPUTED_GOTO

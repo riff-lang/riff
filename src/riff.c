@@ -21,8 +21,9 @@ char *riff_version(void) {
 
 // Entry point for the Emscripten-compiled WASM/JS module
 int riff_main(int flag, char *str) {
-    riff_stab_init();
     riff_state global_state;
+
+    riff_stab_init();
     riff_state_init(&global_state);
     riff_fn main;
     riff_code c;
@@ -30,14 +31,14 @@ int riff_main(int flag, char *str) {
     main.code = &c;
     main.arity = 0;
     global_state.main = main;
-    global_state.pname = "<playground>";
+    global_state.name = "<playground>";
     global_state.src = str;
-    main.name = riff_str_new(global_state.pname, strlen(global_state.pname));
+    main.name = riff_str_new(global_state.name, strlen(global_state.name));
     riff_compile(&global_state);
     if (flag)
         vm_exec(&global_state);
     else
-        d_prog(&global_state);
+        riff_disas(&global_state);
     return 0;
 }
 
@@ -112,15 +113,16 @@ static char *file2str(const char *path) {
 }
 
 int main(int argc, char **argv) {
-    riff_stab_init();
     riff_state global_state;
+
+    riff_stab_init();
     riff_state_init(&global_state);
     riff_fn main;
     riff_code c;
     c_init(&c);
     main.code = &c;
     main.arity = 0;
-    global_state.main = main;
+    global_state.main = &main;
     global_state.argc = argc;
     global_state.argv = argv;
     bool disas = false;
@@ -162,27 +164,27 @@ int main(int argc, char **argv) {
             return 1;
         }
         global_state.src = stdin2str();
-        global_state.pname = "<stdin>";
+        global_state.name = "<stdin>";
         riff_compile(&global_state);
     } else if (optind < argc) {
         // Option '-': Stop processing options and execute stdin
         if (argv[optind][0] == '-' && argv[optind][1] != '-') {
             global_state.src = stdin2str();
-            global_state.pname = "<stdin>";
+            global_state.name = "<stdin>";
         } else {
             global_state.src = file2str(argv[optind]);
-            global_state.pname = argv[optind];
+            global_state.name = argv[optind];
         }
         global_state.arg0 = optind;
         riff_compile(&global_state);
     } else {
-        global_state.pname = "<command-line>";
+        global_state.name = "<command-line>";
     }
 
     // -l: List riff's arbitrary disassembly for the given program
     if (disas) {
-        main.name = riff_str_new(global_state.pname, strlen(global_state.pname));
-        d_prog(&global_state);
+        main.name = riff_str_new(global_state.name, strlen(global_state.name));
+        riff_disas(&global_state);
     } else {
         main.name = NULL;
         vm_exec(&global_state);

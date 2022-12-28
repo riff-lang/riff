@@ -51,7 +51,7 @@ LIB_FN(eval) {
     c_init(&c);
     main.code = &c;
     main.arity = 0;
-    s.main = main;
+    s.main = &main;
     s.src = fp->s->str;
     main.name = NULL;
     riff_compile(&s);

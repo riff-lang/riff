@@ -7,7 +7,7 @@
 #include <math.h>
 #include <stdio.h>
 
-static struct {
+static const struct {
     const char *mnemonic;
     int         arity;
 } opcode_info[] = {
@@ -15,82 +15,62 @@ static struct {
 #include "opcodes.h"
 };
 
-#define OP_ARITY    (opcode_info[b0].arity)
-#define MNEMONIC    (opcode_info[b0].mnemonic)
+#define ARITY(op)       (opcode_info[(op)].arity)
+#define MNEMONIC(op)    (opcode_info[(op)].mnemonic)
 
 // Convenience macros for format specifiers
-#define F_IP        "%*d:  "
 #define F_XX        "%02x "
 #define F_MNEMONIC  " %s"
 #define F_OPERAND   "%d"
 #define F_LMNEMONIC " %-7s "
 #define F_LOPERAND  "%-6d "
 #define F_DEREF     " // %s"
-#define F_ADDR      " // %d"
 
 // Common format strings
-#define INST0       F_IP F_XX "      "   F_MNEMONIC                     "\n"
-#define INST0DEREF  F_IP F_XX "      "   F_LMNEMONIC "     "    F_DEREF "\n"
-#define INST1       F_IP F_XX F_XX "   " F_LMNEMONIC F_OPERAND          "\n"
-#define INST1DEREF  F_IP F_XX F_XX "   " F_LMNEMONIC F_LOPERAND F_DEREF "\n"
-#define INST2       F_IP F_XX F_XX F_XX  F_LMNEMONIC F_OPERAND          "\n"
-
-static int16_t toi16(uint8_t b1, uint8_t b2) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return (int16_t) (b1 | (b2 << 8));
-#else
-    return (int16_t) ((b1 << 8) | b2);
-#endif
-}
-
-static uint16_t tou16(uint8_t b1, uint8_t b2) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return (uint16_t) (b1 | (b2 << 8));
-#else
-    return (uint16_t) ((b1 << 8) | b2);
-#endif
-}
+#define INST0       "      "   F_MNEMONIC                     "\n"
+#define INST0DEREF  "      "   F_LMNEMONIC "     "    F_DEREF "\n"
+#define INST1       F_XX "   " F_LMNEMONIC F_OPERAND          "\n"
+#define INST1DEREF  F_XX "   " F_LMNEMONIC F_LOPERAND F_DEREF "\n"
+#define INST2       F_XX F_XX  F_LMNEMONIC F_OPERAND          "\n"
 
 // Wrap string in quotes
 // TODO deconstruct bytes that correspond to escape sequences into their literal
 //      forms
 static size_t disas_tostr(riff_val *v, char **out) {
-    if (is_str(v)) {
-        return (size_t) sprintf(*out, "\"%s\"", v->s->str);
-    }
+    if (is_str(v))
+        return (size_t) sprintf(*out, "'%s'", v->s->str);
     return riff_tostr(v, out);
 }
 
-static void d_code_obj(riff_code *c, int ipw) {
+static void disas_code(riff_code *c, const int ip_width) {
+    uint8_t *b;
+    char buf[STR_BUF_SZ], *sptr;
     int ip = 0;
-    char buf[STR_BUF_SZ];
+
     while (ip < c->n) {
-        char *sptr = buf;
-        uint8_t  b0  = c->code[ip];
-        uint8_t  b1  = ip+1 < c->n ? c->code[ip+1] : 0;
-        uint8_t  b2  = ip+2 < c->n ? c->code[ip+2] : 0;
-        int16_t  i16 = toi16(b1, b2);
-        uint16_t u16 = tou16(b1, b2);
-        if (OP_ARITY) {
-            switch (b0) {
+        sptr = buf;
+        b = &c->code[ip];
+        fprintf(stdout, "%*d:  " F_XX, ip_width, ip, b[0]);
+        if (ARITY(b[0]) > 0) {
+            switch (b[0]) {
             case OP_CONST:
-                disas_tostr(&c->k[b1], &sptr);
-                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, sptr);
+                disas_tostr(&c->k[b[1]], &sptr);
+                printf(INST1DEREF, b[1], MNEMONIC(b[0]), b[1], sptr);
                 break;
             case OP_TABK:
             case OP_GBLA:
             case OP_GBLV:
             case OP_SIDXA:
             case OP_SIDXV:
-                riff_tostr(&c->k[b1], &sptr);
-                printf(INST1DEREF, ipw, ip, b0, b1, MNEMONIC, b1, sptr);
+                riff_tostr(&c->k[b[1]], &sptr);
+                printf(INST1DEREF, b[1], MNEMONIC(b[0]), b[1], sptr);
                 break;
             case OP_JMP8:
             case OP_JZ8:
             case OP_JNZ8:
             case OP_XJZ8:
             case OP_XJNZ8:
-                printf(INST1, ipw, ip, b0, b1, MNEMONIC, ip + (int8_t) b1);
+                printf(INST1, b[1], MNEMONIC(b[0]), ip + (int8_t) b[1]);
                 break;
             case OP_JMP16:
             case OP_JZ16:
@@ -99,63 +79,68 @@ static void d_code_obj(riff_code *c, int ipw) {
             case OP_XJNZ16:
             case OP_ITERV:
             case OP_ITERKV:
-                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, ip + i16);
+                printf(INST2, b[1], b[2], MNEMONIC(b[0]), ip + *(int16_t *) &b[1]);
                 break;
             case OP_LOOP8:
-                printf(INST1, ipw, ip, b0, b1, MNEMONIC, ip - b1);
+                printf(INST1, b[1], MNEMONIC(b[0]), ip - b[1]);
                 break;
             case OP_LOOP16:
-                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, ip - u16);
+                printf(INST2, b[1], b[2], MNEMONIC(b[0]), ip - *(uint16_t *) &b[1]);
                 break;
             case OP_IMM16:
-                printf(INST2, ipw, ip, b0, b1, b2, MNEMONIC, u16);
+                printf(INST2, b[1], b[2], MNEMONIC(b[0]), *(uint16_t *) &b[1]);
                 break;
             default:
-                printf(INST1, ipw, ip, b0, b1, MNEMONIC, b1);
+                printf(INST1, b[1], MNEMONIC(b[0]), b[1]);
                 break;
             }
-        } else if (b0 >= OP_CONST0 && b0 <= OP_GBLV2) {
-            switch (b0) {
-            case OP_CONST0: disas_tostr(&c->k[0], &sptr); break;
-            case OP_CONST1: disas_tostr(&c->k[1], &sptr); break;
-            case OP_CONST2: disas_tostr(&c->k[2], &sptr); break;
+        } else if (b[0] >= OP_CONST0 && b[0] <= OP_GBLV2) {
+            switch (b[0]) {
+            case OP_CONST0:
+            case OP_CONST1:
+            case OP_CONST2:
+                disas_tostr(&c->k[b[0] - OP_CONST0], &sptr);
+                break;
             case OP_GBLA0:
-            case OP_GBLV0:  riff_tostr(&c->k[0], &sptr);  break;
             case OP_GBLA1:
-            case OP_GBLV1:  riff_tostr(&c->k[1], &sptr);  break;
             case OP_GBLA2:
-            case OP_GBLV2:  riff_tostr(&c->k[2], &sptr);  break;
-            default: break;
+                riff_tostr(&c->k[b[0] - OP_GBLA0], &sptr);
+                break;
+            case OP_GBLV0:
+            case OP_GBLV1:
+            case OP_GBLV2:
+                riff_tostr(&c->k[b[0] - OP_GBLV0], &sptr);
+                break;
             }
-            printf(INST0DEREF, ipw, ip, b0, MNEMONIC, sptr);
+            printf(INST0DEREF, MNEMONIC(b[0]), sptr);
         } else {
-            printf(INST0, ipw, ip, b0, MNEMONIC);
+            printf(INST0, MNEMONIC(b[0]));
         }
-        ip += OP_ARITY + 1;
+        ip += ARITY(b[0]) + 1;
     }
 }
 
-void d_prog(riff_state *e) {
+static void print_code_header(const char *prefix, riff_fn *fn) {
+    fprintf(stdout, "%s%s @ %p -> %d %s\n",
+            prefix,
+            riff_strlen(fn->name) ? fn->name->str : "<anonymous>",
+            fn,
+            fn->code->n,
+            fn->code->n == 1 ? "byte" : "bytes");
+}
+
+void riff_disas(riff_state *state) {
     // Calculate width for the IP in the disassembly
-    int w = (int) log10(e->main.code->n) + 1;
-    for (int i = 0; i < e->nf; ++i) {
-        int fw = (int) log10(e->fn[i]->code->n) + 1;
+    int w = (int) log10(state->main->code->n - 1) + 1;
+    for (int i = 0; i < state->nf; ++i) {
+        int fw = (int) log10(state->fn[i]->code->n - 1) + 1;
         w = w < fw ? fw : w;
     }
 
-    printf("source:%s @ %p -> %d %s\n",
-           e->pname,
-           &e->main,
-           e->main.code->n,
-           e->main.code->n == 1 ? "byte" : "bytes");
-    d_code_obj(e->main.code, w);
-    for (int i = 0; i < e->nf; ++i) {
-        riff_fn *f = e->fn[i];
-        printf("\nfn %s @ %p -> %d %s\n",
-               f->name->hash ? f->name->str : "<anonymous>",
-               f,
-               f->code->n,
-               f->code->n == 1 ? "byte" : "bytes");
-        d_code_obj(e->fn[i]->code, w);
+    print_code_header("source:", state->main);
+    disas_code(state->main->code, w);
+    for (int i = 0; i < state->nf; ++i) {
+        print_code_header("\nfn ", state->fn[i]);
+        disas_code(state->fn[i]->code, w);
     }
 }

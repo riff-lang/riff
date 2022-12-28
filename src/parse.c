@@ -1221,7 +1221,7 @@ int riff_compile(riff_state *s) {
     riff_buf_init(&b);
 
     y.state = s;
-    y.c = s->main.code;
+    y.c = s->main->code;
     y.x = &x;
     x.buf = &b;
     riff_lex_init(&x, s->src);
