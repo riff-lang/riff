@@ -1,3 +1,4 @@
+#include "buf.h"
 #include "code.h"
 #include "disas.h"
 #include "mem.h"
@@ -81,18 +82,16 @@ static void skip_shebang(FILE *file, size_t *s) {
 static char *stdin2str(void) {
     size_t s = ftell(stdin);
     skip_shebang(stdin, &s);
-    int cap = 0;
-    char *buf = NULL;
-    int n = 0;
+    riff_buf buf;
+    riff_buf_init(&buf);
     char c;
     while ((c = fgetc(stdin)) != EOF) {
-        m_growarray(buf, n, cap, buf);
-        buf[n++] = c;
+        riff_buf_add_char(&buf, c);
     }
-    if (!buf)
+    if (!buf.n)
         return NULL;
-    buf[n] = '\0';
-    return buf;
+    riff_buf_add_char(&buf, '\0');
+    return buf.buf;
 }
 
 static char *file2str(const char *path) {
