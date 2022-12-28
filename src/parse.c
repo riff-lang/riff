@@ -733,7 +733,7 @@ static void do_stmt(riff_parser *y) {
         stmt(y);
     }
 
-    int jmp;
+    enum riff_code_jump jmp;
     if (TK_CMP(0, RIFF_TK_UNTIL))
         jmp = JZ;
     else if (TK_CMP(0, RIFF_TK_WHILE))
@@ -1104,7 +1104,7 @@ static void ret_stmt(riff_parser *y) {
     c_return(y->c, p != y->x->p);
 }
 
-static void conditional_loop(riff_parser *y, int jmp) {
+static void conditional_loop(riff_parser *y, enum riff_code_jump jmp) {
     patch_list *r_brk  = y->brk;
     patch_list *r_cont = y->cont;
     patch_list b, c;

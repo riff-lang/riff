@@ -51,7 +51,7 @@ static void push_u16(riff_code *c, uint16_t i) {
 
 // Push a jump instruction and return the location of the byte to be
 // patched
-int c_prep_jump(riff_code *c, int type) {
+int c_prep_jump(riff_code *c, enum riff_code_jump type) {
     switch (type) {
     case JMP:  push(OP_JMP16);  break;
     case JZ:   push(OP_JZ16);   break; 
@@ -83,7 +83,7 @@ void c_end_loop(riff_code *c) {
 }
 
 // Simple backward jumps. Encode a 2-byte offset if necessary.
-void c_jump(riff_code *c, int type, int l) {
+void c_jump(riff_code *c, enum riff_code_jump type, int l) {
     int d = l - c->n;
     if (d <= INT8_MAX && d >= INT8_MIN) {
         switch (type) {

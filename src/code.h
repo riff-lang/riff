@@ -7,12 +7,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum opcodes {
+enum riff_opcode {
 #define OPCODE(x,y,z) OP_##x
 #include "opcodes.h"
 };
 
-enum jumps {
+enum riff_code_jump {
     JMP,    // Unconditional jump
     JZ,     // Pop stack, jump if zero
     JNZ,    // Pop stack, jump if non-zero
@@ -45,11 +45,11 @@ void c_prefix(riff_code *, int);
 void c_infix(riff_code *, int);
 void c_postfix(riff_code *, int);
 void c_concat(riff_code *, int);
-void c_jump(riff_code *, int, int);
+void c_jump(riff_code *, enum riff_code_jump, int);
 void c_loop(riff_code *, int);
 void c_range(riff_code *, int, int, int);
 void c_patch(riff_code *, int);
-int  c_prep_jump(riff_code *, int);
+int  c_prep_jump(riff_code *, enum riff_code_jump);
 int  c_prep_loop(riff_code *, int);
 void c_end_loop(riff_code *);
 void c_pop(riff_code *, int);
