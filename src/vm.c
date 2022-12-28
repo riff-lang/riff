@@ -4,6 +4,7 @@
 #include "lib.h"
 #include "mem.h"
 #include "string.h"
+#include "util.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -104,9 +105,10 @@ static inline void init_argv(riff_tab *t, riff_int arg0, int rf_argc, char **rf_
 static inline int exec(uint8_t *, riff_val *, vm_stack *, vm_stack *);
 
 #define add_user_funcs() \
-    for (int i = 0; i < e->nf; ++i) { \
-        if (e->fn[i]->name->hash) { \
-            riff_htab_insert_str(&globals, e->fn[i]->name, &(riff_val){TYPE_RFN, .fn = e->fn[i]}); \
+    RIFF_VEC_FOREACH((&e->fn), i) { \
+        riff_fn *fn = RIFF_VEC_GET(&e->fn, i); \
+        if (fn->name->hash) { \
+            riff_htab_insert_str(&globals, fn->name, &(riff_val){TYPE_RFN, .fn = fn}); \
         } \
     }
 

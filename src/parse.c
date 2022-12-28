@@ -5,6 +5,7 @@
 #include "mem.h"
 #include "string.h"
 #include "value.h"
+#include "util.h"
 
 #include <ctype.h>
 #include <stddef.h>
@@ -44,29 +45,23 @@ typedef struct {
 } local;
 
 // Patch label lists used for break/continue statements in loops
-typedef struct {
-    int  n;
-    int  cap;
-    int *l;
-} patch_list;
+typedef RIFF_VEC(int) patch_list;
 
 typedef struct {
-    riff_lexer *x;          // Parser controls lexical analysis
-    riff_code  *c;          // Current code object
-    riff_state *state;      // Global state
-    int         nlcl;       // Number of locals in scope
-    int         lcap;
-    local      *lcl;        // Array of local vars
-    uint8_t     ld;         // Lexical depth/scope
-    uint8_t     fd;         // Top-level scope of the current function
-    uint8_t     id;         // Iterator depth (`for` loops only)
-    uint8_t     loop;       // Depth of current loop
-    int         lhs: 1;     // Set when leftmost expr has been evaluated
-    int         ox: 1;      // Typical (i.e. not ++/--) operation flag
-    int         lx: 1;      // Local flag (newly-declared)
-    int         retx: 1;    // Return flag
-    patch_list *brk;        // Patch list for break stmts (current loop)
-    patch_list *cont;       // Patch list for continue stmts (current loop)
+    riff_lexer      *x;         // Parser controls lexical analysis
+    riff_code       *c;         // Current code object
+    riff_state      *state;     // Global state
+    uint8_t          ld;        // Lexical depth/scope
+    uint8_t          fd;        // Top-level scope of the current function
+    uint8_t          id;        // Iterator depth (`for` loops only)
+    uint8_t          loop;      // Depth of current loop
+    int              lhs: 1;    // Set when leftmost expr has been evaluated
+    int              ox: 1;     // Typical (i.e. not ++/--) operation flag
+    int              lx: 1;     // Local flag (newly-declared)
+    int              retx: 1;   // Return flag
+    patch_list      *brk;       // Patch list for break stmts (current loop)
+    patch_list      *cont;      // Patch list for continue stmts (current loop)
+    RIFF_VEC(local)  locals;    // Local variables
 } riff_parser;
 
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned up
@@ -86,8 +81,9 @@ static void err(riff_parser *y, const char *msg) {
 }
 
 static void patch_jumps(riff_parser *y, patch_list *p) {
-    for (int i = 0; i < p->n; ++i)
-        c_patch(y->c, p->l[i]);
+    RIFF_VEC_FOREACH(p,i) {
+        c_patch(y->c, RIFF_VEC_GET(p,i));
+    }
 }
 
 static char closing_delim(char c) {
@@ -178,9 +174,8 @@ static int rbop(int tk) {
 }
 
 static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
-    if (!y->nlcl) {
+    if (!y->locals.n)
         return -1;
-    }
 
     // If LHS hasn't been evaluated or we're not inside a local statement,
     // search through all active locals. Otherwise, we're evaluating the RHS of
@@ -188,7 +183,7 @@ static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
     //
     // This allows for statements like `local x = x` where the LHS `x` refers to
     // a newly-declared local and the RHS refers to any `x` previously in scope.
-    int i = (!y->lhs || !y->lx) ? y->nlcl - 1 : y->nlcl - 2;
+    int i = (!y->lhs || !y->lx) ? y->locals.n - 1 : y->locals.n - 2;
 
     // If parsing the expression `z` in a 'for' loop declaration e.g.
     //
@@ -200,16 +195,16 @@ static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
     i -= !!(flags & EXPR_FOR_Z);
 
     for (; i >= 0; --i) {
-        if (riff_str_eq(y->lcl[i].id, s) && y->lcl[i].d <= y->ld) {
+        local *var = &RIFF_VEC_GET(&y->locals, i);
+        if (riff_str_eq(var->id, s) && var->d <= y->ld)
             return i;
-        }
     }
     return -1;
 }
 
 static void identifier(riff_parser *y, uint32_t flags) {
     int scope  = resolve_local(y, flags, TK(0).s);
-    local *var = scope >= 0 ? &y->lcl[scope] : NULL;
+    local *var = scope >= 0 ? &RIFF_VEC_GET(&y->locals, scope) : NULL;
 
     // If symbol succeeds a prefix ++/-- operation, signal codegen to push the
     // address of the symbol
@@ -422,8 +417,7 @@ static void anon_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_str *name = riff_str_new("", 0);
     f_init(f, name);
-    m_growarray(y->state->fn, y->state->nf, y->state->fcap, riff_fn *);
-    y->state->fn[y->state->nf++] = f;
+    riff_vec_add(&y->state->fn, f);
     riff_parser fy;
     fy.state = y->state;
     fy.x = y->x;
@@ -655,53 +649,40 @@ static void expr_stmt(riff_parser *y) {
 }
 
 // After exiting scope, "pop" local variables no longer in scope by
-// decrementing y->nlcl
+// decrementing y->locals.n
 static uint8_t pop_locals(riff_parser *y, int depth, int f) {
-    if (!y->nlcl) return 0;
+    if (!y->locals.n)
+        return 0;
 
     uint8_t count = 0;
-    for (int i = y->nlcl - 1; i >= 0 && (y->lcl[i].d > depth); --i) {
+    for (int i = y->locals.n - 1; i >= 0 && (RIFF_VEC_GET(&y->locals, i).d > depth); --i)
         ++count;
-    }
-    if (count) {
+    if (count)
         c_pop(y->c, count);
-    }
     return count;
 }
 
 // break_stmt = 'break'
 static void break_stmt(riff_parser *y) {
-    if (!y->loop) {
+    if (!y->loop)
         err(y, "break statement outside of loop");
-    }
     // Reserve a forward jump
-    patch_list *p = y->brk;
     pop_locals(y, y->loop, 0);
-    m_growarray(p->l, p->n, p->cap, int);
-    p->l[p->n++] = c_prep_jump(y->c, JMP);
+    riff_vec_add(y->brk, c_prep_jump(y->c, JMP));
 }
 
 // continue_stmt = 'continue'
 static void continue_stmt(riff_parser *y) {
-    if (!y->loop) {
+    if (!y->loop)
         err(y, "continue statement outside of loop");
-    }
     // Reserve a forward jump
-    patch_list *p = y->cont;
     pop_locals(y, y->loop, 0);
-    m_growarray(p->l, p->n, p->cap, int);
-    p->l[p->n++] = c_prep_jump(y->c, JMP);
-}
-
-static void p_init(patch_list *p) {
-    p->n   = 0;
-    p->cap = 0;
-    p->l   = NULL;
+    riff_vec_add(y->cont, c_prep_jump(y->c, JMP));
 }
 
 static void enter_loop(riff_parser *y, patch_list *b, patch_list *c) {
-    p_init(b);
-    p_init(c);
+    riff_vec_init(b);
+    riff_vec_init(c);
     y->brk  = b;
     y->cont = c;
 }
@@ -709,8 +690,10 @@ static void enter_loop(riff_parser *y, patch_list *b, patch_list *c) {
 static void exit_loop(riff_parser *y, patch_list *ob, patch_list *oc, patch_list *nb, patch_list *nc) {
     y->brk  = ob;
     y->cont = oc;
-    if (nb->n) free(nb->l);
-    if (nc->n) free(nc->l);
+    if (nb->cap)
+        free(nb->list);
+    if (nc->cap)
+        free(nc->list);
 }
 
 // do_stmt = 'do' stmt 'until' expr
@@ -744,7 +727,7 @@ static void do_stmt(riff_parser *y) {
 
     --y->ld;
     y->loop = old_loop;
-    y->nlcl -= pop_locals(y, y->ld, 1);
+    y->locals.n -= pop_locals(y, y->ld, 1);
 
     // Patch continue stmts
     patch_jumps(y, &c);
@@ -758,8 +741,7 @@ static void do_stmt(riff_parser *y) {
 }
 
 static void add_local(riff_parser *y, riff_str *id, int reserved) {
-    m_growarray(y->lcl, y->nlcl, y->lcap, local);
-    y->lcl[y->nlcl++] = (local) {id, y->ld, reserved};
+    riff_vec_add(&y->locals, ((local) {id, y->ld, reserved}));
 }
 
 // Returns the arity of the parsed function
@@ -820,15 +802,14 @@ static void local_fn(riff_parser *y) {
 
     // If the identifier doesn't already exist as a local at the current scope,
     // add a new local.
-    if (idx < 0 || y->lcl[idx].d != y->ld) {
+    if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).d != y->ld) {
         add_local(y, id, 1);
-        c_local(y->c, y->nlcl-1, 1, 1);
+        c_local(y->c, y->locals.n-1, 1, 1);
     }
     riff_fn *f = malloc(sizeof(riff_fn));
     f_init(f, fn_name);
     riff_parser fy;
-    m_growarray(y->state->fn, y->state->nf, y->state->fcap, riff_fn *);
-    y->state->fn[y->state->nf++] = f;
+    riff_vec_add(&y->state->fn, f);
     fy.state = y->state;
     fy.x = y->x;
     fy.c = f->code;
@@ -856,8 +837,7 @@ static void fn_stmt(riff_parser *y) {
         advance();
     }
     f_init(f, id);
-    m_growarray(y->state->fn, y->state->nf, y->state->fcap, riff_fn *);
-    y->state->fn[y->state->nf++] = f;
+    riff_vec_add(&y->state->fn, f);
 
     // Functions parsed with their own parser, same lexer
     riff_parser fy;
@@ -936,7 +916,7 @@ static void for_stmt(riff_parser *y) {
 
     // Pop locals created inside the loop body
     y->ld -= 1;
-    y->nlcl -= pop_locals(y, y->ld, 1);
+    y->locals.n -= pop_locals(y, y->ld, 1);
 
     c_patch(y->c, l1);
     c_loop(y->c, l1 + 2);
@@ -957,7 +937,7 @@ static void for_stmt(riff_parser *y) {
     // workaround of incrementing lexical depth twice prevents break/continue
     // statements from otherwise popping the 'for' loop's own locals. All other
     // loop constructs use y->loop as the argument.
-    y->nlcl -= pop_locals(y, y->ld, 1);
+    y->locals.n -= pop_locals(y, y->ld, 1);
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
@@ -976,7 +956,7 @@ static void if_stmt(riff_parser *y) {
         stmt(y);
     }
     --y->ld;
-    y->nlcl -= pop_locals(y, y->ld, 1);
+    y->locals.n -= pop_locals(y, y->ld, 1);
     if (TK_CMP(0, RIFF_TK_ELIF)) {
 y_elif:
         advance();
@@ -1003,7 +983,7 @@ y_elif:
         }
         c_patch(y->c, l2);
         --y->ld;
-        y->nlcl -= pop_locals(y, y->ld, 1);
+        y->locals.n -= pop_locals(y, y->ld, 1);
     } else {
         c_patch(y->c, l1);
     }
@@ -1034,7 +1014,7 @@ static void local_stmt(riff_parser *y) {
 
         // If the identifier doesn't already exist as a local at the
         // current scope, add a new local
-        if (idx < 0 || y->lcl[idx].d != y->ld) {
+        if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).d != y->ld) {
             set(lx);    // Only set for newly-declared locals
             add_local(y, id, 0);
         }
@@ -1068,7 +1048,7 @@ static void loop_stmt(riff_parser *y) {
     }
     --y->ld;
     y->loop = old_loop;
-    y->nlcl -= pop_locals(y, y->ld, 1);
+    y->locals.n -= pop_locals(y, y->ld, 1);
 
     // Patch continue stmts
     patch_jumps(y, &c);
@@ -1124,7 +1104,7 @@ static void conditional_loop(riff_parser *y, enum riff_code_jump jmp) {
     }
     --y->ld;
     y->loop = old_loop;
-    y->nlcl -= pop_locals(y, y->ld, 1);
+    y->locals.n -= pop_locals(y, y->ld, 1);
 
     // Patch continue stmts
     patch_jumps(y, &c);
@@ -1203,15 +1183,13 @@ static void stmt_list(riff_parser *y) {
 static void y_init(riff_parser *y) {
     unset_all();
     unset(lx);
-    y->nlcl = 0;
-    y->lcap = 0;
-    y->lcl  = NULL;
     y->ld   = 0;
     y->fd   = 0;
     y->id   = 0;
     y->loop = 0;
     y->brk  = NULL;
     y->cont = NULL;
+    riff_vec_init(&y->locals);
 }
 
 int riff_compile(riff_state *s) {

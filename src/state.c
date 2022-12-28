@@ -7,8 +7,7 @@ void riff_state_init(riff_state *s) {
         .argc = 0,
         .arg0 = 0,
         .argv = NULL,
-        .nf   = 0,
-        .fcap = 0,
-        .fn   = NULL,
+        .main = NULL,
     };
+    riff_vec_init(&s->fn);
 }

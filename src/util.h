@@ -22,6 +22,41 @@
 #define riff_dtostr(d,b)   snprintf(b, sizeof b, "%g", d)
 #define riff_strchr(s,c)  (!!memchr(s, c, strlen(s)))
 
+// Generic dynamic array utilities
+#define VEC_GROWTH_FACTOR 2
+#define VEC_INITIAL_CAP   8
+
+#define RIFF_VEC(T)                                                 \
+    struct {                                                        \
+        T      *list;                                               \
+        size_t  n;                                                  \
+        size_t  cap;                                                \
+    }
+
+#define RIFF_VEC_FOREACH(v,var)                                     \
+    for (int (var) = 0; (var) < (v)->n; ++(var))
+
+#define RIFF_VEC_GET(v,idx)                                         \
+    ((v)->list[idx])
+
+#define riff_vec_init(v)                                            \
+    do {                                                            \
+        (v)->list = NULL;                                           \
+        (v)->n    = 0;                                              \
+        (v)->cap  = 0;                                              \
+    } while (0)
+
+#define riff_vec_add(v,item)                                        \
+    do {                                                            \
+        if (riff_unlikely((v)->cap <= (v)->n)) {                    \
+            (v)->cap = (v)->cap == 0                                \
+                ? VEC_INITIAL_CAP                                   \
+                : (v)->cap * VEC_GROWTH_FACTOR;                     \
+            (v)->list = realloc((v)->list, (v)->cap * sizeof *(v)); \
+        }                                                           \
+        (v)->list[(v)->n++] = (item);                               \
+    } while (0)
+
 double  riff_strtod(const char *, char **, int);
 int64_t riff_strtoll(const char *, char **, int);
 int64_t riff_utf8tounicode(const char *, char **);

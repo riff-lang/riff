@@ -2,6 +2,7 @@
 
 #include "conf.h"
 #include "string.h"
+#include "util.h"
 
 #include <inttypes.h>
 #include <math.h>
@@ -132,15 +133,16 @@ static void print_code_header(const char *prefix, riff_fn *fn) {
 void riff_disas(riff_state *state) {
     // Calculate width for the IP in the disassembly
     int w = (int) log10(state->main->code->n - 1) + 1;
-    for (int i = 0; i < state->nf; ++i) {
-        int fw = (int) log10(state->fn[i]->code->n - 1) + 1;
+    RIFF_VEC_FOREACH(&state->fn, i) {
+        int fw = (int) log10(RIFF_VEC_GET(&state->fn, i)->code->n - 1) + 1;
         w = w < fw ? fw : w;
     }
 
     print_code_header("source:", state->main);
     disas_code(state->main->code, w);
-    for (int i = 0; i < state->nf; ++i) {
-        print_code_header("\nfn ", state->fn[i]);
-        disas_code(state->fn[i]->code, w);
+    RIFF_VEC_FOREACH(&state->fn, i) {
+        riff_fn *fn = RIFF_VEC_GET(&state->fn, i);
+        print_code_header("\nfn ", fn);
+        disas_code(fn->code, w);
     }
 }

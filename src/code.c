@@ -25,7 +25,7 @@ void c_init(riff_code *c) {
 }
 
 void c_push(riff_code *c, uint8_t b) {
-    m_growarray(c->code, c->n, c->cap, uint8_t);
+    m_growarray(c->code, c->n, c->cap);
     c->code[c->n++] = b;
 }
 
@@ -176,7 +176,7 @@ static void push_constant(riff_code *c, int i) {
 }
 
 void c_fn_constant(riff_code *c, riff_fn *fn) {
-    m_growarray(c->k, c->nk, c->kcap, riff_val);
+    m_growarray(c->k, c->nk, c->kcap);
     c->k[c->nk++] = (riff_val) {TYPE_RFN, .fn = fn};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
@@ -211,7 +211,7 @@ void c_constant(riff_code *c, riff_token *tk) {
         c->last = LAST_INS_IDX(0);
         return;
     } else if (tk->kind == RIFF_TK_REGEX) {
-        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        m_growarray(c->k, c->nk, c->kcap);
         c->k[c->nk++] = (riff_val) {TYPE_REGEX, .r = tk->r};
         if (c->nk > (UINT8_MAX + 1))
             err(c, "Exceeded max number of unique literals");
@@ -228,7 +228,7 @@ void c_constant(riff_code *c, riff_token *tk) {
     // Provided literal does not already exist in constant table
     switch (tk->kind) {
     case RIFF_TK_FLOAT:
-        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        m_growarray(c->k, c->nk, c->kcap);
         c->k[c->nk++] = (riff_val) {TYPE_FLOAT, .f = tk->f};
         break;
     case RIFF_TK_INT: {
@@ -252,7 +252,7 @@ void c_constant(riff_code *c, riff_token *tk) {
                 c->last = LAST_INS_IDX(2);
                 return;
             } else {
-                m_growarray(c->k, c->nk, c->kcap, riff_val);
+                m_growarray(c->k, c->nk, c->kcap);
                 c->k[c->nk++] = (riff_val) {TYPE_INT, .i = i};
             }
             break;
@@ -260,7 +260,7 @@ void c_constant(riff_code *c, riff_token *tk) {
         break;
     }
     case RIFF_TK_STR: case RIFF_TK_IDENT: {
-        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        m_growarray(c->k, c->nk, c->kcap);
         c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->s};
         break;
     }
@@ -315,7 +315,7 @@ void c_global(riff_code *c, riff_token *tk, int mode) {
             return;
         }
     }
-    m_growarray(c->k, c->nk, c->kcap, riff_val);
+    m_growarray(c->k, c->nk, c->kcap);
     c->k[c->nk++] = (riff_val) {TYPE_STR, .s = tk->s};
     if (c->nk > (UINT8_MAX + 1))
         err(c, "Exceeded max number of unique literals");
@@ -391,7 +391,7 @@ void c_table(riff_code *c, int n) {
         }
 
         // Otherwise, add `n` to constants pool
-        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        m_growarray(c->k, c->nk, c->kcap);
         c->k[c->nk++] = (riff_val) {TYPE_INT, .i = (riff_int) n};
         if (c->nk > (UINT8_MAX + 1)) {
             err(c, "Exceeded max number of unique literals");
@@ -481,7 +481,7 @@ void c_str_index(riff_code *c, int prev_idx, riff_str *k, int addr) {
     }
     int idx = find_constant(c, &(riff_token) {RIFF_TK_STR, .s = k});
     if (idx < 0) {
-        m_growarray(c->k, c->nk, c->kcap, riff_val);
+        m_growarray(c->k, c->nk, c->kcap);
         c->k[c->nk++] = (riff_val) {TYPE_STR, .s = k};
         if (c->nk > (UINT8_MAX + 1)) {
             err(c, "Exceeded max number of unique literals");
