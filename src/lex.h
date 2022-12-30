@@ -17,7 +17,7 @@ typedef struct {
     };
 } riff_token;
 
-enum lexer_mode {
+enum riff_lex_mode {
     LEX_NUD,
     LEX_LED,
     LEX_STR_SQ,     // Interpolated string (single quotes)
@@ -90,7 +90,7 @@ enum token_kind {
 typedef struct {
     riff_token  tk[2];  // LL(1)
     const char *p;
-    int         ln;
+    size_t      ln;
     riff_buf    buf;
 } riff_lexer;
 

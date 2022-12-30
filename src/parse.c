@@ -76,7 +76,7 @@ static int  compile_fn(riff_parser *);
 static void y_init(riff_parser *);
 
 static void err(riff_parser *y, const char *msg) {
-    fprintf(stderr, "riff: [compile] line %d: %s\n", y->x->ln, msg);
+    fprintf(stderr, "riff: [compile] line %zu: %s\n", y->x->ln, msg);
     exit(1);
 }
 
@@ -122,7 +122,7 @@ static void consume(riff_parser *y, int tk, const char *msg) {
     advance();
 }
 
-static void consume_mode(riff_parser *y, int mode, int tk, const char *msg) {
+static void consume_mode(riff_parser *y, enum riff_lex_mode mode, int tk, const char *msg) {
     check(y, tk, msg);
     advance_mode(mode);
 }
@@ -254,8 +254,12 @@ static void literal(riff_parser *y, uint32_t flags) {
 
 static void interpolated_str(riff_parser *y, char d) {
     uint8_t n = 0;
-    int inter_mode = d == '\'' ? RIFF_TK_STR_INTER_SQ : RIFF_TK_STR_INTER_DQ;
-    int lex_mode = d == '\'' ? LEX_STR_SQ : LEX_STR_DQ;
+    int inter_mode = d == '\'' ?
+        RIFF_TK_STR_INTER_SQ :
+        RIFF_TK_STR_INTER_DQ;
+    enum riff_lex_mode lex_mode = d == '\''
+        ? LEX_STR_SQ
+        : LEX_STR_DQ;
     while (TK_CMP(0, inter_mode)) {
         if (riff_strlen(TK(0).s) > 0) {
             ++n;

@@ -16,7 +16,7 @@
 #define TK(i)    (x->tk[i])
 
 static void err(riff_lexer *x, const char *msg) {
-    fprintf(stderr, "riff: [lex] line %d: %s\n", x->ln, msg);
+    fprintf(stderr, "riff: [lex] line %zu: %s\n", x->ln, msg);
     exit(1);
 }
 
@@ -401,7 +401,7 @@ static void block_comment(riff_lexer *x) {
     }
 }
 
-static int tokenize(riff_lexer *x, int mode, riff_token *tk) {
+static int tokenize(riff_lexer *x, enum riff_lex_mode mode, riff_token *tk) {
     int c;
     if (mode == LEX_STR_SQ) {
         return str_literal(x, tk, '\'');
