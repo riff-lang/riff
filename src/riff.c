@@ -91,7 +91,7 @@ static char *stdin2str(void) {
     if (!buf.n)
         return NULL;
     riff_buf_add_char(&buf, '\0');
-    return buf.buf;
+    return buf.list;
 }
 
 static char *file2str(const char *path) {

@@ -1195,13 +1195,10 @@ static void y_init(riff_parser *y) {
 int riff_compile(riff_state *s) {
     riff_parser y;
     riff_lexer  x;
-    riff_buf    b;
-    riff_buf_init(&b);
 
     y.state = s;
     y.c = s->main->code;
     y.x = &x;
-    x.buf = &b;
     riff_lex_init(&x, s->src);
     // Overwrite OP_RET byte if appending to an existing bytecode array.
     if (y.c->n && y.c->code[y.c->n-1] == OP_RET) {
@@ -1211,6 +1208,6 @@ int riff_compile(riff_state *s) {
     stmt_list(&y);
     pop_locals(&y, y.ld, 1);
     c_push(y.c, OP_RET);
-    riff_buf_free(&b);
+    riff_lex_free(&x);
     return 0;
 }

@@ -91,10 +91,11 @@ typedef struct {
     riff_token  tk[2];  // LL(1)
     const char *p;
     int         ln;
-    riff_buf   *buf;
+    riff_buf    buf;
 } riff_lexer;
 
 int  riff_lex_init(riff_lexer *, const char *);
+void riff_lex_free(riff_lexer *);
 int  riff_lex_advance(riff_lexer *, int);
 int  riff_lex_peek(riff_lexer *, int);
 

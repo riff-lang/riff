@@ -116,8 +116,8 @@ static inline int read_bytes(FILE *f, riff_int n, riff_str **ret) {
     if (n) {
         riff_buf buf;
         riff_buf_init_size(&buf, n);
-        size_t nr = fread(buf.buf, sizeof (char), n, f);
-        *ret = riff_str_new(buf.buf, nr);
+        size_t nr = fread(buf.list, sizeof (char), n, f);
+        *ret = riff_str_new(buf.list, nr);
         riff_buf_free(&buf);
         return nr > 0;
     } else {
@@ -133,11 +133,11 @@ static inline int read_line(FILE *f, riff_str **ret) {
     riff_buf_init_size(&buf, m);
     while (1) {
         riff_buf_resize(&buf, m);
-        if (fgets(buf.buf + buf.n, m - buf.n, f) == NULL) {
+        if (fgets(buf.list + buf.n, m - buf.n, f) == NULL) {
             break;
         }
-        buf.n += (size_t) strlen(buf.buf + buf.n);
-        if (buf.n && buf.buf[buf.n-1] == '\n') {
+        buf.n += (size_t) strlen(buf.list + buf.n);
+        if (buf.n && buf.list[buf.n-1] == '\n') {
             --buf.n;
             break;
         }
@@ -145,7 +145,7 @@ static inline int read_line(FILE *f, riff_str **ret) {
             m += m;
         }
     }
-    *ret = riff_str_new(buf.buf, buf.n);
+    *ret = riff_str_new(buf.list, buf.n);
     riff_buf_free(&buf);
     return 1;
 }
@@ -156,10 +156,10 @@ static inline int read_all(FILE *f, riff_str **ret) {
     riff_buf_init_size(&buf, m);
     do {
         riff_buf_resize(&buf, m);
-        buf.n += fread(buf.buf + buf.n, sizeof (char), m - buf.n, f);
+        buf.n += fread(buf.list + buf.n, sizeof (char), m - buf.n, f);
         m += m;
     } while (buf.n == m);
-    *ret = riff_str_new(buf.buf, buf.n);
+    *ret = riff_str_new(buf.list, buf.n);
     riff_buf_free(&buf);
     return 1;
 }
