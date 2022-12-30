@@ -46,13 +46,34 @@
         (v)->cap  = 0;                                              \
     } while (0)
 
+#define riff_vec_init_size(v,sz)                                    \
+    do {                                                            \
+        (v)->list = malloc((sz) * sizeof *((v)->list));             \
+        (v)->n    = 0;                                              \
+        (v)->cap  = (sz);                                           \
+    } while (0)
+
+#define riff_vec_free(v)                                            \
+    do {                                                            \
+        if ((v)->cap) {                                             \
+            free((v)->list);                                        \
+            riff_vec_init((v));                                     \
+        }                                                           \
+    } while (0)
+
+#define riff_vec_resize(v,sz)                                       \
+    do {                                                            \
+        (v)->list = realloc((v)->list, (sz) * sizeof *((v)->list)); \
+        (v)->cap  = (sz);                                           \
+    } while (0)
+
 #define riff_vec_add(v,item)                                        \
     do {                                                            \
         if (riff_unlikely((v)->cap <= (v)->n)) {                    \
             (v)->cap = (v)->cap == 0                                \
                 ? VEC_INITIAL_CAP                                   \
                 : (v)->cap * VEC_GROWTH_FACTOR;                     \
-            (v)->list = realloc((v)->list, (v)->cap * sizeof *(v)); \
+            riff_vec_resize((v), (v)->cap);                         \
         }                                                           \
         (v)->list[(v)->n++] = (item);                               \
     } while (0)
