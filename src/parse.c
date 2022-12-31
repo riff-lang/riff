@@ -8,6 +8,7 @@
 #include "util.h"
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -18,14 +19,17 @@
 #define advance_mode(m) riff_lex_advance(y->x, (m))
 #define peek_mode(m)    riff_lex_peek(y->x, (m))
 
-#define set(f)      y->f    = 1
-#define unset(f)    y->f    = 0
-#define restore(f)  y->f    = f
-#define unset_all() y->lhs  = 0; \
-                    y->ox   = 0; \
-                    y->retx = 0
+#define set(f)          y->f = true
+#define unset(f)        y->f = false
+#define restore(f)      y->f = f
+#define unset_all()      \
+    do {                 \
+        y->lhs  = false; \
+        y->ox   = false; \
+        y->retx = false; \
+    } while (0)
 
-#define save_and_unset(f) int f = y->f; y->f = 0
+#define save_and_unset(f) bool f = y->f; y->f = false
 
 #define TK(i)       (y->x->tk[i])
 #define TK_CMP(i,t) (TK(i).kind == (t))
@@ -39,9 +43,9 @@ enum expr_flags {
 
 // Local vars
 typedef struct {
-    riff_str *id;
-    int       d;
-    int       reserved: 1;
+    riff_str *ident;
+    size_t    depth;
+    bool      reserved;
 } local;
 
 // Patch label lists used for break/continue statements in loops
@@ -55,10 +59,10 @@ typedef struct {
     uint8_t          fd;        // Top-level scope of the current function
     uint8_t          id;        // Iterator depth (`for` loops only)
     uint8_t          loop;      // Depth of current loop
-    int              lhs: 1;    // Set when leftmost expr has been evaluated
-    int              ox: 1;     // Typical (i.e. not ++/--) operation flag
-    int              lx: 1;     // Local flag (newly-declared)
-    int              retx: 1;   // Return flag
+    bool             lhs;       // Set when leftmost expr has been evaluated
+    bool             ox;        // Typical (i.e. not ++/--) operation flag
+    bool             lx;        // Local flag (newly-declared)
+    bool             retx;      // Return flag
     patch_list      *brk;       // Patch list for break stmts (current loop)
     patch_list      *cont;      // Patch list for continue stmts (current loop)
     RIFF_VEC(local)  locals;    // Local variables
@@ -196,7 +200,7 @@ static int resolve_local(riff_parser *y, uint32_t flags, riff_str *s) {
 
     for (; i >= 0; --i) {
         local *var = &RIFF_VEC_GET(&y->locals, i);
-        if (riff_str_eq(var->id, s) && var->d <= y->ld)
+        if (riff_str_eq(var->ident, s) && var->depth <= y->ld)
             return i;
     }
     return -1;
@@ -211,7 +215,7 @@ static void identifier(riff_parser *y, uint32_t flags) {
     if (flags & EXPR_REF) {
         if (var) {
             c_local(y->c, scope, 1, !var->reserved);
-            var->reserved = 1;
+            var->reserved = true;
         } else {
             c_global(y->c, &TK(0), 1);
         }
@@ -229,7 +233,7 @@ static void identifier(riff_parser *y, uint32_t flags) {
              TK_CMP(1, '.') || TK_CMP(1, '['))) {
         if (var) {
             c_local(y->c, scope, 1, !var->reserved);
-            var->reserved = 1;
+            var->reserved = true;
         } else {
             c_global(y->c, &TK(0), 1);
         }
@@ -659,7 +663,7 @@ static uint8_t pop_locals(riff_parser *y, int depth, int f) {
         return 0;
 
     uint8_t count = 0;
-    for (int i = y->locals.n - 1; i >= 0 && (RIFF_VEC_GET(&y->locals, i).d > depth); --i)
+    for (int i = y->locals.n - 1; i >= 0 && (RIFF_VEC_GET(&y->locals, i).depth > depth); --i)
         ++count;
     if (count)
         c_pop(y->c, count);
@@ -806,7 +810,7 @@ static void local_fn(riff_parser *y) {
 
     // If the identifier doesn't already exist as a local at the current scope,
     // add a new local.
-    if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).d != y->ld) {
+    if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).depth != y->ld) {
         add_local(y, id, 1);
         c_local(y->c, y->locals.n-1, 1, 1);
     }
@@ -1018,7 +1022,7 @@ static void local_stmt(riff_parser *y) {
 
         // If the identifier doesn't already exist as a local at the
         // current scope, add a new local
-        if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).d != y->ld) {
+        if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).depth != y->ld) {
             set(lx);    // Only set for newly-declared locals
             add_local(y, id, 0);
         }
