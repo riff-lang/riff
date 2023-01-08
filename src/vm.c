@@ -132,14 +132,14 @@ int vm_exec(riff_state *e) {
     register_lib();
     // Add user-defined functions to the global hash table
     add_user_funcs();
-    return exec(e->main->code->code, e->main->code->k, stack, stack);
+    return exec(e->main.code.code, e->main.code.k, stack, stack);
 }
 
 // Reentry point for eval()
 int vm_exec_reenter(riff_state *e, vm_stack *fp) {
     // Add user-defined functions to the global hash table
     add_user_funcs();
-    return exec(e->main->code->code, e->main->code->k, fp, fp);
+    return exec(e->main.code.code, e->main.code.k, fp, fp);
 }
 
 #ifndef COMPUTED_GOTO
@@ -497,7 +497,7 @@ L(TCALL): {
 
         // In the case of direct recursion and no call frame adjustments needed,
         // quickly reset IP and dispatch control
-        if (ep == fn->code->code && ar1 == ar2) {
+        if (ep == fn->code.code && ar1 == ar2) {
             ip = ep;
             BREAK;
         }
@@ -521,8 +521,8 @@ L(TCALL): {
             while (nargs++ <= ar2)
                 set_null(&sp++->v);
         }
-        ip = ep = fn->code->code;
-        k  = fn->code->k;
+        ip = ep = fn->code.code;
+        k  = fn->code.k;
         BREAK;
     }
 
@@ -567,7 +567,7 @@ L(CALL): {
         // to itself without any other work required from the VM here. This is
         // completely necessary for local named functions, but globals benefit
         // as well.
-        nret = exec(fn->code->code, fn->code->k, sp, sp - arity - 1);
+        nret = exec(fn->code.code, fn->code.k, sp, sp - arity - 1);
         sp -= arity;
 
         // Copy the function's return value to the stack top - this should be

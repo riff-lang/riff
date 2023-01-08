@@ -26,15 +26,9 @@ int riff_main(int flag, char *str) {
 
     riff_stab_init();
     riff_state_init(&global_state);
-    riff_fn main;
-    riff_code c;
-    c_init(&c);
-    main.code = &c;
-    main.arity = 0;
-    global_state.main = main;
-    global_state.name = "<playground>";
-    global_state.src = str;
-    main.name = riff_str_new(global_state.name, strlen(global_state.name));
+    global_state.name = "<playground>",
+    global_state.src = str,
+
     riff_compile(&global_state);
     if (flag)
         vm_exec(&global_state);
@@ -114,18 +108,14 @@ static char *file2str(const char *path) {
 int main(int argc, char **argv) {
     riff_state global_state;
 
-    riff_stab_init();
-    riff_state_init(&global_state);
-    riff_fn main;
-    riff_code c;
-    c_init(&c);
-    main.code = &c;
-    main.arity = 0;
-    global_state.main = &main;
-    global_state.argc = argc;
-    global_state.argv = argv;
     bool disas = false;
     bool opt_e = false;
+
+    riff_stab_init();
+    riff_state_init(&global_state);
+    global_state.argc = argc,
+    global_state.argv = argv,
+
     opterr = 0;
     int o;
     while ((o = getopt(argc, argv, "e:hlv")) != -1) {
@@ -181,13 +171,10 @@ int main(int argc, char **argv) {
     }
 
     // -l: List riff's arbitrary disassembly for the given program
-    if (disas) {
-        main.name = riff_str_new(global_state.name, strlen(global_state.name));
+    if (riff_unlikely(disas))
         riff_disas(&global_state);
-    } else {
-        main.name = NULL;
+    else
         vm_exec(&global_state);
-    }
     return 0;
 }
 

@@ -40,20 +40,12 @@ LIB_FN(error) {
 
 // eval(s)
 LIB_FN(eval) {
-    if (!is_str(fp)) {
+    if (!is_str(fp))
         return 0;
-    }
     riff_state s;
-    riff_fn main;
-    riff_code c;
 
     riff_state_init(&s);
-    c_init(&c);
-    main.code = &c;
-    main.arity = 0;
-    s.main = &main;
     s.src = fp->s->str;
-    main.name = NULL;
     riff_compile(&s);
     vm_exec_reenter(&s, (vm_stack *) fp);
     return 0;

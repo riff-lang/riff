@@ -5,11 +5,11 @@
 #include "value.h"
 
 struct riff_fn {
-    riff_code *code;
-    riff_str  *name;
+    riff_code  code;
     uint8_t    arity;
+    riff_str  *name;
 };
 
-void f_init(riff_fn *, riff_str *);
+void riff_fn_init(riff_fn *, riff_str *);
 
 #endif

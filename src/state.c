@@ -7,7 +7,7 @@ void riff_state_init(riff_state *s) {
         .argc = 0,
         .arg0 = 0,
         .argv = NULL,
-        .main = NULL,
     };
+    riff_fn_init(&s->main, NULL);
     riff_vec_init(&s->fn);
 }

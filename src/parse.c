@@ -424,12 +424,12 @@ static void table(riff_parser *y, int delim) {
 static void anon_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_str *name = riff_str_new("", 0);
-    f_init(f, name);
+    riff_fn_init(f, name);
     riff_vec_add(&y->state->fn, f);
     riff_parser fy;
     fy.state = y->state;
     fy.x = y->x;
-    fy.c = f->code;
+    fy.c = &f->code;
     y_init(&fy);
     add_local(&fy, name, 1);   // Dummy reference to itself
     f->arity = compile_fn(&fy);
@@ -815,12 +815,12 @@ static void local_fn(riff_parser *y) {
         c_local(y->c, y->locals.n-1, 1, 1);
     }
     riff_fn *f = malloc(sizeof(riff_fn));
-    f_init(f, fn_name);
+    riff_fn_init(f, fn_name);
     riff_parser fy;
     riff_vec_add(&y->state->fn, f);
     fy.state = y->state;
     fy.x = y->x;
-    fy.c = f->code;
+    fy.c = &f->code;
     y_init(&fy);
 
     // Reserve first local slot for itself. VM will adjust FP accordingly.
@@ -844,14 +844,14 @@ static void fn_stmt(riff_parser *y) {
         id = TK(0).s;
         advance();
     }
-    f_init(f, id);
+    riff_fn_init(f, id);
     riff_vec_add(&y->state->fn, f);
 
     // Functions parsed with their own parser, same lexer
     riff_parser fy;
     fy.state = y->state;
     fy.x = y->x;
-    fy.c = f->code;
+    fy.c = &f->code;
     y_init(&fy);
 
     // Reserve first local slot for itself. This is to match behavior of named
@@ -1205,7 +1205,7 @@ int riff_compile(riff_state *s) {
     riff_lexer  x;
 
     y.state = s;
-    y.c = s->main->code;
+    y.c = &s->main.code;
     y.x = &x;
     riff_lex_init(&x, s->src);
     // Overwrite OP_RET byte if appending to an existing bytecode array.
