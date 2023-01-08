@@ -108,7 +108,6 @@ static char *file2str(const char *path) {
 int main(int argc, char **argv) {
     riff_state global_state;
 
-    bool disas = false;
     bool opt_e = false;
 
     riff_stab_init();
@@ -129,7 +128,7 @@ int main(int argc, char **argv) {
             usage();
             exit(0);
         case 'l':
-            disas = true;
+            global_state.disas = true;
             break;
         case 'v':
             version();
@@ -171,7 +170,7 @@ int main(int argc, char **argv) {
     }
 
     // -l: List riff's arbitrary disassembly for the given program
-    if (riff_unlikely(disas))
+    if (riff_unlikely(global_state.disas))
         riff_disas(&global_state);
     else
         vm_exec(&global_state);

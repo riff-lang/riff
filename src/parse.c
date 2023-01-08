@@ -424,7 +424,8 @@ static void table(riff_parser *y, int delim) {
 static void anon_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_fn_init(f);
-    riff_vec_add(&y->state->anon_fn, f);
+    if (riff_unlikely(y->state->disas))
+        riff_vec_add(&y->state->anon_fn, f);
     riff_parser fy;
     fy.state = y->state;
     fy.x = y->x;
@@ -813,9 +814,10 @@ static void local_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_fn_init(f);
 
-    // Save ident for disassembly
-    f->name = id;
-    riff_vec_add(&y->state->anon_fn, f);
+    if (riff_unlikely(y->state->disas)) {
+        f->name = id;
+        riff_vec_add(&y->state->anon_fn, f);
+    }
 
     riff_parser fy;
     fy.state = y->state;
