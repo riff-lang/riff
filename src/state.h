@@ -12,7 +12,8 @@ typedef struct {
     int                   arg0;
     char                **argv;
     riff_fn               main;
-    RIFF_VEC(riff_fn *)   fn;
+    RIFF_VEC(riff_fn *)   global_fn;
+    RIFF_VEC(riff_fn *)   anon_fn;
 } riff_state;
 
 void riff_state_init(riff_state *);

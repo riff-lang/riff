@@ -10,6 +10,6 @@ struct riff_fn {
     riff_str  *name;
 };
 
-void riff_fn_init(riff_fn *, riff_str *);
+void riff_fn_init(riff_fn *);
 
 #endif

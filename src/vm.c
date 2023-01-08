@@ -105,11 +105,9 @@ static inline void init_argv(riff_tab *t, riff_int arg0, int rf_argc, char **rf_
 static inline int exec(uint8_t *, riff_val *, vm_stack *, vm_stack *);
 
 #define add_user_funcs() \
-    RIFF_VEC_FOREACH((&e->fn), i) { \
-        riff_fn *fn = RIFF_VEC_GET(&e->fn, i); \
-        if (fn->name->hash) { \
-            riff_htab_insert_str(&globals, fn->name, &(riff_val){TYPE_RFN, .fn = fn}); \
-        } \
+    RIFF_VEC_FOREACH((&state->global_fn), i) { \
+        riff_fn *fn = RIFF_VEC_GET(&state->global_fn, i); \
+        riff_htab_insert_str(&globals, fn->name, &(riff_val){TYPE_RFN, .fn = fn}); \
     }
 
 static inline void register_lib(void) {
@@ -122,24 +120,24 @@ static inline void register_lib(void) {
 }
 
 // VM entry point/initialization
-int vm_exec(riff_state *e) {
+int vm_exec(riff_state *state) {
     riff_htab_init(&globals);
     iter = NULL;
     riff_tab_init(&fldv);
     re_register_fldv(&fldv);
-    init_argv(&argv, e->arg0, e->argc, e->argv);
+    init_argv(&argv, state->arg0, state->argc, state->argv);
     riff_htab_insert_cstr(&globals, "arg", &(riff_val){TYPE_TAB, .t = &argv});
     register_lib();
     // Add user-defined functions to the global hash table
     add_user_funcs();
-    return exec(e->main.code.code, e->main.code.k, stack, stack);
+    return exec(state->main.code.code, state->main.code.k, stack, stack);
 }
 
 // Reentry point for eval()
-int vm_exec_reenter(riff_state *e, vm_stack *fp) {
+int vm_exec_reenter(riff_state *state, vm_stack *fp) {
     // Add user-defined functions to the global hash table
     add_user_funcs();
-    return exec(e->main.code.code, e->main.code.k, fp, fp);
+    return exec(state->main.code.code, state->main.code.k, fp, fp);
 }
 
 #ifndef COMPUTED_GOTO

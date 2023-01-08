@@ -423,15 +423,14 @@ static void table(riff_parser *y, int delim) {
 // anon_fn_expr = 'fn' ['(' [id {',' id}] '{' stmt_list '}'
 static void anon_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
-    riff_str *name = riff_str_new("", 0);
-    riff_fn_init(f, name);
-    riff_vec_add(&y->state->fn, f);
+    riff_fn_init(f);
+    riff_vec_add(&y->state->anon_fn, f);
     riff_parser fy;
     fy.state = y->state;
     fy.x = y->x;
     fy.c = &f->code;
     y_init(&fy);
-    add_local(&fy, name, 1);   // Dummy reference to itself
+    add_local(&fy, riff_str_new("",0), 1);   // Dummy reference to itself
     f->arity = compile_fn(&fy);
     c_fn_constant(y->c, f);
 }
@@ -805,9 +804,6 @@ static void local_fn(riff_parser *y) {
     riff_str *id = TK(0).s;
     int idx = resolve_local(y, 0, id);
 
-    // Create string for disassembly
-    riff_str *fn_name = riff_strcat("local ", TK(0).s->str, 6, riff_strlen(TK(0).s));
-
     // If the identifier doesn't already exist as a local at the current scope,
     // add a new local.
     if (idx < 0 || RIFF_VEC_GET(&y->locals, idx).depth != y->ld) {
@@ -815,9 +811,13 @@ static void local_fn(riff_parser *y) {
         c_local(y->c, y->locals.n-1, 1, 1);
     }
     riff_fn *f = malloc(sizeof(riff_fn));
-    riff_fn_init(f, fn_name);
+    riff_fn_init(f);
+
+    // Save ident for disassembly
+    f->name = id;
+    riff_vec_add(&y->state->anon_fn, f);
+
     riff_parser fy;
-    riff_vec_add(&y->state->fn, f);
     fy.state = y->state;
     fy.x = y->x;
     fy.c = &f->code;
@@ -844,8 +844,9 @@ static void fn_stmt(riff_parser *y) {
         id = TK(0).s;
         advance();
     }
-    riff_fn_init(f, id);
-    riff_vec_add(&y->state->fn, f);
+    riff_fn_init(f);
+    f->name = id;
+    riff_vec_add(&y->state->global_fn, f);
 
     // Functions parsed with their own parser, same lexer
     riff_parser fy;

@@ -121,10 +121,10 @@ static void disas_code(riff_code *c, const int ip_width) {
     }
 }
 
-static void print_code_header(const char *prefix, riff_fn *fn) {
-    fprintf(stdout, "%s%s @ %p -> %d %s\n",
+static void print_fn_header(const char *prefix, riff_fn *fn) {
+    fprintf(stdout, "%sfn %s @ %p -> %d %s\n",
             prefix,
-            riff_strlen(fn->name) ? fn->name->str : "<anonymous>",
+            fn->name && riff_strlen(fn->name) ? fn->name->str : "<anonymous>",
             fn,
             fn->code.n,
             fn->code.n == 1 ? "byte" : "bytes");
@@ -133,16 +133,31 @@ static void print_code_header(const char *prefix, riff_fn *fn) {
 void riff_disas(riff_state *state) {
     // Calculate width for the IP in the disassembly
     int w = (int) log10(state->main.code.n - 1) + 1;
-    RIFF_VEC_FOREACH(&state->fn, i) {
-        int fw = (int) log10(RIFF_VEC_GET(&state->fn, i)->code.n - 1) + 1;
+    RIFF_VEC_FOREACH(&state->global_fn, i) {
+        int fw = (int) log10(RIFF_VEC_GET(&state->global_fn, i)->code.n - 1) + 1;
+        w = w < fw ? fw : w;
+    }
+    RIFF_VEC_FOREACH(&state->anon_fn, i) {
+        int fw = (int) log10(RIFF_VEC_GET(&state->anon_fn, i)->code.n - 1) + 1;
         w = w < fw ? fw : w;
     }
 
-    print_code_header("source:", &state->main);
+    fprintf(stdout, "source:%s @ %p -> %d %s\n",
+            state->name,
+            &state->main,
+            state->main.code.n,
+            state->main.code.n == 1 ? "byte" : "bytes");
     disas_code(&state->main.code, w);
-    RIFF_VEC_FOREACH(&state->fn, i) {
-        riff_fn *fn = RIFF_VEC_GET(&state->fn, i);
-        print_code_header("\nfn ", fn);
+    RIFF_VEC_FOREACH(&state->global_fn, i) {
+        riff_fn *fn = RIFF_VEC_GET(&state->global_fn, i);
+        puts("");
+        print_fn_header("", fn);
+        disas_code(&fn->code, w);
+    }
+    RIFF_VEC_FOREACH(&state->anon_fn, i) {
+        riff_fn *fn = RIFF_VEC_GET(&state->anon_fn, i);
+        puts("");
+        print_fn_header("local ", fn);
         disas_code(&fn->code, w);
     }
 }
