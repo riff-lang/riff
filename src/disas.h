@@ -5,6 +5,6 @@
 #include "state.h"
 #include "lex.h"
 
-void riff_disas(riff_state *);
+int riff_disas(riff_state *);
 
 #endif

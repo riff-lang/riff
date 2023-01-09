@@ -121,16 +121,7 @@ static void disas_code(riff_code *c, const int ip_width) {
     }
 }
 
-static void print_fn_header(const char *prefix, riff_fn *fn) {
-    fprintf(stdout, "%sfn %s @ %p -> %d %s\n",
-            prefix,
-            fn->name && riff_strlen(fn->name) ? fn->name->str : "<anonymous>",
-            fn,
-            fn->code.n,
-            fn->code.n == 1 ? "byte" : "bytes");
-}
-
-void riff_disas(riff_state *state) {
+static int max_ip_width(riff_state *state) {
     // Calculate width for the IP in the disassembly
     int w = (int) log10(state->main.code.n - 1) + 1;
     RIFF_VEC_FOREACH(&state->global_fn, i) {
@@ -141,23 +132,37 @@ void riff_disas(riff_state *state) {
         int fw = (int) log10(RIFF_VEC_GET(&state->anon_fn, i)->code.n - 1) + 1;
         w = w < fw ? fw : w;
     }
+    return w;
+}
 
+static void print_fn_header(const char *prefix, riff_fn *fn) {
+    fprintf(stdout, "%sfn %s @ %p -> %d %s\n",
+            prefix,
+            fn->name && riff_strlen(fn->name) ? fn->name->str : "<anonymous>",
+            fn,
+            fn->code.n,
+            fn->code.n == 1 ? "byte" : "bytes");
+}
+
+int riff_disas(riff_state *state) {
+    int ip_width = max_ip_width(state);
     fprintf(stdout, "source:%s @ %p -> %d %s\n",
             state->name,
             &state->main,
             state->main.code.n,
             state->main.code.n == 1 ? "byte" : "bytes");
-    disas_code(&state->main.code, w);
+    disas_code(&state->main.code, ip_width);
     RIFF_VEC_FOREACH(&state->global_fn, i) {
         riff_fn *fn = RIFF_VEC_GET(&state->global_fn, i);
         puts("");
         print_fn_header("", fn);
-        disas_code(&fn->code, w);
+        disas_code(&fn->code, ip_width);
     }
     RIFF_VEC_FOREACH(&state->anon_fn, i) {
         riff_fn *fn = RIFF_VEC_GET(&state->anon_fn, i);
         puts("");
         print_fn_header("local ", fn);
-        disas_code(&fn->code, w);
+        disas_code(&fn->code, ip_width);
     }
+    return 0;
 }

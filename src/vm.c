@@ -120,7 +120,7 @@ static inline void register_lib(void) {
 }
 
 // VM entry point/initialization
-int vm_exec(riff_state *state) {
+int riff_exec(riff_state *state) {
     riff_htab_init(&globals);
     iter = NULL;
     riff_tab_init(&fldv);
@@ -134,7 +134,7 @@ int vm_exec(riff_state *state) {
 }
 
 // Reentry point for eval()
-int vm_exec_reenter(riff_state *state, vm_stack *fp) {
+int riff_exec_reenter(riff_state *state, vm_stack *fp) {
     // Add user-defined functions to the global hash table
     add_user_funcs();
     return exec(state->main.code.code, state->main.code.k, fp, fp);

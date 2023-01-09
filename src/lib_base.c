@@ -47,7 +47,7 @@ LIB_FN(eval) {
     riff_state_init(&s);
     s.src = fp->s->str;
     riff_compile(&s);
-    vm_exec_reenter(&s, (vm_stack *) fp);
+    riff_exec_reenter(&s, (vm_stack *) fp);
     return 0;
 }
 

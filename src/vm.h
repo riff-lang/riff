@@ -45,7 +45,7 @@ struct vm_iter {
     vm_iter   *p;    // Previous loop iterator
 };
 
-int vm_exec(riff_state *);
-int vm_exec_reenter(riff_state *, vm_stack *);
+int riff_exec(riff_state *);
+int riff_exec_reenter(riff_state *, vm_stack *);
 
 #endif
