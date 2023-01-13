@@ -20,7 +20,6 @@ static uint32_t         riff_htab_logical_size(riff_htab *);
 static inline riff_val *riff_htab_delete_val(riff_htab *, riff_val *);
 
 void riff_tab_init(riff_tab *t) {
-    t->nullx = 0;
     t->hint  = 0;
     t->lsize = 0;
     t->psize = 0;
@@ -81,7 +80,7 @@ riff_int riff_tab_logical_size(riff_tab *t) {
             ++l;
     }
     // Include special "null" index
-    l += (t->nullx && !is_null(t->nullv));
+    l += !is_null(t->nullv);
     t->lsize = l;
     t->hint = 0;
     return l + riff_htab_logical_size(t->h);
@@ -118,7 +117,7 @@ riff_val *riff_tab_collect_keys(riff_tab *t) {
     }
     // TODO pass `len`, allowing function to exit early if possible
     riff_htab_collect_keys(t->h, keys, &n);
-    if (riff_unlikely(t->nullx)) {
+    if (riff_unlikely(!is_null(t->nullv))) {
         keys[n++] = (riff_val) {TYPE_NULL, .i = 0};
     }
     return keys;
@@ -135,28 +134,23 @@ static inline int would_fit(riff_tab *t, riff_int k) {
         (k < t->cap || t_potential_lf(t->psize, t->cap, k) >= T_MIN_LOAD_FACTOR);
 }
 
-riff_val *riff_tab_lookup(riff_tab *t, riff_val *k, int hint) {
-    if (hint) t->hint = 1;
+riff_val *riff_tab_lookup(riff_tab *t, riff_val *k) {
     riff_val tmp;
     k = reduce_key(k, &tmp);
     switch (k->type) {
     case TYPE_NULL:
-        if (hint) {
-            t->nullx = 1;
-        }
         return t->nullv;
     case TYPE_INT:
         if (k->i >= 0) {
             riff_int ki = k->i;
-            if (t_exists(t, ki)) {
+            if (t_exists(t, ki))
                 return t->v[ki];
-            }
-            if (would_fit(t, ki)) {
+            if (would_fit(t, ki))
                 return riff_tab_insert_int(t, ki, NULL);
-            }
         }
         // Fall-through
-    default: return riff_htab_lookup_val(t->h, k);
+    default:
+        return riff_htab_lookup_val(t->h, k);
     }
 }
 

@@ -308,7 +308,7 @@ VM_BINOP(idx) {
         *l = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        *l = *riff_tab_lookup(l->t, r, 0);
+        *l = *riff_tab_lookup(l->t, r);
         break;
     default:
         set_null(l);

@@ -239,7 +239,7 @@ L(LOOP16): {
         *iter->k = *iter->kp;
         // Fall-through
     case LOOP_TAB_V:
-        *iter->v = *riff_tab_lookup(iter->tab, iter->kp++, 0);
+        *iter->v = *riff_tab_lookup(iter->tab, iter->kp++);
         break;
     default:
         break;
@@ -639,7 +639,8 @@ L(IDXA): {
             *sp[i].a = *v_newtab(0);
             // Fall-through
         case TYPE_TAB:
-            sp[i+1].a = riff_tab_lookup(sp[i].a->t, &sp[i+1].v, 1);
+            sp[i].a->t->hint = 1;
+            sp[i+1].a = riff_tab_lookup(sp[i].a->t, &sp[i+1].v);
             break;
         // IDXA is invalid for all other types
         default:
@@ -677,7 +678,8 @@ L(IDXA1):
         *sp[-2].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-2].a = riff_tab_lookup(sp[-2].a->t, &sp[-1].v, 1);
+        sp[-2].a->t->hint = 1;
+        sp[-2].a = riff_tab_lookup(sp[-2].a->t, &sp[-1].v);
         break;
     // IDXA is invalid for all other types
     default:
@@ -697,7 +699,7 @@ L(IDXV1):
         *sp[-2].a = *v_newtab(0);
         // Fall-through
     case TYPE_TAB:
-        sp[-2].v = *riff_tab_lookup(sp[-2].a->t, &sp[-1].v, 0);
+        sp[-2].v = *riff_tab_lookup(sp[-2].a->t, &sp[-1].v);
         --sp;
         ++ip;
         break;
@@ -747,11 +749,12 @@ L(SIDXV):
     ip += 2;
     BREAK;
 
-L(FLDA):    sp[-1].a = riff_tab_lookup(&fldv, &sp[-1].v, 1);
+L(FLDA):    sp[-1].a = riff_tab_lookup(&fldv, &sp[-1].v);
+            fldv.hint = 1;
             ++ip;
             BREAK;
 
-L(FLDV):    sp[-1].v = *riff_tab_lookup(&fldv, &sp[-1].v, 0);
+L(FLDV):    sp[-1].v = *riff_tab_lookup(&fldv, &sp[-1].v);
             ++ip;
             BREAK;
 

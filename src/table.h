@@ -16,7 +16,6 @@ struct riff_tab {
     uint32_t    lsize;
     uint32_t    psize;
     uint32_t    cap;
-    int         nullx: 1;
     int         hint: 1;
 };
 
@@ -43,7 +42,7 @@ struct ht_node {
 void      riff_tab_init(riff_tab *);
 riff_int  riff_tab_logical_size(riff_tab *);
 riff_val *riff_tab_collect_keys(riff_tab *);
-riff_val *riff_tab_lookup(riff_tab *, riff_val *, int);
+riff_val *riff_tab_lookup(riff_tab *, riff_val *);
 riff_val *riff_tab_insert_int(riff_tab *, riff_int, riff_val *);
 riff_val *riff_tab_insert(riff_tab *, riff_val *, riff_val *, int);
 
