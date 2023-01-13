@@ -104,9 +104,9 @@ static inline void init_argv(riff_tab *t, riff_int arg0, int rf_argc, char **rf_
 
 static inline int exec(uint8_t *, riff_val *, vm_stack *, vm_stack *);
 
-#define add_user_funcs() \
-    RIFF_VEC_FOREACH((&state->global_fn), i) { \
-        riff_fn *fn = RIFF_VEC_GET(&state->global_fn, i); \
+#define add_user_funcs()                                                           \
+    RIFF_VEC_FOREACH((&state->global_fn), i) {                                     \
+        riff_fn *fn = RIFF_VEC_GET(&state->global_fn, i);                          \
         riff_htab_insert_str(&globals, fn->name, &(riff_val){TYPE_RFN, .fn = fn}); \
     }
 
@@ -204,7 +204,7 @@ L(XJZ16):   XJUMPCOND16(!vm_test(&sp[-1].v)); BREAK;
 
 // Initialize/cycle current iterator
 L(LOOP8):
-L(LOOP16):{
+L(LOOP16): {
     int jmp16 = *ip == OP_LOOP16;
     if (riff_unlikely(!iter->n--)) {
         ip += 2 + jmp16;
@@ -212,32 +212,28 @@ L(LOOP16):{
     }
     switch (iter->t) {
     case LOOP_RANGE_KV:
-        if (riff_likely(is_int(iter->k))) {
+        if (riff_likely(is_int(iter->k)))
             iter->k->i += 1;
-        } else {
+        else
             set_int(iter->k, 0);
-        }
         // Fall-through
     case LOOP_RANGE_V:
-        if (riff_likely(is_int(iter->v))) {
+        if (riff_likely(is_int(iter->v)))
             iter->v->i += iter->itvl;
-        } else {
+        else
             *iter->v = (riff_val) {TYPE_INT, .i = iter->st};
-        }
         break;
     case LOOP_STR_KV:
-        if (riff_likely(is_int(iter->k))) {
+        if (riff_likely(is_int(iter->k)))
             iter->k->i += 1;
-        } else {
+        else
             set_int(iter->k, 0);
-        }
         // Fall-through
     case LOOP_STR_V:
-        if (riff_likely(is_str(iter->v))) {
+        if (riff_likely(is_str(iter->v)))
             iter->v->s = riff_str_new(iter->str++, 1);
-        } else {
+        else
             *iter->v = (riff_val) {TYPE_STR, .s = riff_str_new(iter->str++, 1)};
-        }
         break;
     case LOOP_TAB_KV:
         *iter->k = *iter->kp;
@@ -245,16 +241,13 @@ L(LOOP16):{
     case LOOP_TAB_V:
         *iter->v = *riff_tab_lookup(iter->tab, iter->kp++, 0);
         break;
-    default: break;
+    default:
+        break;
     }
 
     // Treat byte(s) following OP_LOOP as unsigned since jumps are always
     // backward
-    if (jmp16) {
-        ip -= *(uint16_t *) &ip[1];
-    } else {
-        ip -= ip[1];
-    }
+    ip -= jmp16 ? *(uint16_t *) &ip[1] : ip[1];
     BREAK;
 }
 
@@ -285,7 +278,11 @@ L(ITERKV):
 
 // Unary operations
 // sp[-1].v is assumed to be safe to overwrite
-#define UNARYOP(x) vm_##x(&sp[-1].v); ++ip
+#define UNARYOP(x)         \
+    do {                   \
+        vm_##x(&sp[-1].v); \
+        ++ip;              \
+    } while (0)
 
 L(LEN):     UNARYOP(len);  BREAK;
 L(LNOT):    UNARYOP(lnot); BREAK;
@@ -295,7 +292,12 @@ L(NUM):     UNARYOP(num);  BREAK;
 
 // Standard binary operations
 // sp[-2].v and sp[-1].v are assumed to be safe to overwrite
-#define BINOP(x) vm_##x(&sp[-2].v, &sp[-1].v); --sp; ++ip
+#define BINOP(x)                      \
+    do {                              \
+        vm_##x(&sp[-2].v, &sp[-1].v); \
+        --sp;                         \
+        ++ip;                         \
+    } while (0)
 
 L(ADD):     BINOP(add);    BREAK;
 L(SUB):     BINOP(sub);    BREAK;
@@ -329,19 +331,21 @@ L(VIDXV):   BINOP(idx);    BREAK;
 // sp[-1].a is address of some variable's riff_val.
 // Increment/decrement this value directly and replace the stack element with a
 // copy of the value.
-#define PRE(x) \
-    switch (sp[-1].a->type) { \
-    case TYPE_INT: sp[-1].a->i += x; break; \
-    case TYPE_FLOAT: sp[-1].a->f += x; break; \
-    case TYPE_STR: \
-        set_flt(sp[-1].a, str2flt(sp[-1].a->s) + x); \
-        break; \
-    default: \
-        set_int(sp[-1].a, x); \
-        break; \
-    } \
-    sp[-1].v = *sp[-1].a; \
-    ++ip
+#define PRE(x)                                           \
+    do {                                                 \
+        switch (sp[-1].a->type) {                        \
+        case TYPE_INT: sp[-1].a->i += x; break;          \
+        case TYPE_FLOAT: sp[-1].a->f += x; break;        \
+        case TYPE_STR:                                   \
+            set_flt(sp[-1].a, str2flt(sp[-1].a->s) + x); \
+            break;                                       \
+        default:                                         \
+            set_int(sp[-1].a, x);                        \
+            break;                                       \
+        }                                                \
+        sp[-1].v = *sp[-1].a;                            \
+        ++ip;                                            \
+    } while (0)
 
 L(PREINC):  PRE(1);  BREAK;
 L(PREDEC):  PRE(-1); BREAK;
@@ -351,20 +355,22 @@ L(PREDEC):  PRE(-1); BREAK;
 // value, then increment/decrement the riff_val at the given address. Replace the
 // stack element with the previously made copy and coerce to a numeric value if
 // needed.
-#define POST(x) \
-    tp = sp[-1].a; \
-    sp[-1].v = *tp; \
-    switch (tp->type) { \
-    case TYPE_INT: tp->i += x; break; \
-    case TYPE_FLOAT: tp->f += x; break; \
-    case TYPE_STR: \
-        set_flt(tp, str2flt(tp->s) + x); \
-        break; \
-    default: \
-        set_int(tp, x); \
-        break; \
-    } \
-    UNARYOP(num)
+#define POST(x)                              \
+    do {                                     \
+        tp = sp[-1].a;                       \
+        sp[-1].v = *tp;                      \
+        switch (tp->type) {                  \
+        case TYPE_INT: tp->i += x; break;    \
+        case TYPE_FLOAT: tp->f += x; break;  \
+        case TYPE_STR:                       \
+            set_flt(tp, str2flt(tp->s) + x); \
+            break;                           \
+        default:                             \
+            set_int(tp, x);                  \
+            break;                           \
+        }                                    \
+        UNARYOP(num);                        \
+    } while (0)
 
 L(POSTINC): POST(1);  BREAK;
 L(POSTDEC): POST(-1); BREAK;
@@ -374,10 +380,12 @@ L(POSTDEC): POST(-1); BREAK;
 // copy of the value in sp[-2].v. Perform the binary operation x and assign the
 // result to the saved address.
 #define COMPOUNDBINOP(x) \
-    tp = sp[-2].a; \
-    sp[-2].v = *tp; \
-    BINOP(x); \
-    *tp = sp[-1].v
+    do {                 \
+        tp = sp[-2].a;   \
+        sp[-2].v = *tp;  \
+        BINOP(x);        \
+        *tp = sp[-1].v;  \
+    } while (0)
 
 L(ADDX):    COMPOUNDBINOP(add); BREAK;
 L(SUBX):    COMPOUNDBINOP(sub); BREAK;
@@ -393,13 +401,19 @@ L(SHRX):    COMPOUNDBINOP(shr); BREAK;
 L(XORX):    COMPOUNDBINOP(xor); BREAK;
 
 // Simple pop operation
-L(POP):     --sp; ++ip; BREAK;
+L(POP):     --sp;
+            ++ip;
+            BREAK;
 
 // Pop IP+1 values from stack
-L(POPI):    sp -= ip[1]; ip += 2; BREAK;
+L(POPI):    sp -= ip[1];
+            ip += 2;
+            BREAK;
 
 // Push null literal on stack
-L(NUL):     set_null(&sp++->v); ++ip; BREAK;
+L(NUL):     set_null(&sp++->v);
+            ++ip;
+            BREAK;
 
 // Push immediate
 // Assign integer value x to the top of the stack.
@@ -424,8 +438,9 @@ L(CONST2):  PUSHCONST(2);     ++ip;    BREAK;
 // Assign the address of global variable x's riff_val in the globals table.
 // The lookup will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
-// Parser signals for this opcode for assignment or pre/post ++/--.
-#define PUSHGLOBALADDR(x) sp++->a = riff_htab_lookup_str(&globals, k[(x)].s)
+// Compiler emits this opcode for assignment or pre/post ++/--.
+#define PUSHGLOBALADDR(x) \
+    sp++->a = riff_htab_lookup_str(&globals, k[(x)].s)
 
 L(GBLA):    PUSHGLOBALADDR(ip[1]); ip += 2; BREAK;
 L(GBLA0):   PUSHGLOBALADDR(0);     ++ip;    BREAK;
@@ -436,9 +451,9 @@ L(GBLA2):   PUSHGLOBALADDR(2);     ++ip;    BREAK;
 // Copy the value of global variable x to the top of the stack.
 // The lookup will create an entry if needed, accommodating
 // undeclared/uninitialized variable usage.
-// Parser signals for this opcode to be used when only needing the value, e.g.
-// arithmetic.
-#define PUSHGLOBALVAL(x) sp++->v = *riff_htab_lookup_str(&globals, k[(x)].s)
+// Compiler emits this opcode when only needing the value, e.g. arithmetic.
+#define PUSHGLOBALVAL(x) \
+    sp++->v = *riff_htab_lookup_str(&globals, k[(x)].s)
 
 L(GBLV):    PUSHGLOBALVAL(ip[1]); ip += 2; BREAK;
 L(GBLV0):   PUSHGLOBALVAL(0);     ++ip;    BREAK;
@@ -482,9 +497,8 @@ L(TCALL): {
         int ar2 = fn->arity;    // Callee's arity
 
         // Recycle call frame
-        for (int i = 0; i <= ar2; ++i) {
+        for (int i = 0; i <= ar2; ++i)
             fp[i].v = sp[i].v;
-        }
 
         // Increment SP without nullifying slots (preserving values) if number
         // of arguments exceeds the frame's current "arity"
@@ -502,28 +516,25 @@ L(TCALL): {
 
         // If callee's arity is larger than the current frame, create stack
         // space and nullify slots
-        if (ar2 > ar1) {
+        if (ar2 > ar1)
             while (ar1++ < ar2)
                 set_null(&sp++->v);
-        }
 
         // Else, if the current frame is too large for the next call, decrement
         // SP
-        else if (ar2 < ar1) {
+        else if (ar2 < ar1)
             sp -= ar1 - ar2;
-        }
 
         // Else else, if the size of the call frame is fine, but the user didn't
         // provide enough arguments, create stack space and nullify slots
-        else if (nargs <= ar2) {
+        else if (nargs <= ar2)
             while (nargs++ <= ar2)
                 set_null(&sp++->v);
-        }
+
         ip = ep = fn->code.code;
         k  = fn->code.k;
         BREAK;
     }
-
     // Fall-through to OP_CALL for C function calls
 }
 
@@ -547,17 +558,14 @@ L(CALL): {
 
         // If user called function with too few arguments, nullify stack slots and
         // increment SP.
-        if (nargs < arity) {
-            for (int i = nargs; i < arity; ++i) {
+        if (nargs < arity)
+            for (int i = nargs; i < arity; ++i)
                 set_null(&sp++->v);
-            }
-        }
         
         // If user called function with too many arguments, decrement SP so it
         // points to the appropriate slot for control transfer.
-        else if (nargs > arity) {
+        else if (nargs > arity)
             sp -= (nargs - arity);
-        }
 
         // Pass SP-arity-1 as the FP for the succeeding call frame. Since the
         // function is already at this location in the stack, the compiler can
@@ -580,13 +588,12 @@ L(CALL): {
 
         // Most library functions are somewhat variadic; their arity refers to
         // the minimum number of arguments they require.
-        if (arity && nargs < arity) {
+        if (arity && nargs < arity)
             // If user called function with too few arguments, nullify stack
             // slots.
-            for (int i = nargs; i < arity; ++i) {
+            for (int i = nargs; i < arity; ++i)
                 set_null(&sp[i].v);
-            }
-        }
+
         // Decrement SP to serve as the FP for the function call. Library
         // functions assign their own return values to SP-1.
         sp -= nargs;
@@ -594,9 +601,8 @@ L(CALL): {
     }
     ip += 2;
     // Nulllify stack slot if callee returns nothing
-    if (!nret) { 
+    if (!nret)
         set_null(&sp[-1].v);
-    }
     BREAK;
 }
 
@@ -610,13 +616,15 @@ L(RET1):    retp->v = sp[-1].v;
 
 // Create a sequential table of x elements from the top of the stack. Leave the
 // table riff_val on the stack. Tables index at 0 by default.
-#define INITTABLE(x) \
-    tp = v_newtab(x); \
-    for (int i = (x) - 1; i >= 0; --i) { \
-        --sp; \
-        riff_tab_insert_int(tp->t, i, &sp->v); \
-    } \
-    sp++->v = *tp
+#define INITTABLE(x)                               \
+    do {                                           \
+        tp = v_newtab(x);                          \
+        for (int i = (x) - 1; i >= 0; --i) {       \
+            --sp;                                  \
+            riff_tab_insert_int(tp->t, i, &sp->v); \
+        }                                          \
+        sp++->v = *tp;                             \
+    } while (0)
 
 L(TAB0):    INITTABLE(0);          ++ip;    BREAK;
 L(TAB):     INITTABLE(ip[1]);      ip += 2; BREAK;
@@ -646,9 +654,8 @@ L(IDXA): {
 
 L(IDXV): {
     int i = -ip[1] - 1;
-    if (is_null(sp[i].a)) {
+    if (is_null(sp[i].a))
         *sp[i].a = *v_newtab(0);
-    }
     sp[i].v = *sp[i].a;
     for (; i < -1; ++i) {
         vm_idx(&sp[i].v, &sp[i+1].v);
@@ -760,14 +767,15 @@ L(FLDV):    sp[-1].v = *riff_tab_lookup(&fldv, &sp[-1].v, 0);
 //   srnge: ..:z        0..INT_MAX:SP[-1]
 // If `z` is not provided, the interval is set to -1 if x > y (downward ranges).
 // Otherwise, the interval is set to 1 (upward ranges).
-#define PUSHRANGE(f,t,i,s) { \
-    riff_range *r = malloc(sizeof(riff_range)); \
-    riff_int from = r->from = (f); \
-    riff_int to   = r->to = (t); \
-    riff_int itvl = (i); \
-    r->itvl       = itvl ? itvl : from > to ? -1 : 1; \
-    s = (riff_val) {TYPE_RANGE, .q = r}; \
-}
+#define PUSHRANGE(f,t,i,s)                                \
+    do {                                                  \
+        riff_range *r = malloc(sizeof(riff_range));       \
+        riff_int from = r->from = (f);                    \
+        riff_int to   = r->to = (t);                      \
+        riff_int itvl = (i);                              \
+        r->itvl       = itvl ? itvl : from > to ? -1 : 1; \
+        s = (riff_val) {TYPE_RANGE, .q = r};              \
+    } while (0)
 
 // x..y
 L(RNG):     PUSHRANGE(intval(&sp[-2].v), intval(&sp[-1].v), 0, sp[-2].v);

@@ -8,18 +8,25 @@
 #include <math.h>
 
 // Integer arithmetic (Bitwise ops)
-#define INT_ARITH(l,r,op) set_int(l, (intval(l) op intval(r)))
+#define INT_ARITH(l,r,op)                       \
+    do {                                        \
+        set_int(l, (intval(l) op intval(r)));   \
+    } while (0)
 
 // Floating-point arithmetic (div)
-#define FLT_ARITH(l,r,op) set_flt(l, (fltval(l) op fltval(r)))
+#define FLT_ARITH(l,r,op)                       \
+    do {                                        \
+        set_flt(l, (fltval(l) op fltval(r)));   \
+    } while (0)
 
 // "Polymorphic" arithmetic (add, sub, mul)
-#define NUM_ARITH(l,r,op) \
-    if (is_int(l) && is_int(r)) { \
-        l->i = (l->i op r->i); \
-    } else { \
-        FLT_ARITH(l,r,op); \
-    }
+#define NUM_ARITH(l,r,op)                       \
+    do {                                        \
+        if (is_int(l) && is_int(r))             \
+            l->i = (l->i op r->i);              \
+        else                                    \
+            FLT_ARITH(l,r,op);                  \
+    } while (0)
 
 // Return boolean result of value (0/1)
 static inline int vm_test(riff_val *v) {
@@ -102,48 +109,49 @@ VM_UOP(neg) {
 VM_UOP(not) { set_int(v, ~intval(v)); }
 
 // == and != operators
-#define CMP_EQ(l,r,op) \
-    if (is_int(l) && is_int(r)) { \
-        l->i = (l->i op r->i); \
-    } else if (is_null(l) ^ is_null(r)) { \
-        set_int(l, !(0 op 0)); \
-    } else if (is_str(l) && is_str(r)) { \
-        set_int(l, ((l->s) op (r->s))); \
-    } else if (is_str(l) && !is_str(r)) { \
-        if (!riff_strlen(l->s)) { \
-            set_int(l, !(0 op 0)); \
-            return; \
-        } \
-        char *end; \
-        riff_float f = riff_strtod(l->s->str, &end, 0); \
-        if (*end) { \
-            set_int(l, 0); \
-        } else { \
-            set_int(l, (f op numval(r))); \
-        } \
-    } else if (!is_str(l) && is_str(r)) { \
-        if (!riff_strlen(r->s)) { \
-            set_int(l, !(0 op 0)); \
-            return; \
-        } \
-        char *end; \
-        riff_float f = riff_strtod(r->s->str, &end, 0); \
-        if (*end) { \
-            set_int(l, 0); \
-        } else { \
-            set_int(l, (numval(l) op f)); \
-        } \
-    } else { \
-        NUM_ARITH(l,r,op); \
-    }
+#define CMP_EQ(l,r,op)                                      \
+    do {                                                    \
+        if (is_int(l) && is_int(r)) {                       \
+            l->i = (l->i op r->i);                          \
+        } else if (is_null(l) ^ is_null(r)) {               \
+            set_int(l, !(0 op 0));                          \
+        } else if (is_str(l) && is_str(r)) {                \
+            set_int(l, ((l->s) op (r->s)));                 \
+        } else if (is_str(l) && !is_str(r)) {               \
+            if (!riff_strlen(l->s)) {                       \
+                set_int(l, !(0 op 0));                      \
+                return;                                     \
+            }                                               \
+            char *end;                                      \
+            riff_float f = riff_strtod(l->s->str, &end, 0); \
+            if (*end)                                       \
+                set_int(l, 0);                              \
+            else                                            \
+                set_int(l, (f op numval(r)));               \
+        } else if (!is_str(l) && is_str(r)) {               \
+            if (!riff_strlen(r->s)) {                       \
+                set_int(l, !(0 op 0));                      \
+                return;                                     \
+            }                                               \
+            char *end;                                      \
+            riff_float f = riff_strtod(r->s->str, &end, 0); \
+            if (*end)                                       \
+                set_int(l, 0);                              \
+            else                                            \
+                set_int(l, (numval(l) op f));               \
+        } else {                                            \
+            NUM_ARITH(l,r,op);                              \
+        }                                                   \
+    } while (0)
 
 // >, <, >= and <= operators
-#define CMP_REL(l,r,op) \
-    if (is_int(l) && is_int(r)) { \
-        l->i = (l->i op r->i); \
-    } else { \
-        set_int(l, (numval(l) op numval(r))); \
-    }
+#define CMP_REL(l,r,op)                                     \
+    do {                                                    \
+        if (is_int(l) && is_int(r))                         \
+            l->i = (l->i op r->i);                          \
+        else                                                \
+            set_int(l, (numval(l) op numval(r)));           \
+    } while (0)
 
 VM_BINOP(eq) { CMP_EQ(l,r,==);  }
 VM_BINOP(ne) { CMP_EQ(l,r,!=);  }
