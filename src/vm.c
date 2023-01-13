@@ -20,7 +20,7 @@ static inline void err(const char *msg) {
 static riff_htab  globals;
 static riff_tab   argv;
 static riff_tab   fldv;
-static vm_iter   *iter;
+static vm_iter   *iter = NULL;
 static vm_stack   stack[VM_STACK_SIZE];
 
 static inline void new_iter(riff_val *set, int kind) {
@@ -36,7 +36,7 @@ static inline void new_iter(riff_val *set, int kind) {
         set->i = (riff_int) set->f;
         // Fall-through
     case TYPE_INT:
-        iter->t = kind ? LOOP_RANGE_KV : LOOP_RANGE_V;
+        iter->t = LOOP_RANGE_KV + kind;
         iter->st = 0;
         if (set->i >= 0) {
             iter->n = set->i + 1; // Inclusive
@@ -47,26 +47,24 @@ static inline void new_iter(riff_val *set, int kind) {
         }
         break;
     case TYPE_STR:
-        iter->t = kind ? LOOP_STR_KV : LOOP_STR_V;
+        iter->t = LOOP_STR_KV + kind;
         iter->n = riff_strlen(set->s);
         iter->str = set->s->str;
         break;
     case TYPE_REGEX:
         err("cannot iterate over regular expression");
     case TYPE_RANGE: {
-        riff_int n;
-        iter->t = kind ? LOOP_RANGE_KV : LOOP_RANGE_V;
+        iter->t = LOOP_RANGE_KV + kind;
         iter->itvl = set->q->itvl;
-        if (iter->itvl > 0)
-            n = (set->q->to - set->q->from) + 1;
-        else
-            n = (set->q->from - set->q->to) + 1;
+        riff_int n = iter->itvl > 0
+            ? (set->q->to - set->q->from) + 1
+            : (set->q->from - set->q->to) + 1;
         iter->n = n <= 0 ? 0 : (riff_uint) ceil(fabs(n / (double) iter->itvl));
         iter->st = set->q->from;
         break;
     }
     case TYPE_TAB:
-        iter->t = kind ? LOOP_TAB_KV : LOOP_TAB_V;
+        iter->t = LOOP_TAB_KV + kind;
         iter->n = riff_tab_logical_size(set->t);
         iter->kp = iter->keys = riff_tab_collect_keys(set->t);
         iter->tab = set->t;
@@ -74,7 +72,8 @@ static inline void new_iter(riff_val *set, int kind) {
     case TYPE_RFN:
     case TYPE_CFN:
         err("cannot iterate over function");
-    default: break;
+    default:
+        break;
     }
 }
 
@@ -122,7 +121,6 @@ static inline void register_lib(void) {
 // VM entry point/initialization
 int riff_exec(riff_state *state) {
     riff_htab_init(&globals);
-    iter = NULL;
     riff_tab_init(&fldv);
     re_register_fldv(&fldv);
     init_argv(&argv, state->arg0, state->argc, state->argv);
@@ -205,7 +203,7 @@ L(XJZ16):   XJUMPCOND16(!vm_test(&sp[-1].v)); BREAK;
 // Initialize/cycle current iterator
 L(LOOP8):
 L(LOOP16): {
-    int jmp16 = *ip == OP_LOOP16;
+    int jmp16 = *ip - OP_LOOP8;
     if (riff_unlikely(!iter->n--)) {
         ip += 2 + jmp16;
         BREAK;
@@ -213,7 +211,7 @@ L(LOOP16): {
     switch (iter->t) {
     case LOOP_RANGE_KV:
         if (riff_likely(is_int(iter->k)))
-            iter->k->i += 1;
+            ++iter->k->i;
         else
             set_int(iter->k, 0);
         // Fall-through
@@ -225,7 +223,7 @@ L(LOOP16): {
         break;
     case LOOP_STR_KV:
         if (riff_likely(is_int(iter->k)))
-            iter->k->i += 1;
+            ++iter->k->i;
         else
             set_int(iter->k, 0);
         // Fall-through
@@ -259,14 +257,14 @@ L(POPL):    destroy_iter();
 // Create iterator and jump to the corresponding OP_LOOP instruction for
 // initialization
 L(ITERV):
-    new_iter(&sp[-1].v, 0); 
+    new_iter(&sp[-1].v, 1); 
     set_null(&sp[-1].v);
     iter->v = &sp[-1].v;
     JUMP16();
     BREAK;
 
 L(ITERKV):
-    new_iter(&sp[-1].v, 1); 
+    new_iter(&sp[-1].v, 0); 
     set_null(&sp[-1].v);
 
     // Reserve extra stack slot for k,v iterators
