@@ -420,8 +420,8 @@ L(NULL):    set_null(&sp++->v);
 
 L(IMM):     PUSHIMM(ip[1]);                ip += 2; BREAK;
 L(IMM16):   PUSHIMM(*(uint16_t *) &ip[1]); ip += 3; BREAK;
-L(IMM0):    PUSHIMM(0);                    ++ip;    BREAK;
-L(IMM1):    PUSHIMM(1);                    ++ip;    BREAK;
+L(ZERO):    PUSHIMM(0);                    ++ip;    BREAK;
+L(ONE):     PUSHIMM(1);                    ++ip;    BREAK;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the stack.

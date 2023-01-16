@@ -63,7 +63,7 @@
     _(NULL,    0)                               \
     _(IMM,     1)                               \
     _(IMM16,   2)                               \
-    _(IMM0,    0)  _(IMM1,    0)                \
+    _(ZERO,    0)  _(ONE,     0)                \
     _(CONST,   1)                               \
     _(CONST0,  0)  _(CONST1,  0)  _(CONST2,  0) \
     _(GBLA,    1)                               \

@@ -236,7 +236,7 @@ void c_constant(riff_code *c, riff_token *tk) {
         switch (i) {
         case 0:
         case 1:
-            push(OP_IMM0 + i);
+            push(OP_ZERO + i);
             c->last = LAST_INS_IDX(0);
             return;
         default:
