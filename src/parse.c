@@ -52,20 +52,19 @@ typedef struct {
 typedef RIFF_VEC(int) patch_list;
 
 typedef struct {
-    riff_lexer      *x;         // Parser controls lexical analysis
-    riff_code       *c;         // Current code object
-    riff_state      *state;     // Global state
-    uint8_t          ld;        // Lexical depth/scope
-    uint8_t          fd;        // Top-level scope of the current function
-    uint8_t          id;        // Iterator depth (`for` loops only)
-    uint8_t          loop;      // Depth of current loop
-    bool             lhs;       // Set when leftmost expr has been evaluated
-    bool             ox;        // Typical (i.e. not ++/--) operation flag
-    bool             lx;        // Local flag (newly-declared)
-    bool             retx;      // Return flag
-    patch_list      *brk;       // Patch list for break stmts (current loop)
-    patch_list      *cont;      // Patch list for continue stmts (current loop)
-    RIFF_VEC(local)  locals;    // Local variables
+    riff_lexer      *x;             // Parser controls lexical analysis
+    riff_code       *c;             // Current code object
+    riff_state      *state;         // Global state
+    uint8_t          ld;            // Lexical depth/scope
+    uint8_t          fd;            // Top-level scope of the current function
+    uint8_t          id;            // Iterator depth (`for` loops only)
+    uint8_t          loop;          // Depth of current loop
+    bool             lhs;           // Set when leftmost expr has been evaluated
+    bool             ox;            // Typical (i.e. not ++/--) operation flag
+    bool             lx;            // Local flag (newly-declared)
+    bool             retx;          // Return flag
+    patch_list      *brk, *cont;    // Patch lists for break/continue stmts (current loop)
+    RIFF_VEC(local)  locals;        // Local variables
 } riff_parser;
 
 // TODO Hardcoded logic for valid "follow" tokens should be cleaned up

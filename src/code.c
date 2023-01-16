@@ -87,11 +87,11 @@ void c_jump(riff_code *c, enum riff_code_jump type, int l) {
     int d = l - c->n;
     if (d <= INT8_MAX && d >= INT8_MIN) {
         switch (type) {
-        case JMP:  push(OP_JMP8);  break;
-        case JZ:   push(OP_JZ8);   break; 
-        case JNZ:  push(OP_JNZ8);  break;
-        case XJZ:  push(OP_XJZ8);  break;
-        case XJNZ: push(OP_XJNZ8); break;
+        case JMP:  push(OP_JMP);  break;
+        case JZ:   push(OP_JZ);   break; 
+        case JNZ:  push(OP_JNZ);  break;
+        case XJZ:  push(OP_XJZ);  break;
+        case XJNZ: push(OP_XJNZ); break;
         default: break;
         }
         push((int8_t) d);
@@ -115,7 +115,7 @@ void c_jump(riff_code *c, enum riff_code_jump type, int l) {
 void c_loop(riff_code *c, int l) {
     int d = c->n - l;
     if (d <= UINT8_MAX) {
-        push(OP_LOOP8);
+        push(OP_LOOP);
         push((uint8_t) d);
         c->last = LAST_INS_IDX(1);
     } else if (d <= UINT16_MAX) {
@@ -207,7 +207,7 @@ static int find_constant(riff_code *c, riff_token *tk) {
 // Add a riff_val literal to a code object's constant table, if necessary
 void c_constant(riff_code *c, riff_token *tk) {
     if (tk->kind == RIFF_TK_NULL) {
-        push(OP_NUL);
+        push(OP_NULL);
         c->last = LAST_INS_IDX(0);
         return;
     } else if (tk->kind == RIFF_TK_REGEX) {
@@ -236,17 +236,16 @@ void c_constant(riff_code *c, riff_token *tk) {
         switch (i) {
         case 0:
         case 1:
-        case 2:
             push(OP_IMM0 + i);
             c->last = LAST_INS_IDX(0);
             return;
         default:
-            if (i >= 3 && i <= UINT8_MAX) {
-                push(OP_IMM8);
+            if (i >= 0 && i <= UINT8_MAX) {
+                push(OP_IMM);
                 push((uint8_t) i);
                 c->last = LAST_INS_IDX(1);
                 return;
-            } else if (i >= 256 && i <= UINT16_MAX) {
+            } else if (i > UINT8_MAX && i <= UINT16_MAX) {
                 push(OP_IMM16);
                 push_u16(c, (uint16_t) i);
                 c->last = LAST_INS_IDX(2);

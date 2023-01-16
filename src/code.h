@@ -2,14 +2,15 @@
 #define CODE_H
 
 #include "lex.h"
+#include "opcodes.h"
 #include "value.h"
 
 #include <stdint.h>
 #include <stdlib.h>
 
+#define OPCODE_ENUM(s,a)  OP_##s,
 enum riff_opcode {
-#define OPCODE(x,y,z) OP_##x
-#include "opcodes.h"
+    OPCODE_DEF(OPCODE_ENUM)
 };
 
 enum riff_code_jump {

@@ -3,6 +3,7 @@
 #include "conf.h"
 #include "lib.h"
 #include "mem.h"
+#include "opcodes.h"
 #include "string.h"
 #include "util.h"
 
@@ -168,8 +169,8 @@ static inline int exec(uint8_t *ep, riff_val *k, vm_stack *sp, vm_stack *fp) {
     while (1) { switch (*ip) {
 #else
     static void *dispatch_labels[] = {
-#define OPCODE(x,y,z) &&L_##x
-#include "opcodes.h"
+#define LABEL_ENUM(s,a)   &&L_##s,
+        OPCODE_DEF(LABEL_ENUM)
     };
     DISPATCH();
 #endif
@@ -178,16 +179,16 @@ static inline int exec(uint8_t *ep, riff_val *k, vm_stack *sp, vm_stack *fp) {
 #define JUMP8()  (ip +=  (int8_t)     ip[1])
 #define JUMP16() (ip += *(int16_t *) &ip[1])
 
-L(JMP8):    JUMP8();  BREAK;
+L(JMP):     JUMP8();  BREAK;
 L(JMP16):   JUMP16(); BREAK;
 
 // Conditional jumps (pop stack unconditionally)
 #define JUMPCOND8(x)  (x ? JUMP8()  : (ip += 2)); --sp
 #define JUMPCOND16(x) (x ? JUMP16() : (ip += 3)); --sp
 
-L(JNZ8):    JUMPCOND8(riff_op_test(&sp[-1].v));   BREAK;
+L(JNZ):     JUMPCOND8(riff_op_test(&sp[-1].v));   BREAK;
 L(JNZ16):   JUMPCOND16(riff_op_test(&sp[-1].v));  BREAK;
-L(JZ8):     JUMPCOND8(!riff_op_test(&sp[-1].v));  BREAK;
+L(JZ):      JUMPCOND8(!riff_op_test(&sp[-1].v));  BREAK;
 L(JZ16):    JUMPCOND16(!riff_op_test(&sp[-1].v)); BREAK;
 
 
@@ -195,15 +196,15 @@ L(JZ16):    JUMPCOND16(!riff_op_test(&sp[-1].v)); BREAK;
 #define XJUMPCOND8(x)  if (x) JUMP8();  else {--sp; ip += 2;}
 #define XJUMPCOND16(x) if (x) JUMP16(); else {--sp; ip += 3;}
 
-L(XJNZ8):   XJUMPCOND8(riff_op_test(&sp[-1].v));   BREAK;
+L(XJNZ):    XJUMPCOND8(riff_op_test(&sp[-1].v));   BREAK;
 L(XJNZ16):  XJUMPCOND16(riff_op_test(&sp[-1].v));  BREAK;
-L(XJZ8):    XJUMPCOND8(!riff_op_test(&sp[-1].v));  BREAK;
+L(XJZ):     XJUMPCOND8(!riff_op_test(&sp[-1].v));  BREAK;
 L(XJZ16):   XJUMPCOND16(!riff_op_test(&sp[-1].v)); BREAK;
 
 // Initialize/cycle current iterator
-L(LOOP8):
+L(LOOP):
 L(LOOP16): {
-    int jmp16 = *ip - OP_LOOP8;
+    int jmp16 = *ip - OP_LOOP;
     if (riff_unlikely(!iter->n--)) {
         ip += 2 + jmp16;
         BREAK;
@@ -409,7 +410,7 @@ L(POPI):    sp -= ip[1];
             BREAK;
 
 // Push null literal on stack
-L(NUL):     set_null(&sp++->v);
+L(NULL):    set_null(&sp++->v);
             ++ip;
             BREAK;
 
@@ -417,11 +418,10 @@ L(NUL):     set_null(&sp++->v);
 // Assign integer value x to the top of the stack.
 #define PUSHIMM(x) set_int(&sp++->v, (x))
 
-L(IMM8):    PUSHIMM(ip[1]);                ip += 2; BREAK;
+L(IMM):     PUSHIMM(ip[1]);                ip += 2; BREAK;
 L(IMM16):   PUSHIMM(*(uint16_t *) &ip[1]); ip += 3; BREAK;
 L(IMM0):    PUSHIMM(0);                    ++ip;    BREAK;
 L(IMM1):    PUSHIMM(1);                    ++ip;    BREAK;
-L(IMM2):    PUSHIMM(2);                    ++ip;    BREAK;
 
 // Push constant
 // Copy constant x from code object's constant table to the top of the stack.

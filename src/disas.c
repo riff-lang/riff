@@ -1,6 +1,7 @@
 #include "disas.h"
 
 #include "conf.h"
+#include "opcodes.h"
 #include "string.h"
 #include "util.h"
 
@@ -12,8 +13,8 @@ static const struct {
     const char *mnemonic;
     int         arity;
 } opcode_info[] = {
-#define OPCODE(x,y,z) { z, y }
-#include "opcodes.h"
+#define MNEMONIC_ENUM(s,a)  { #s, a },
+OPCODE_DEF(MNEMONIC_ENUM)
 };
 
 #define ARITY(op)       (opcode_info[(op)].arity)
@@ -66,11 +67,11 @@ static void disas_code(riff_code *c, const int ip_width) {
                 riff_tostr(&c->k[b[1]], &sptr);
                 printf(INST1DEREF, b[1], MNEMONIC(b[0]), b[1], sptr);
                 break;
-            case OP_JMP8:
-            case OP_JZ8:
-            case OP_JNZ8:
-            case OP_XJZ8:
-            case OP_XJNZ8:
+            case OP_JMP:
+            case OP_JZ:
+            case OP_JNZ:
+            case OP_XJZ:
+            case OP_XJNZ:
                 printf(INST1, b[1], MNEMONIC(b[0]), ip + (int8_t) b[1]);
                 break;
             case OP_JMP16:
@@ -82,7 +83,7 @@ static void disas_code(riff_code *c, const int ip_width) {
             case OP_ITERKV:
                 printf(INST2, b[1], b[2], MNEMONIC(b[0]), ip + *(int16_t *) &b[1]);
                 break;
-            case OP_LOOP8:
+            case OP_LOOP:
                 printf(INST1, b[1], MNEMONIC(b[0]), ip - b[1]);
                 break;
             case OP_LOOP16:
