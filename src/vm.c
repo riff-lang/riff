@@ -15,7 +15,7 @@ static inline void err(const char *msg) {
     exit(1);
 }
 
-#include "vm_ops.h"
+#include "ops.h"
 
 static riff_htab  globals;
 static riff_tab   argv;
@@ -185,20 +185,20 @@ L(JMP16):   JUMP16(); BREAK;
 #define JUMPCOND8(x)  (x ? JUMP8()  : (ip += 2)); --sp
 #define JUMPCOND16(x) (x ? JUMP16() : (ip += 3)); --sp
 
-L(JNZ8):    JUMPCOND8(vm_test(&sp[-1].v));   BREAK;
-L(JNZ16):   JUMPCOND16(vm_test(&sp[-1].v));  BREAK;
-L(JZ8):     JUMPCOND8(!vm_test(&sp[-1].v));  BREAK;
-L(JZ16):    JUMPCOND16(!vm_test(&sp[-1].v)); BREAK;
+L(JNZ8):    JUMPCOND8(riff_op_test(&sp[-1].v));   BREAK;
+L(JNZ16):   JUMPCOND16(riff_op_test(&sp[-1].v));  BREAK;
+L(JZ8):     JUMPCOND8(!riff_op_test(&sp[-1].v));  BREAK;
+L(JZ16):    JUMPCOND16(!riff_op_test(&sp[-1].v)); BREAK;
 
 
 // Conditional jumps (pop stack if jump not taken)
 #define XJUMPCOND8(x)  if (x) JUMP8();  else {--sp; ip += 2;}
 #define XJUMPCOND16(x) if (x) JUMP16(); else {--sp; ip += 3;}
 
-L(XJNZ8):   XJUMPCOND8(vm_test(&sp[-1].v));   BREAK;
-L(XJNZ16):  XJUMPCOND16(vm_test(&sp[-1].v));  BREAK;
-L(XJZ8):    XJUMPCOND8(!vm_test(&sp[-1].v));  BREAK;
-L(XJZ16):   XJUMPCOND16(!vm_test(&sp[-1].v)); BREAK;
+L(XJNZ8):   XJUMPCOND8(riff_op_test(&sp[-1].v));   BREAK;
+L(XJNZ16):  XJUMPCOND16(riff_op_test(&sp[-1].v));  BREAK;
+L(XJZ8):    XJUMPCOND8(!riff_op_test(&sp[-1].v));  BREAK;
+L(XJZ16):   XJUMPCOND16(!riff_op_test(&sp[-1].v)); BREAK;
 
 // Initialize/cycle current iterator
 L(LOOP8):
@@ -276,10 +276,10 @@ L(ITERKV):
 
 // Unary operations
 // sp[-1].v is assumed to be safe to overwrite
-#define UNARYOP(x)         \
-    do {                   \
-        vm_##x(&sp[-1].v); \
-        ++ip;              \
+#define UNARYOP(x)              \
+    do {                        \
+        riff_op_##x(&sp[-1].v); \
+        ++ip;                   \
     } while (0)
 
 L(LEN):     UNARYOP(len);  BREAK;
@@ -290,11 +290,11 @@ L(NUM):     UNARYOP(num);  BREAK;
 
 // Standard binary operations
 // sp[-2].v and sp[-1].v are assumed to be safe to overwrite
-#define BINOP(x)                      \
-    do {                              \
-        vm_##x(&sp[-2].v, &sp[-1].v); \
-        --sp;                         \
-        ++ip;                         \
+#define BINOP(x)                           \
+    do {                                   \
+        riff_op_##x(&sp[-2].v, &sp[-1].v); \
+        --sp;                              \
+        ++ip;                              \
     } while (0)
 
 L(ADD):     BINOP(add);    BREAK;
@@ -318,7 +318,7 @@ L(MATCH):   BINOP(match);  BREAK;
 L(NMATCH):  BINOP(nmatch); BREAK;
 L(CAT):     BINOP(cat);    BREAK;
 
-L(CATI):    vm_catn(sp, ip[1]);
+L(CATI):    riff_op_catn(sp, ip[1]);
             sp -= ip[1] - 1;
             ip += 2;
             BREAK;
@@ -657,7 +657,7 @@ L(IDXV): {
         *sp[i].a = *v_newtab(0);
     sp[i].v = *sp[i].a;
     for (; i < -1; ++i) {
-        vm_idx(&sp[i].v, &sp[i+1].v);
+        riff_op_idx(&sp[i].v, &sp[i+1].v);
         sp[i+1].v = sp[i].v;
     }
     sp -= ip[1];
@@ -701,7 +701,7 @@ L(IDXV1):
         --sp;
         ++ip;
         break;
-    // Dereference and call vm_idx().
+    // Dereference and call riff_op_idx().
     case TYPE_INT:
     case TYPE_FLOAT:
     case TYPE_STR:

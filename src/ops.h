@@ -1,5 +1,5 @@
-#ifndef VM_OPS_H
-#define VM_OPS_H
+#ifndef OPS_H
+#define OPS_H
 
 #include "conf.h"
 #include "string.h"
@@ -29,7 +29,7 @@
     } while (0)
 
 // Return boolean result of value (0/1)
-static inline int vm_test(riff_val *v) {
+static inline int riff_op_test(riff_val *v) {
     switch (v->type) {
     case TYPE_INT: return !!(v->i);
     case TYPE_FLOAT: return !!(v->f);
@@ -55,35 +55,35 @@ static inline int vm_test(riff_val *v) {
     }
 }
 
-#define VM_UOP(op)   static inline void vm_##op(riff_val *v)
-#define VM_BINOP(op) static inline void vm_##op(riff_val *l, riff_val *r)
+#define UNARY_OP(op)    static inline void riff_op_##op(riff_val *v)
+#define BINARY_OP(op)   static inline void riff_op_##op(riff_val *l, riff_val *r)
 
-VM_BINOP(add) { NUM_ARITH(l,r,+); }
-VM_BINOP(sub) { NUM_ARITH(l,r,-); }
-VM_BINOP(mul) { NUM_ARITH(l,r,*); }
+BINARY_OP(add) { NUM_ARITH(l,r,+); }
+BINARY_OP(sub) { NUM_ARITH(l,r,-); }
+BINARY_OP(mul) { NUM_ARITH(l,r,*); }
 
 // Language comparison for division by zero:
 // 0/0 = nan; 1/0 = inf : lua, mawk
 // error: pretty much all others
-VM_BINOP(div) { FLT_ARITH(l,r,/); }
+BINARY_OP(div) { FLT_ARITH(l,r,/); }
 
 // Language comparison for modulus by zero:
 // `nan`: mawk
 // error: pretty much all others
-VM_BINOP(mod) {
+BINARY_OP(mod) {
     riff_float res = fmod(numval(l), numval(r));
     set_flt(l, res < 0 ? res + numval(r) : res);
 }
 
-VM_BINOP(pow) { set_flt(l, pow(fltval(l), fltval(r))); }
+BINARY_OP(pow) { set_flt(l, pow(fltval(l), fltval(r))); }
 
-VM_BINOP(and) { INT_ARITH(l,r,&);  }
-VM_BINOP(or)  { INT_ARITH(l,r,|);  }
-VM_BINOP(xor) { INT_ARITH(l,r,^);  }
-VM_BINOP(shl) { INT_ARITH(l,r,<<); }
-VM_BINOP(shr) { INT_ARITH(l,r,>>); }
+BINARY_OP(and) { INT_ARITH(l,r,&);  }
+BINARY_OP(or)  { INT_ARITH(l,r,|);  }
+BINARY_OP(xor) { INT_ARITH(l,r,^);  }
+BINARY_OP(shl) { INT_ARITH(l,r,<<); }
+BINARY_OP(shr) { INT_ARITH(l,r,>>); }
 
-VM_UOP(num) {
+UNARY_OP(num) {
     switch (v->type) {
     case TYPE_INT:
     case TYPE_FLOAT:
@@ -97,7 +97,7 @@ VM_UOP(num) {
     }
 }
 
-VM_UOP(neg) {
+UNARY_OP(neg) {
     switch (v->type) {
     case TYPE_INT:   v->i = -v->i;               break;
     case TYPE_FLOAT: v->f = -v->f;               break;
@@ -106,7 +106,7 @@ VM_UOP(neg) {
     }
 }
 
-VM_UOP(not) { set_int(v, ~intval(v)); }
+UNARY_OP(not) { set_int(v, ~intval(v)); }
 
 // == and != operators
 #define CMP_EQ(l,r,op)                                      \
@@ -153,16 +153,16 @@ VM_UOP(not) { set_int(v, ~intval(v)); }
             set_int(l, (numval(l) op numval(r)));           \
     } while (0)
 
-VM_BINOP(eq) { CMP_EQ(l,r,==);  }
-VM_BINOP(ne) { CMP_EQ(l,r,!=);  }
-VM_BINOP(gt) { CMP_REL(l,r,>);  }
-VM_BINOP(ge) { CMP_REL(l,r,>=); }
-VM_BINOP(lt) { CMP_REL(l,r,<);  }
-VM_BINOP(le) { CMP_REL(l,r,<=); }
+BINARY_OP(eq) { CMP_EQ(l,r,==);  }
+BINARY_OP(ne) { CMP_EQ(l,r,!=);  }
+BINARY_OP(gt) { CMP_REL(l,r,>);  }
+BINARY_OP(ge) { CMP_REL(l,r,>=); }
+BINARY_OP(lt) { CMP_REL(l,r,<);  }
+BINARY_OP(le) { CMP_REL(l,r,<=); }
 
-VM_UOP(lnot) { set_int(v, !vm_test(v)); }
+UNARY_OP(lnot) { set_int(v, !riff_op_test(v)); }
 
-VM_UOP(len) {
+UNARY_OP(len) {
     riff_int l = 0;
     switch (v->type) {
 
@@ -194,7 +194,7 @@ VM_UOP(len) {
     set_int(v, l);
 }
 
-VM_BINOP(cat) {
+BINARY_OP(cat) {
     char lbuf[STR_BUF_SZ];
     char rbuf[STR_BUF_SZ];
     char *ls = lbuf, *rs = rbuf;
@@ -203,7 +203,7 @@ VM_BINOP(cat) {
     set_str(l, riff_strcat(ls, rs, llen, rlen));
 }
 
-static inline void vm_catn(vm_stack *fp, int n) {
+static inline void riff_op_catn(vm_stack *fp, int n) {
     char buf[STR_BUF_SZ];
     char tbuf[STR_BUF_SZ];
     size_t len = 0;
@@ -266,10 +266,10 @@ do_match:
     }
 }
 
-VM_BINOP(match)  { set_int(l,  match(l, r)); }
-VM_BINOP(nmatch) { set_int(l, !match(l, r)); }
+BINARY_OP(match)  { set_int(l,  match(l, r)); }
+BINARY_OP(nmatch) { set_int(l, !match(l, r)); }
 
-VM_BINOP(idx) {
+BINARY_OP(idx) {
     switch (l->type) {
     case TYPE_INT:
     case TYPE_FLOAT: {

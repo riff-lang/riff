@@ -15,7 +15,7 @@ static void err(const char *msg) {
     exit(1);
 }
 
-#include "vm_ops.h"
+#include "ops.h"
 
 LIB_FN(error);
 
@@ -24,7 +24,7 @@ LIB_FN(assert) {
     if (riff_unlikely(!argc)) {
         err("expected expression for assertion");
     }
-    if (riff_unlikely(!vm_test(fp))) {
+    if (riff_unlikely(!riff_op_test(fp))) {
         l_error(fp+1, argc-1);
     }
     return 0;
