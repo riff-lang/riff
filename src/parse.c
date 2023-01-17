@@ -1070,8 +1070,8 @@ static void loop_stmt(riff_parser *y) {
     exit_loop(y, r_brk, r_cont, &b, &c);
 }
 
-// ret_stmt = 'return' [expr]
-static void ret_stmt(riff_parser *y) {
+// return_stmt = 'return' [expr]
+static void return_stmt(riff_parser *y) {
     // Destroy any unterminated iterators before returning control. Destroying
     // iterators before parsing any return expression allows for codegen to
     // still check for tailcalls.
@@ -1148,7 +1148,7 @@ static void while_stmt(riff_parser *y) {
 //      | for_stmt
 //      | if_stmt
 //      | local_stmt
-//      | ret_stmt
+//      | return_stmt
 //      | until_stmt
 //      | while_stmt
 static void stmt(riff_parser *y) {
@@ -1171,7 +1171,7 @@ static void stmt(riff_parser *y) {
     case RIFF_TK_IF:     advance(); if_stmt(y);       break;
     case RIFF_TK_LOCAL:  advance(); local_stmt(y);    break;
     case RIFF_TK_LOOP:   advance(); loop_stmt(y);     break;
-    case RIFF_TK_RETURN: advance(); ret_stmt(y);      break;
+    case RIFF_TK_RETURN: advance(); return_stmt(y);   break;
     case RIFF_TK_UNTIL:  advance(); until_stmt(y);    break;
     case RIFF_TK_WHILE:  advance(); while_stmt(y);    break;
     default:                        expr_stmt(y);     break;
