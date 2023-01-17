@@ -419,7 +419,7 @@ static void table(riff_parser *y, int delim) {
 }
 
 // Function literals
-// anon_fn_expr = 'fn' ['(' [id {',' id}] '{' stmt_list '}'
+// anon_fn_expr = 'fn' ['(' [id {',' id}] ')'] '{' stmt_list '}'
 static void anon_fn(riff_parser *y) {
     riff_fn *f = malloc(sizeof(riff_fn));
     riff_fn_init(f);
