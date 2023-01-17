@@ -1,7 +1,6 @@
 #ifndef VM_H
 #define VM_H
 
-#include "code.h"
 #include "state.h"
 #include "table.h"
 #include "value.h"

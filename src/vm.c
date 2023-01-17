@@ -1,9 +1,9 @@
 #include "vm.h"
 
+#include "code.h"
 #include "conf.h"
 #include "lib.h"
 #include "mem.h"
-#include "opcodes.h"
 #include "string.h"
 #include "util.h"
 

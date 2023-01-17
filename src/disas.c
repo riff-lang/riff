@@ -1,7 +1,7 @@
 #include "disas.h"
 
+#include "code.h"
 #include "conf.h"
-#include "opcodes.h"
 #include "string.h"
 #include "util.h"
 
