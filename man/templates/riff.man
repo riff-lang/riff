@@ -1,0 +1,69 @@
+$if(has-tables)$
+'\" t
+$endif$
+.\" Define V font for inline verbatim, using C font in formats
+.\" that render this, and otherwise B font.
+.ie "\f[CB]x\f[]"x" \{\
+. ftr V B
+. ftr VI BI
+. ftr VB B
+. ftr VBI BI
+.\}
+.el \{\
+. ftr V CR
+. ftr VI CI
+. ftr VB CB
+. ftr VBI CBI
+.\}
+$if(adjusting)$
+.ad $adjusting$
+$endif$
+.TH "$title/uppercase/nowrap$" "$section/nowrap$" "$date/nowrap$" "riff $riff-version/nowrap$" "$header/nowrap$"
+$if(hyphenate)$
+.hy
+$else$
+.nh
+$endif$
+$for(header-includes)$
+$header-includes$
+$endfor$
+.SH NAME
+.PP
+$title$ - $subtitle$
+$if(synopsis)$
+.SH SYNOPSIS
+.PP
+$synopsis$
+$endif$
+.SH DESCRIPTION
+.PP
+$for(include-before)$
+$include-before$
+$endfor$
+$body$
+$for(include-after)$
+$include-after$
+$endfor$
+$if(option)$
+.SH OPTIONS
+.PP
+$for(option)$
+$option$
+$endfor$
+$endif$
+$if(example)$
+.SH EXAMPLES
+.PP
+$for(example)$
+$example$
+$endfor$
+$endif$
+$if(see-also)$
+.SH SEE ALSO
+.PP
+$for(see-also)$$see-also$$sep$, $endfor$
+$endif$
+$if(author)$
+.SH AUTHORS
+$for(author)$$author$$sep$; $endfor$
+$endif$

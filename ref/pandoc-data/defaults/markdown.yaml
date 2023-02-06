@@ -1,0 +1,11 @@
+from: markdown+header_attributes+multiline_tables+implicit_header_references
+standalone: true
+columns: 80
+reference-links: true
+syntax-definitions:
+  - ${.}/syntax/riff.xml
+  - ${.}/syntax/ebnf.xml
+html-math-method:
+  method: mathjax
+input-files:
+  - ${.}/ref.md

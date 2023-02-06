@@ -31,7 +31,7 @@ int riff_main(int flag, char *str) {
 
     riff_compile(&global_state);
     if (flag)
-        vm_exec(&global_state);
+        riff_exec(&global_state);
     else
         riff_disas(&global_state);
     return 0;

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd" []>
+<language name="EBNF" section="Sources" extensions="*.ebnf" version="1" kateversion="5.0">
+  <highlighting>
+    <contexts>
+      <context name="LHS" attribute="Keyword" lineEndContext="#stay">
+        <DetectChar   attribute="Operator" char="="           context="RHS" />
+        <Detect2Chars attribute="Comment"  char="(" char1="*" context="Block Comment" />
+      </context>
+      <context name="RHS" attribute="Variable" lineEndContext="#stay">
+        <DetectChar attribute="Operator"  char="|"         context="#stay" />
+        <AnyChar    attribute="Separator" String=",()[]{}" context="#stay" />
+        <DetectChar attribute="Separator" char=";"         context="#pop" />
+        <DetectChar attribute="String"    char="&quot;"    context="Double Quoted Literal" />
+        <DetectChar attribute="String"    char="&apos;"    context="Single Quoted Literal" />
+        <DetectChar attribute="Operator"  char="?"         context="Special Sequence" />
+      </context>
+      <context name="Double Quoted Literal" attribute="String" lineEndContext="#stay">
+        <DetectChar attribute="String" context="#pop" char="&quot;" />
+      </context>
+      <context name="Single Quoted Literal" attribute="String" lineEndContext="#stay">
+        <DetectChar attribute="String" context="#pop" char="&apos;" />
+      </context>
+      <context name="Block Comment" attribute="Comment" lineEndContext="#stay">
+        <Detect2Chars char="*" char1=")" context="#pop"/>
+      </context>
+      <context name="Special Sequence" attribute="Special" lineEndContext="#stay">
+        <DetectChar attribute="Operator" char="?" context="#pop" />
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"         />
+      <itemData name="Keyword"     defStyleNum="dsKeyword"        />
+      <itemData name="Operator"    defStyleNum="dsOperator"       />
+      <itemData name="Separator"   defStyleNum="dsOperator"       />
+      <itemData name="String"      defStyleNum="dsString"         />
+      <itemData name="Variable"    defStyleNum="dsVariable"       />
+      <itemData name="Comment"     defStyleNum="dsComment"        />
+      <itemData name="Special"     defStyleNum="dsVerbatimString" />
+    </itemDatas>
+  </highlighting>
+</language>

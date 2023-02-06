@@ -2,6 +2,7 @@
 *.out.*
 tags
 /bin
+/man/man1
 *.dSYM
 *.prof
 *.profraw

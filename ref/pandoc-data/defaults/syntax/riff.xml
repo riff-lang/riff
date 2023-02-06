@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd" []>
+<language name="Riff"
+          section="Scripts"
+          extensions="*.rf;*.riff"
+          version="1"
+          kateversion="5.0"
+          mimetype="text/x-riff">
+  <highlighting>
+    <contexts>
+      <context attribute="Normal Text" name="Normal Text">
+        <!-- Line comments -->
+        <RegExpr      attribute="Comment" String="\/\/.*$" />
+
+        <!-- Block comments -->
+        <Detect2Chars attribute="Comment" context="Block Comment" char="/" char1="*" />
+
+        <!-- Closing parens, brackets -->
+        <RegExpr      attribute="Normal Text" context="Infix Op" String="[\)\}]" />
+
+        <!-- Strings -->
+        <DetectChar   attribute="String" context="String" char="'" />
+        <DetectChar   attribute="String" context="String" char="&quot;" />
+
+        <!-- Regexes -->
+        <DetectChar   attribute="Regex" context="Regex" char="/" />
+
+        <!-- Numbers -->
+        <RegExpr      attribute="Bin Int"   context="Infix Op" String="0[bB][01_]*" />
+        <RegExpr      attribute="Hex Float" context="Infix Op" String="0[xX][A-Fa-f0-9_]+\.(?!\.)" />
+        <RegExpr      attribute="Hex Float" context="Infix Op" String="0[xX][A-Fa-f0-9_]*(?:[pP][+-]?[A-Fa-f0-9][A-Fa-f0-9_]*)?" />
+        <RegExpr      attribute="Hex Float" context="Infix Op" String="0[xX][A-Fa-f0-9_]*\.?[A-Fa-f0-9][A-Fa-f0-9_]*(?:[pP][+-]?[A-Fa-f0-9][A-Fa-f0-9_]*)?" />
+        <RegExpr      attribute="Dec Float" context="Infix Op" String="\d[\d_]*\.(?!\.)" />
+        <RegExpr      attribute="Dec Float" context="Infix Op" String="(\d[\d_]*)?\.?\d[\d_]*(?:[eE][+-]?\d[\d_]*)?" />
+        <RegExpr      attribute="Dec Float" context="Infix Op" String="\.\d[\d_]*(?:[eE][+-]?\d[\d_]*)?" />
+        <RegExpr      attribute="Hex Int"   context="Infix Op" String="0[xX][0-9A-Fa-f_]*" />
+        <RegExpr      attribute="Dec Int"   context="Infix Op" String="\d[\d_]*" />
+
+        <!-- .. -->
+        <RegExpr      attribute="Operator" String="\.\." />
+
+        <!-- Builtin functions -->
+        <RegExpr      attribute="Builtin" String="(?:assert|error|eval|print|num|type)\b" />
+        <RegExpr      attribute="Builtin" String="(?:abs|atan|ceil|cos|exp|int|log|sin|sqrt|tan)\b" />
+        <RegExpr      attribute="Builtin" String="(?:close|flush|getc|open|printf|putc|read|write)\b" />
+        <RegExpr      attribute="Builtin" String="(?:rand|srand)\b" />
+        <RegExpr      attribute="Builtin" String="(?:byte|char|fmt|gsub|hex|lower|split|sub|upper)\b" />
+        <RegExpr      attribute="Builtin" String="(?:clock|exit)\b" />
+
+        <!-- null -->
+        <RegExpr      attribute="Constant" context="Infix Op" String="null\b" />
+
+        <!-- Control flow -->
+        <RegExpr      attribute="ControlFlow" String="(?:break|continue|elif|else|if|return)\b" />
+
+        <!-- Other keywords -->
+        <RegExpr      attribute="Keyword" String="(?:fn|local)\b" />
+        <RegExpr      attribute="Keyword" String="(?:do|for|loop|while)\b" />
+        <RegExpr      attribute="Keyword" String="(?:and|not|or)\b" />
+        <RegExpr      attribute="Keyword" String="in\b" />
+        <!-- Identifiers -->
+        <RegExpr      attribute="Normal Text" context="Infix Op" String="[A-Za-z_]\w*\b" />
+      </context>
+
+      <!-- Useful for disambiguation where certain characters have
+        multiple contexts. This is pretty much how the Riff
+        lexer/parser handles ambiguities -->
+      <context attribute="Infix Op" name="Infix Op" fallthrough="true" fallthroughContext="Normal Text" lineEndContext="#stay">
+        <DetectSpaces />
+        <RegExpr      attribute="Comment" String="\/\/.*$" />
+        <Detect2Chars attribute="Comment" context="Block Comment" char="/" char1="*" />
+        <DetectChar   attribute="Normal Text" context="#pop" char=";" />
+        <DetectChar   attribute="Normal Text" context="#pop" char="/" />
+        <Detect2Chars attribute="Infix Op"    context="#stay" char="+" char1="+" />
+        <Detect2Chars attribute="Infix Op"    context="#stay" char="-" char1="-" />
+      </context>
+
+      <!-- Block comments -->
+      <context attribute="Block Comment" name="Block Comment" lineEndContext="#stay">
+        <Detect2Chars attribute="Comment" context="#pop" char="*" char1="/" />
+        <RegExpr      attribute="Comment" context="#stay" String=".*" />
+      </context>
+
+      <!-- Strings -->
+      <context attribute="String" name="String" lineEndContext="#stay">
+
+        <!-- fmt() format modifiers/specifiers -->
+        <RegExpr      attribute="Attribute" context="#stay" String="(?:%%|%[-+ 0]*(?:\*|\d*)?(?:\.(?:\d*|\*)?)?[aAbcdeEfFgGimosxX])" />
+        <RegExpr      attribute="Attribute" context="#stay" String="#[A-Za-z_]\w*" />
+        <RegExpr      attribute="Attribute" context="#stay" String="#\{.*\}" />
+        <RegExpr      attribute="Attribute" context="#stay" String="#\(.*\)" />
+
+        <!-- Special chars, i.e. escape sequences -->
+        <RegExpr      attribute="SpecialChar" context="#stay" String="\\[\\abefnrtv'&quot;]|\\x[A-Fa-f0-9]{1,2}|\\\d{1,3}" />
+        <RegExpr      attribute="SpecialChar" context="#stay" String="\\u[A-Fa-f0-9]{1,4}|\\U[A-Fa-f0-9]{1,8}" />
+
+        <LineContinue attribute="String" context="#stay"/>
+        <DetectChar   attribute="String" context="Infix Op" char="'" />
+        <DetectChar   attribute="String" context="Infix Op" char="&quot;" />
+      </context>
+
+      <context attribute="Regex" name="Regex" lineEndContext="#stay">
+        <Detect2Chars attribute="Regex" context="#stay" char="\" char1="/" />
+        <DetectChar   attribute="Regex" context="RegexFlag" char="/" />
+      </context>
+
+      <context attribute="RegexFlag" name="RegexFlag" lineEndContext="#pop#pop">
+        <RegExpr      attribute="RegexFlag" context="#stay" String="[ADJUimnsux]" />
+        <RegExpr      attribute="Normal Text" context="#pop#pop" String="[^ADJUimnsux]" />
+      </context>
+
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"        />
+      <itemData name="Infix Op"    defStyleNum="dsNormal"        />
+      <itemData name="Comment"     defStyleNum="dsComment"       />
+      <itemData name="Bin Int"     defStyleNum="dsBaseN"         />
+      <itemData name="Hex Float"   defStyleNum="dsFloat"         />
+      <itemData name="Dec Float"   defStyleNum="dsFloat"         />
+      <itemData name="Hex Int"     defStyleNum="dsBaseN"         />
+      <itemData name="Dec Int"     defStyleNum="dsDecVal"        />
+      <itemData name="Operator"    defStyleNum="dsOperator"      />
+      <itemData name="Builtin"     defStyleNum="dsBuiltIn"       />
+      <itemData name="Constant"    defStyleNum="dsConstant"      />
+      <itemData name="ControlFlow" defStyleNum="dsControlFlow"   />
+      <itemData name="Keyword"     defStyleNum="dsKeyword"       />
+      <itemData name="String"      defStyleNum="dsString"        />
+      <itemData name="Regex"       defStyleNum="dsSpecialString" />
+      <itemData name="RegexFlag"   defStyleNum="dsSpecialString" />
+      <itemData name="Attribute"   defStyleNum="dsAttribute"     />
+      <itemData name="Char"        defStyleNum="dsChar"          />
+      <itemData name="SpecialChar" defStyleNum="dsSpecialChar"   />
+    </itemDatas>
+  </highlighting>
+  <general>
+    <comments>
+      <comment name="singleLine" start="//" />
+      <comment name="multiLine" start="/*" end="*/" region="Comment" />
+    </comments>
+    <keywords casesensitive="1"/>
+  </general>
+</language>
