@@ -39,13 +39,13 @@ Running `make` in the root directory of the repository will compile
 the source code and place the executable locally at `bin/riff`.
 
 Running `make install` will compile the source code and place the executable at
-`/usr/local/bin/riff` by default. To change the installation path, specify the
+`~/.local/bin/riff` by default. To change the installation path, specify the
 `prefix` when running `make install`.
 
-For example, to install `riff` at `$HOME/.local/bin/riff`:
+For example, to install `riff` at `/usr/local/bin/riff`:
 
 ```bash
-$ make install prefix=$HOME/.local
+$ make install prefix=/usr/local
 ```
 
 ### Versioning

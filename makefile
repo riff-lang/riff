@@ -1,4 +1,4 @@
-prefix        ?= /usr/local
+prefix        ?= $(HOME)/.local
 exec_prefix   ?= $(prefix)
 datarootdir   ?= $(prefix)/share
 bindir        ?= $(exec_prefix)/bin
@@ -93,8 +93,9 @@ clean:
 	rm -rf $(man1builddir)
 	rm -rf *.dSYM
 
-install: riff
+install: riff man | $(bindir) $(man1dir)
 	install $(binbuilddir)/riff $(bindir)/riff
+	cp $(man1builddir)/* $(man1dir)
 
 test: riff bats
 
@@ -163,7 +164,7 @@ $(addprefix $(man1builddir)/,riffprng.1 riffregex.1 riffsyn.1):
 
 # Order-only prereqs
 
-$(binbuilddir) $(man1builddir):
+$(bindir) $(man1dir) $(binbuilddir) $(man1builddir):
 	mkdir -p $@
 
 lib/pcre2/pcre2test.wasm:
