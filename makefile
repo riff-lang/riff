@@ -4,6 +4,7 @@ datarootdir   ?= $(prefix)/share
 bindir        ?= $(exec_prefix)/bin
 mandir        ?= $(datarootdir)/man
 man1dir       ?= $(mandir)/man1
+extdir        ?= ext
 srcdir        ?= src
 
 pandoc        ?= pandoc
@@ -127,8 +128,8 @@ $(binbuilddir)/instr: CFLAGS += $(IFLAGS)
 $(binbuilddir)/lsan:  CFLAGS += $(LFLAGS)
 $(WASM_TARGETS):      CFLAGS += $(WASM_SFLAGS)
 
-$(WASM_TARGETS): pcre2-config = lib/pcre2/wasm-install/bin/pcre2-config
-$(WASM_TARGETS): | lib/pcre2/pcre2test.wasm
+$(WASM_TARGETS): pcre2-config = $(extdir)/pcre2/pcre2-config
+$(WASM_TARGETS): | $(extdir)/pcre2/pcre2test.wasm
 
 $(TARGETS): $(SRC) | $(binbuilddir)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
@@ -167,5 +168,5 @@ $(addprefix $(man1builddir)/,riffprng.1 riffregex.1 riffsyn.1):
 $(bindir) $(man1dir) $(binbuilddir) $(man1builddir):
 	mkdir -p $@
 
-lib/pcre2/pcre2test.wasm:
-	(cd lib/pcre2; ./autogen.sh; emconfigure ./configure --prefix=$$PWD/wasm-install --disable-shared; emmake make)
+$(extdir)/pcre2/pcre2test.wasm:
+	(cd $(@D); ./autogen.sh; emconfigure ./configure --prefix=$$PWD/wasm-install --disable-shared; emmake make install)
