@@ -55,7 +55,7 @@
 
         <!-- Other keywords -->
         <RegExpr      attribute="Keyword" String="(?:fn|local)\b" />
-        <RegExpr      attribute="Keyword" String="(?:do|for|loop|while)\b" />
+        <RegExpr      attribute="Keyword" String="(?:do|for|loop|until|while)\b" />
         <RegExpr      attribute="Keyword" String="(?:and|not|or)\b" />
         <RegExpr      attribute="Keyword" String="in\b" />
         <!-- Identifiers -->
